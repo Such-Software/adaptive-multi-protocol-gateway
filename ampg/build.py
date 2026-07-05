@@ -67,6 +67,11 @@ def _render_privacy_html_tree(
     files_skipped = 0
     stats = PrivacyRenderStats()
     max_asset_bytes = int(protocol.options.get("max_asset_bytes", 1024 * 1024))
+    script_policy = str(protocol.options.get("script_policy", "strip"))
+    if script_policy != "strip":
+        raise ValueError(
+            f"{site.id}/{protocol.name}: privacy-html only supports script_policy='strip'"
+        )
     for source_path in _iter_source_files(site.source.path):
         target_path = output_root / source_path.relative_to(site.source.path)
         target_path.parent.mkdir(parents=True, exist_ok=True)

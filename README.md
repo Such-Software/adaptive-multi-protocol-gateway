@@ -95,7 +95,9 @@ The current implementation is dependency-free Python:
 
 ```sh
 python3 -m ampg --config examples/wownero.gateway.toml plan
+python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml build
+python3 -m ampg --config examples/i2p-only.gateway.toml build
 python3 -m ampg docs generate
 python3 -m unittest discover -s tests
 ```
@@ -103,6 +105,9 @@ python3 -m unittest discover -s tests
 The Wownero build writes generated files under `dist/wownero/`. Each protocol output
 root contains `.ampg-output`; AMPG refuses to clean a non-empty output directory unless
 that marker is present.
+
+Plan artifacts are written under `dist/ampg-plan/` only when `--write-artifacts` is
+passed. They are reviewable snippets, not installed daemon config.
 
 ## Reusable checklist
 

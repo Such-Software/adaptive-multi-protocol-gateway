@@ -79,6 +79,7 @@ from transport-interface readiness.
 ## Safety requirements
 
 - Show every config write before applying it.
+- Generate snippets into the plan root before any install or reload step.
 - Back up any adopted-daemon snippet AMPG touches.
 - Never delete hidden-service keys, I2P keys, or Reticulum identities without an explicit
   destructive command.

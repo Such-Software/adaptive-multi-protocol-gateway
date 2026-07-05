@@ -25,6 +25,7 @@ canonical_url = "https://wownero.org"
 
 [site.outputs]
 root = "/var/www/ampg/wownero"
+plan_root = "/var/lib/ampg/plans"
 
 [site.interactions]
 default_tier = "static"
@@ -43,6 +44,8 @@ daemon = "tor"
 daemon_policy = "auto"
 local_port = 18080
 onion_location = "auto"
+max_asset_bytes = 1048576
+script_policy = "strip"
 
 [site.protocols.i2p]
 enabled = false
@@ -50,6 +53,10 @@ renderer = "privacy-html"
 daemon = "i2pd"
 daemon_policy = "auto"
 local_port = 18081
+keys_file = "wownero-web.dat"
+tunnel_name = "wownero-web"
+max_asset_bytes = 1048576
+script_policy = "strip"
 
 [site.protocols.gemini]
 enabled = false
@@ -88,6 +95,8 @@ workflow.
 - remote fonts, analytics, and third-party embeds.
 - localStorage/sessionStorage assumptions.
 - non-local asset references unless explicitly allowed.
+- JavaScript files when `script_policy = "strip"`.
+- assets larger than `max_asset_bytes`.
 
 `gemtext` defaults:
 
@@ -162,6 +171,54 @@ max_tier = "forms"
 
 `max_tier` is a hard cap. If a route needs a higher tier than the protocol allows, AMPG
 omits it or renders a safe alternate page.
+
+## Protocol-only deployments
+
+Enabled protocols are independent. A config can omit clearnet entirely and publish only
+to I2P, Tor, Gemini, Reticulum, or any combination of supported targets.
+
+For an existing HTML site that should publish only to I2P:
+
+```toml
+[[site]]
+id = "example_i2p_only"
+domain = "example.org"
+
+[site.source]
+kind = "static-html"
+path = "../example.org"
+
+[site.outputs]
+root = "/var/www/ampg/example"
+plan_root = "/var/lib/ampg/plans"
+
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+local_port = 18081
+keys_file = "example-web.dat"
+tunnel_name = "example-web"
+max_asset_bytes = 524288
+script_policy = "strip"
+```
+
+This builds only the I2P output root and only the I2P/nginx plan snippets.
+
+## Plan artifacts
+
+`ampg plan` prints expected artifact paths. `ampg plan --write-artifacts` writes
+reviewable snippets under `site.outputs.plan_root`.
+
+Generated snippets are not installed by `plan`:
+
+- nginx server blocks for static HTTP roots.
+- Tor hidden-service snippets for loopback HTTP targets.
+- i2pd server tunnel snippets for I2P web publishing.
+
+I2P web tunnels should use a web-specific key file such as `wownero-web.dat`; AMPG does
+not reuse daemon RPC/P2P tunnel keys for web publishing.
 
 ## Reusable checklist
 

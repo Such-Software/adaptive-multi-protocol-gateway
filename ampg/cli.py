@@ -7,7 +7,7 @@ import sys
 from .build import build_gateway
 from .config import load_config
 from .docsgen import generate_docs
-from .plan import plan_gateway
+from .plan import plan_gateway, write_plan_artifacts
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -19,7 +19,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to gateway TOML config.",
     )
     subcommands = parser.add_subparsers(dest="command", required=True)
-    subcommands.add_parser("plan", help="Print a dry-run plan.")
+    plan_parser = subcommands.add_parser("plan", help="Print a dry-run plan.")
+    plan_parser.add_argument(
+        "--write-artifacts",
+        action="store_true",
+        help="Write generated config snippets to the configured plan root.",
+    )
     subcommands.add_parser("build", help="Build enabled protocol outputs.")
     docs_parser = subcommands.add_parser("docs", help="Generate or check generated docs.")
     docs_subcommands = docs_parser.add_subparsers(dest="docs_command", required=True)
@@ -37,7 +42,7 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_docs(args)
         config = load_config(args.config)
         if args.command == "plan":
-            return _cmd_plan(config)
+            return _cmd_plan(config, write_artifacts=args.write_artifacts)
         if args.command == "build":
             return _cmd_build(config)
     except Exception as exc:  # noqa: BLE001 - CLI should print concise failures.
@@ -46,8 +51,9 @@ def main(argv: list[str] | None = None) -> int:
     return 1
 
 
-def _cmd_plan(config) -> int:
+def _cmd_plan(config, *, write_artifacts: bool) -> int:
     for line in plan_gateway(config):
+        artifact_text = ",".join(str(path) for path in line.artifacts) if line.artifacts else "-"
         print(
             "AMPG_PLAN "
             f"site={line.site_id} "
@@ -56,8 +62,13 @@ def _cmd_plan(config) -> int:
             f"output={line.output_root} "
             f"daemon={line.daemon} "
             f"policy={line.daemon_policy} "
+            f"artifacts={artifact_text} "
             f"action=\"{line.action}\""
         )
+    if write_artifacts:
+        artifacts = write_plan_artifacts(config)
+        for artifact in artifacts:
+            print(f"AMPG_ARTIFACT path={artifact.path}")
     return 0
 
 

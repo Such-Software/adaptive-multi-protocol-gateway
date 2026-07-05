@@ -107,7 +107,7 @@ enabled = true
 daemon_policy = "auto"
 
 [site.protocols.i2p]
-enabled = false
+enabled = true
 daemon_policy = "auto"
 
 [site.protocols.gemini]
@@ -133,6 +133,8 @@ daemon_policy = "auto"
 ```sh
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml build
+python3 -m ampg --config examples/i2p-only.gateway.toml plan
+python3 -m ampg --config examples/i2p-only.gateway.toml build
 ```
 
 ## Reusable checklist

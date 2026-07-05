@@ -33,6 +33,7 @@ class SourceConfig:
 @dataclass(frozen=True)
 class OutputConfig:
     root: Path
+    plan_root: Path
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,7 @@ def _parse_site(raw_site: dict[str, Any], base_dir: Path) -> SiteConfig:
 
     source_path = _resolve_path(base_dir, _required_str(source, "path"))
     output_root = _resolve_path(base_dir, _required_str(outputs, "root"))
+    plan_root = _resolve_path(base_dir, str(outputs.get("plan_root", "../dist/ampg-plan")))
 
     parsed_protocols = {
         name: _parse_protocol(name, raw_protocol)
@@ -97,7 +99,7 @@ def _parse_site(raw_site: dict[str, Any], base_dir: Path) -> SiteConfig:
             path=source_path,
             canonical_url=source.get("canonical_url"),
         ),
-        outputs=OutputConfig(root=output_root),
+        outputs=OutputConfig(root=output_root, plan_root=plan_root),
         protocols=parsed_protocols,
     )
 

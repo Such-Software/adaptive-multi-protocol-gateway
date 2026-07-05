@@ -40,6 +40,7 @@ CONFIG_FIELDS = (
     ConfigField("site.source", "path", "path", True, "", "Source tree path."),
     ConfigField("site.source", "canonical_url", "url", False, "", "Canonical clearnet URL."),
     ConfigField("site.outputs", "root", "path", True, "", "Generated output root."),
+    ConfigField("site.outputs", "plan_root", "path", False, "../dist/ampg-plan", "Generated plan artifact root."),
     ConfigField(
         "site.interactions",
         "default_tier",
@@ -87,6 +88,22 @@ CONFIG_FIELDS = (
         False,
         "protocol default",
         "Whether AMPG adopts, manages, or only renders config.",
+    ),
+    ConfigField(
+        "site.protocols.<name>",
+        "max_asset_bytes",
+        "integer",
+        False,
+        "1048576",
+        "Maximum asset size copied by privacy-html render targets.",
+    ),
+    ConfigField(
+        "site.protocols.<name>",
+        "script_policy",
+        "enum",
+        False,
+        "strip",
+        "Script handling policy for privacy-html render targets.",
     ),
 )
 
