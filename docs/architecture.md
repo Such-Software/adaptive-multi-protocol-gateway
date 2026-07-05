@@ -1,0 +1,99 @@
+# Architecture
+
+> Status: draft | Updated 2026-07-05 | Applies to: AMPG core
+
+AMPG is a compiler plus an ingress manager. The compiler turns one site into a
+protocol-neutral content graph, then renders protocol-specific outputs. The ingress
+manager connects those outputs to daemons selected by the operator.
+
+## System shape
+
+```text
+source site
+  -> source adapter
+  -> content graph
+  -> render profiles
+  -> output roots
+  -> daemon adapters
+  -> clearnet / Tor / I2P / Gemini / Reticulum
+```
+
+## Source adapters
+
+`static-html`
+: Reads an existing static site tree. AMPG preserves the clearnet version, parses HTML
+  into a content graph, rewrites local links, and extracts text for Gemini and Micron
+  renderers. This is the default path for the Wownero pilot.
+
+`markdown`
+: Reads Markdown plus frontmatter. This is the cleanest authoring model for new sites.
+
+`ssg-output`
+: Reads the built output of another static site generator. AMPG does not own that
+  generator; it adapts the generated files.
+
+## Content graph
+
+The internal graph is intentionally small:
+
+- `Site`: domain, aliases, selected protocols, source metadata.
+- `Page`: route, title, language, headings, body blocks, links, assets.
+- `Asset`: path, media type, size, dimensions, privacy policy.
+- `Link`: target, relation, transport compatibility.
+
+Renderers should not scrape each other. They read the content graph and write their
+own output.
+
+## Render profiles
+
+`clearnet`
+: High-fidelity output. Static HTML sources are copied by default. Markdown sources render
+  to full HTML and may include CSS, JavaScript, web fonts, and rich media.
+
+`privacy-html`
+: Tor and I2P default. Removes JavaScript, tracking pixels, external fonts, third-party
+  embeds, remote assets, and stateful browser storage assumptions. CSS is local and small.
+
+`gemtext`
+: Gemini output. Converts headings, paragraphs, lists, code blocks, and links to `.gmi`.
+  Inline links become block links near the paragraph by default.
+
+`micron`
+: Reticulum/Nomad output. Produces terminal-oriented Micron markup with small pages,
+  plain links, and no heavy media by default.
+
+## Daemon adapters
+
+Daemon adapters provide a common interface:
+
+- `detect`: find existing services, ports, config files, and health endpoints.
+- `plan`: decide whether to adopt, manage, or fail.
+- `render_config`: produce config snippets and complete managed configs.
+- `apply`: write approved managed config and start or reload services.
+- `health`: verify the selected transport can serve the generated output.
+
+Adapters must be conservative. They do not modify non-AMPG config without showing a
+plan first, and managed config lives under AMPG-owned state directories.
+
+## Interaction boundary
+
+v1 is static-first, but the architecture reserves a path for interactive applications.
+Interactivity is declared per route group:
+
+- `static`: files only.
+- `forms`: server-rendered actions and full-page responses.
+- `sessions`: authenticated flows with strict session policy.
+- `realtime`: rich browser/admin interfaces; HTTP transports only.
+- `internal`: workers, webhooks, private admin APIs; never published automatically.
+
+Dynamic support comes through application adapters that expose action metadata. HTTP
+transports can use normal forms or reverse proxies. Gemini uses status-code input prompts
+for simple actions. Reticulum uses page scripts or Micron action links. The core compiler
+must remain useful when no application adapter is configured.
+
+## Reusable checklist
+
+- [ ] Add a source adapter only when it can produce the content graph.
+- [ ] Add a renderer only when it reads the graph directly.
+- [ ] Add a daemon adapter only with `detect`, `plan`, `render_config`, `apply`, and `health`.
+- [ ] Keep privacy defaults stricter than clearnet defaults.

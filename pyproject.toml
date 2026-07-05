@@ -1,0 +1,12 @@
+[project]
+name = "adaptive-multi-protocol-gateway"
+version = "0.1.0"
+description = "Static-first multi-protocol site compiler and ingress planner."
+requires-python = ">=3.11"
+license = "Apache-2.0"
+
+[project.scripts]
+ampg = "ampg.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
