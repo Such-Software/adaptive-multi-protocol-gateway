@@ -50,11 +50,12 @@ max_asset_bytes = 1048576
 script_policy = "strip"
 
 [site.protocols.gemini]
-enabled = false
+enabled = true
 renderer = "gemtext"
 daemon = "agate"
 daemon_policy = "auto"
 port = 1965
+max_asset_bytes = 1048576
 
 [site.protocols.reticulum]
 enabled = false

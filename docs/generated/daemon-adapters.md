@@ -34,3 +34,13 @@ Notes:
 Notes:
 - Web tunnels should use web-specific key files.
 - Existing RPC/P2P tunnel keys are not reused for web publishing.
+
+## agate
+
+- Protocols: gemini
+- Default policy: `auto`
+- Generated artifacts: Agate plan values
+
+Notes:
+- Gemini serves generated Gemtext output directly.
+- Certificate and key paths are plan values until install/apply support exists.

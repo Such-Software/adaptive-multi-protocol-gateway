@@ -59,11 +59,12 @@ max_asset_bytes = 1048576
 script_policy = "strip"
 
 [site.protocols.gemini]
-enabled = false
+enabled = true
 renderer = "gemtext"
 daemon = "agate"
 daemon_policy = "auto"
 port = 1965
+max_asset_bytes = 1048576
 
 [site.protocols.reticulum]
 enabled = false
@@ -103,6 +104,8 @@ workflow.
 - one `.gmi` page per HTML or Markdown page.
 - inline links emitted after the paragraph that referenced them.
 - images and PDFs emitted as links with file size metadata when known.
+- local `.html` links rewritten to `.gmi`.
+- JavaScript, CSS, source maps, and oversized assets skipped.
 
 `micron` defaults:
 
@@ -216,6 +219,7 @@ Generated snippets are not installed by `plan`:
 - nginx server blocks for static HTTP roots.
 - Tor hidden-service snippets for loopback HTTP targets.
 - i2pd server tunnel snippets for I2P web publishing.
+- Agate plan values for Gemini publishing.
 
 I2P web tunnels should use a web-specific key file such as `wownero-web.dat`; AMPG does
 not reuse daemon RPC/P2P tunnel keys for web publishing.

@@ -65,7 +65,7 @@ and include backup warnings in the plan.
 Default daemon: Agate.
 
 Gemini is static-friendly and can be managed safely. AMPG generates `.gmi` output,
-certificates when requested, and an Agate config pointing at the Gemini output root.
+certificates when requested, and Agate plan values pointing at the Gemini output root.
 
 ### Reticulum
 

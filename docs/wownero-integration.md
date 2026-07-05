@@ -122,7 +122,7 @@ daemon_policy = "auto"
 ## Acceptance Criteria
 
 - `ampg plan` identifies the Wownero source tree and selected protocols.
-- `ampg build` creates clearnet and Tor output without requiring Markdown.
+- `ampg build` creates clearnet, Tor, I2P, and Gemini output without requiring Markdown.
 - Tor output contains no `<script>` tags or inline event handlers.
 - Generated Gemini output has readable headings, paragraphs, and links.
 - Generated Micron output fits terminal-first browsing.

@@ -132,6 +132,18 @@ RENDER_PROFILES = (
             "Removes remote src/poster/link asset references.",
         ),
     ),
+    RenderProfile(
+        name="gemtext",
+        summary="Text-first Gemini output from semantic HTML.",
+        output="Gemtext plus linked/downloadable assets",
+        defaults=(
+            "Converts HTML headings to Gemtext heading lines.",
+            "Converts paragraphs and list items to flowing text.",
+            "Converts anchors and images to Gemtext link lines.",
+            "Rewrites local .html links to .gmi links.",
+            "Skips JavaScript, CSS, source maps, and oversized assets.",
+        ),
+    ),
 )
 
 
@@ -164,6 +176,16 @@ DAEMON_ADAPTERS = (
         notes=(
             "Web tunnels should use web-specific key files.",
             "Existing RPC/P2P tunnel keys are not reused for web publishing.",
+        ),
+    ),
+    DaemonAdapter(
+        daemon=DEFAULT_DAEMONS["gemini"],
+        protocols=("gemini",),
+        default_policy=DEFAULT_POLICIES["gemini"],
+        generated_artifacts=("Agate plan values",),
+        notes=(
+            "Gemini serves generated Gemtext output directly.",
+            "Certificate and key paths are plan values until install/apply support exists.",
         ),
     ),
 )

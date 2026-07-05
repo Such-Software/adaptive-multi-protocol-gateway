@@ -29,3 +29,16 @@ Defaults:
 - Skips JavaScript and source-map files.
 - Skips oversized assets above max_asset_bytes.
 - Removes remote src/poster/link asset references.
+
+## gemtext
+
+Text-first Gemini output from semantic HTML.
+
+- Output: Gemtext plus linked/downloadable assets
+
+Defaults:
+- Converts HTML headings to Gemtext heading lines.
+- Converts paragraphs and list items to flowing text.
+- Converts anchors and images to Gemtext link lines.
+- Rewrites local .html links to .gmi links.
+- Skips JavaScript, CSS, source maps, and oversized assets.

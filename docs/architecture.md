@@ -32,6 +32,17 @@ source site
 : Reads the built output of another static site generator. AMPG does not own that
   generator; it adapts the generated files.
 
+## Source quality
+
+AMPG gets better results from semantic, accessible source documents. Authors should use
+one `h1`, ordered heading levels, meaningful link text, alt text for images, and ordinary
+flowing document structure before decorative layout. This keeps clearnet accessible and
+gives constrained renderers a clean outline for Gemtext, Micron, and other text-first
+targets.
+
+`ampg audit` reports source-quality warnings. The audit is advisory by default and can be
+made strict in CI with `--fail-on-warn`.
+
 ## Content graph
 
 The internal graph is intentionally small:

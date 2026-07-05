@@ -97,6 +97,7 @@ The current implementation is dependency-free Python:
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml build
+python3 -m ampg --config examples/wownero.gateway.toml audit
 python3 -m ampg --config examples/i2p-only.gateway.toml build
 python3 -m ampg docs generate
 python3 -m unittest discover -s tests

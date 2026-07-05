@@ -4,6 +4,7 @@ import argparse
 from pathlib import Path
 import sys
 
+from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
 from .docsgen import generate_docs
@@ -26,6 +27,12 @@ def main(argv: list[str] | None = None) -> int:
         help="Write generated config snippets to the configured plan root.",
     )
     subcommands.add_parser("build", help="Build enabled protocol outputs.")
+    audit_parser = subcommands.add_parser("audit", help="Audit source HTML quality.")
+    audit_parser.add_argument(
+        "--fail-on-warn",
+        action="store_true",
+        help="Exit non-zero when warnings are found.",
+    )
     docs_parser = subcommands.add_parser("docs", help="Generate or check generated docs.")
     docs_subcommands = docs_parser.add_subparsers(dest="docs_command", required=True)
     docs_generate = docs_subcommands.add_parser("generate", help="Generate docs from code.")
@@ -45,6 +52,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_plan(config, write_artifacts=args.write_artifacts)
         if args.command == "build":
             return _cmd_build(config)
+        if args.command == "audit":
+            return _cmd_audit(config, fail_on_warn=args.fail_on_warn)
     except Exception as exc:  # noqa: BLE001 - CLI should print concise failures.
         print(f"AMPG status=error message={exc}", file=sys.stderr)
         return 1
@@ -93,6 +102,23 @@ def _cmd_build(config) -> int:
             f" skipped={result.files_skipped}"
             f"{extra}"
         )
+    return 0
+
+
+def _cmd_audit(config, *, fail_on_warn: bool) -> int:
+    issues = audit_gateway(config)
+    for issue in issues:
+        print(
+            "AMPG_AUDIT "
+            f"site={issue.site_id} "
+            f"severity={issue.severity} "
+            f"code={issue.code} "
+            f"path={issue.path} "
+            f"message=\"{issue.message}\""
+        )
+    print(f"AMPG_AUDIT_SUMMARY issues={len(issues)}")
+    if issues and fail_on_warn:
+        return 1
     return 0
 
 
