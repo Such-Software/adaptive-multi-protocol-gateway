@@ -53,11 +53,12 @@ ampg init site wownero \
 ampg enable wownero tor gemini i2p reticulum
 ampg plan
 ampg build
-ampg apply
+ampg apply --dry-run
 ```
 
 `plan` prints rendered output paths, daemon decisions, port bindings, config diffs, and
-operator actions. `apply` performs only the approved changes.
+operator actions. The current `apply --dry-run` prints the activation sequence without
+changing services. Live apply support will perform only approved changes.
 
 ## Interaction tiers
 
@@ -103,6 +104,8 @@ python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml status
 python3 -m ampg --config examples/wownero.gateway.toml doctor
+python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run
+python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
@@ -132,4 +135,5 @@ passed. They are reviewable snippets, not installed daemon config.
 - [ ] Run `ampg status` or `ampg doctor`; review daemon ownership decisions.
 - [ ] Run `ampg build`; inspect generated variants.
 - [ ] Run AMPB fixture checks against generated manifests.
-- [ ] Run `ampg apply`; publish through adopted or managed daemons.
+- [ ] Run `ampg apply --dry-run`; review the activation sequence.
+- [ ] Run live apply after the activation sequence is clean.

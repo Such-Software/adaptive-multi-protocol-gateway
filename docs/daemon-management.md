@@ -39,6 +39,8 @@ config artifacts.
 ```sh
 python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
+python3 -m ampg --config gateway.toml apply --dry-run
+python3 -m ampg --config gateway.toml apply --dry-run --write-artifacts
 python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
 
@@ -48,6 +50,12 @@ adapter, installed/running daemon probe, action, and policy result.
 `doctor` checks source paths, renderer support, route exposure, output readiness, and
 daemon policy feasibility. It exits nonzero only for errors; missing build output is a
 warning so operators can run it before the first build.
+
+`apply --dry-run` prints the activation sequence for each enabled protocol: generated
+output readiness, config artifacts to review, daemon action, and post-apply health
+checks. It exits nonzero when any step is blocked. `--write-artifacts` writes reviewable
+config snippets to the configured plan root but still does not install or reload
+services.
 
 Platform providers describe how AMPG may supervise managed daemons:
 

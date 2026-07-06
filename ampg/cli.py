@@ -4,6 +4,12 @@ import argparse
 from pathlib import Path
 import sys
 
+from .activation import (
+    ActivationStep,
+    activation_steps,
+    blocked_steps,
+    write_activation_artifacts,
+)
 from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
@@ -50,6 +56,25 @@ def main(argv: list[str] | None = None) -> int:
         help="Check source, renderer, route, and daemon readiness.",
     )
     doctor_parser.add_argument(
+        "--platform",
+        choices=PLATFORM_NAMES,
+        help="Override platform detection for dry-run checks.",
+    )
+    apply_parser = subcommands.add_parser(
+        "apply",
+        help="Show or run the transport activation sequence.",
+    )
+    apply_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the activation sequence without changing services.",
+    )
+    apply_parser.add_argument(
+        "--write-artifacts",
+        action="store_true",
+        help="Write generated config snippets to the configured plan root.",
+    )
+    apply_parser.add_argument(
         "--platform",
         choices=PLATFORM_NAMES,
         help="Override platform detection for dry-run checks.",
@@ -132,6 +157,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_status(config, args)
         if args.command == "doctor":
             return _cmd_doctor(config, args)
+        if args.command == "apply":
+            return _cmd_apply(config, args)
         if args.command == "build":
             return _cmd_build(config)
         if args.command == "manifest":
@@ -146,6 +173,36 @@ def main(argv: list[str] | None = None) -> int:
         print(f"AMPG status=error message={exc}", file=sys.stderr)
         return 1
     return 1
+
+
+def _cmd_apply(config, args) -> int:
+    if not args.dry_run:
+        print(
+            'AMPG_APPLY status=error message="live apply is not implemented; rerun with --dry-run"',
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.write_artifacts:
+        for path in write_activation_artifacts(config):
+            print(f"AMPG_APPLY_ARTIFACT path={path} status=written")
+
+    steps = activation_steps(config, platform_provider=_platform_override(args))
+    for step in steps:
+        _print_activation_step(step)
+
+    blocked = blocked_steps(steps)
+    print(
+        "AMPG_APPLY_SUMMARY "
+        "mode=dry-run "
+        f"sites={len(config.sites)} "
+        f"steps={len(steps)} "
+        f"ready={sum(1 for step in steps if step.status == 'ready')} "
+        f"review={sum(1 for step in steps if step.status == 'review')} "
+        f"planned={sum(1 for step in steps if step.status == 'planned')} "
+        f"blocked={len(blocked)}"
+    )
+    return 1 if blocked else 0
 
 
 def _cmd_status(config, args) -> int:
@@ -233,6 +290,19 @@ def _cmd_build(config) -> int:
             f"fixtures={manifest.fixture_count}"
         )
     return 0
+
+
+def _print_activation_step(step: ActivationStep) -> None:
+    print(
+        "AMPG_APPLY_STEP "
+        f"site={step.site_id} "
+        f"protocol={step.protocol} "
+        f"stage={step.stage} "
+        f"action={step.action} "
+        f"target={step.target} "
+        f"status={step.status} "
+        f"message=\"{_quote(step.message)}\""
+    )
 
 
 def _print_transport_status(status: TransportStatus) -> None:

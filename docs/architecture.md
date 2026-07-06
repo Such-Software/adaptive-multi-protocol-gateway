@@ -107,6 +107,16 @@ python3 -m ampg --config gateway.toml doctor --platform android-termux
 This keeps the same gateway config portable across a VPS, laptop, old phone, or manual
 render-only environment while making daemon ownership decisions explicit.
 
+## Activation plan
+
+`ampg apply --dry-run` turns daemon status and generated config artifacts into an ordered
+activation sequence. Each enabled protocol gets output, artifact, daemon, and health
+steps. Blocked steps stop the command before any live apply path can touch services.
+
+The dry-run command is intentionally stricter than `doctor`: missing generated output is
+blocked during activation, because AMPG must not point a transport at an unbuilt output
+root.
+
 ## Interaction boundary
 
 v1 is static-first, but the architecture reserves a path for interactive applications.
