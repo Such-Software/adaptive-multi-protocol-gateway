@@ -247,6 +247,9 @@ daemon_policy = "auto"
         self.assertIn("kind=loopback-config", output_text)
         self.assertIn(str(root / ".ampg/state/example/i2p/i2pd-tunnels.conf"), output_text)
         self.assertIn(str(root / ".ampg/state/example/i2p/nginx-loopback.conf"), output_text)
+        self.assertIn("AMPG_APPLY_SUPERVISOR site=example protocol=i2p", output_text)
+        self.assertIn("service=ampg-example-i2p-i2pd", output_text)
+        self.assertIn("service=ampg-example-i2p-nginx-loopback", output_text)
 
 
 if __name__ == "__main__":

@@ -86,8 +86,8 @@ Missing output blocks the plan, while placeholder transport addresses are review
 output readiness, config artifacts to review, daemon action, address capture or reuse,
 and post-apply health checks. It exits nonzero when any step is blocked. `--write-artifacts`
 writes reviewable config snippets to the configured plan root, then prints the planned
-copies from those reviewed artifacts into `gateway.state_dir`. It still does not install
-or reload services.
+copies from those reviewed artifacts into `gateway.state_dir` and the supervisor services
+that would be registered or started. It still does not install or reload services.
 
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet
 `adopt` failure will block a full activation run, but it will not block

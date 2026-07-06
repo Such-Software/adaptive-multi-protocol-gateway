@@ -11,6 +11,7 @@ from ampg.install_plan import (
     install_artifacts,
     install_plan,
     install_state_copies,
+    install_supervisor_actions,
     write_install_artifacts,
 )
 from ampg.platforms import platform_by_name
@@ -303,6 +304,47 @@ daemon_policy = "auto"
             by_kind["loopback-config"].target,
         )
         self.assertIn("cp", by_kind["daemon-config"].command)
+
+    def test_supervisor_action_plan_uses_reviewed_supervisor_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config = load_config(
+                _write_config(
+                    root,
+                    """
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+""",
+                )
+            )
+            write_install_artifacts(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+
+            actions = install_supervisor_actions(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+
+        by_kind = {action.kind: action for action in actions}
+        self.assertEqual({"daemon-supervisor", "loopback-supervisor"}, set(by_kind))
+        self.assertEqual("planned", by_kind["daemon-supervisor"].status)
+        self.assertEqual("ampg-example-i2p-i2pd", by_kind["daemon-supervisor"].service)
+        self.assertEqual("sv-enable ampg-example-i2p-i2pd", by_kind["daemon-supervisor"].command)
+        self.assertEqual(
+            root / "plan/example/i2p/managed/android-termux/i2pd.run",
+            by_kind["daemon-supervisor"].source,
+        )
+        self.assertEqual(
+            "sv-enable ampg-example-i2p-nginx-loopback",
+            by_kind["loopback-supervisor"].command,
+        )
 
     def test_install_plan_cli_can_write_managed_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:

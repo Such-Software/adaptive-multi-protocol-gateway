@@ -151,7 +151,8 @@ config first, then captured addresses, then deterministic placeholders.
 
 `apply --dry-run` includes an address stage. Placeholder addresses remain review items
 until the generated transport identity is captured or configured. With `--write-artifacts`,
-apply also prints the reviewed config artifacts that would be copied into managed state.
+apply also prints reviewed config artifacts that would be copied into managed state and
+the supervisor services that would be registered or started.
 
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without

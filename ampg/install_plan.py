@@ -47,6 +47,19 @@ class InstallStateCopy:
     message: str
 
 
+@dataclass(frozen=True)
+class InstallSupervisorAction:
+    site_id: str
+    protocol: str
+    platform: str
+    kind: str
+    service: str
+    source: Path
+    status: str
+    command: str
+    message: str
+
+
 def install_plan(
     config: GatewayConfig,
     *,
@@ -141,6 +154,31 @@ def install_state_copies(
             status = status_by_protocol[(site.id, protocol.name)]
             copies.extend(_protocol_state_copies(config, site, protocol, provider, status))
     return copies
+
+
+def install_supervisor_actions(
+    config: GatewayConfig,
+    *,
+    platform_provider: PlatformProvider | None = None,
+    daemon_probe: DaemonProbeFunc | None = None,
+) -> list[InstallSupervisorAction]:
+    provider = platform_provider or detect_platform()
+    statuses = gateway_status(
+        config,
+        platform_provider=provider,
+        daemon_probe=daemon_probe,
+    )
+    status_by_protocol = {
+        (status.site_id, status.protocol): status for status in statuses
+    }
+    actions: list[InstallSupervisorAction] = []
+    for site in config.sites:
+        for protocol in site.protocols.values():
+            if not protocol.enabled:
+                continue
+            status = status_by_protocol[(site.id, protocol.name)]
+            actions.extend(_protocol_supervisor_actions(config, site, protocol, provider, status))
+    return actions
 
 
 def _protocol_install_steps(
@@ -351,6 +389,51 @@ def _protocol_state_copies(
     return copies
 
 
+def _protocol_supervisor_actions(
+    config: GatewayConfig,
+    site: SiteConfig,
+    protocol: ProtocolConfig,
+    provider: PlatformProvider,
+    status: TransportStatus,
+) -> list[InstallSupervisorAction]:
+    actions: list[InstallSupervisorAction] = []
+    for artifact in _protocol_install_artifacts(config, site, protocol, provider, status):
+        service_suffix = _supervisor_service_suffix(protocol, artifact)
+        if service_suffix is None:
+            continue
+        service = _artifact_service_name(site, protocol, service_suffix)
+        source_exists = artifact.path.exists()
+        actions.append(
+            InstallSupervisorAction(
+                site_id=site.id,
+                protocol=protocol.name,
+                platform=provider.name,
+                kind=artifact.kind,
+                service=service,
+                source=artifact.path,
+                status="planned" if source_exists else "review",
+                command=_supervisor_start_command(provider, service),
+                message=(
+                    "register and start reviewed supervisor after state config is copied"
+                    if source_exists
+                    else "supervisor artifact is missing; rerun with --write-artifacts first"
+                ),
+            )
+        )
+    return actions
+
+
+def _supervisor_service_suffix(
+    protocol: ProtocolConfig,
+    artifact: InstallArtifact,
+) -> str | None:
+    if artifact.kind == "daemon-supervisor":
+        return protocol.daemon
+    if artifact.kind == "loopback-supervisor":
+        return "nginx-loopback"
+    return None
+
+
 def _state_copy_target(
     config: GatewayConfig,
     site: SiteConfig,
@@ -433,6 +516,18 @@ def _supervisor_command(
     protocol: ProtocolConfig,
 ) -> str:
     service = _service_name(site, protocol)
+    if provider.name == "android-termux":
+        return f"sv-enable {service}"
+    if provider.name == "linux-systemd":
+        return f"sudo systemctl enable --now {service}.service"
+    if provider.name == "macos-launchd":
+        return f"launchctl bootstrap gui/$UID ~/Library/LaunchAgents/org.ampg.{service}.plist"
+    if provider.name == "linux-user":
+        return f"run {service} under the user supervisor"
+    return "-"
+
+
+def _supervisor_start_command(provider: PlatformProvider, service: str) -> str:
     if provider.name == "android-termux":
         return f"sv-enable {service}"
     if provider.name == "linux-systemd":

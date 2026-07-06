@@ -26,8 +26,10 @@ from .health import HealthCheck, blocked_health_checks, health_plan
 from .install_plan import (
     InstallStateCopy,
     InstallStep,
+    InstallSupervisorAction,
     blocked_install_steps,
     install_state_copies,
+    install_supervisor_actions,
     install_plan,
     write_install_artifacts,
 )
@@ -305,6 +307,8 @@ def _cmd_apply(config, args) -> int:
             print(f"AMPG_APPLY_ARTIFACT path={path} status=written")
         for copy in install_state_copies(config, platform_provider=platform_provider):
             _print_install_state_copy(copy)
+        for action in install_supervisor_actions(config, platform_provider=platform_provider):
+            _print_supervisor_action(action)
 
     steps = activation_steps(config, platform_provider=platform_provider)
     for step in steps:
@@ -540,6 +544,21 @@ def _print_install_state_copy(copy: InstallStateCopy) -> None:
         f"status={copy.status} "
         f"command=\"{_quote(copy.command)}\" "
         f"message=\"{_quote(copy.message)}\""
+    )
+
+
+def _print_supervisor_action(action: InstallSupervisorAction) -> None:
+    print(
+        "AMPG_APPLY_SUPERVISOR "
+        f"site={action.site_id} "
+        f"protocol={action.protocol} "
+        f"platform={action.platform} "
+        f"kind={action.kind} "
+        f"service={action.service} "
+        f"source=\"{_quote(str(action.source))}\" "
+        f"status={action.status} "
+        f"command=\"{_quote(action.command)}\" "
+        f"message=\"{_quote(action.message)}\""
     )
 
 

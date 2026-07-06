@@ -113,8 +113,8 @@ render-only environment while making daemon ownership decisions explicit.
 activation sequence. Each enabled protocol gets output, artifact, daemon, and health
 steps, plus an address step when AMPG must capture or confirm a generated transport
 identity. With `--write-artifacts`, it also prints planned copies from reviewed artifacts
-into managed state. Blocked steps stop the command before any live apply path can touch
-services.
+into managed state and planned supervisor start/reload actions. Blocked steps stop the
+command before any live apply path can touch services.
 
 The dry-run command is intentionally stricter than `doctor`: missing generated output is
 blocked during activation, because AMPG must not point a transport at an unbuilt output
