@@ -4,6 +4,12 @@ from dataclasses import dataclass
 from pathlib import Path
 import shlex
 
+from .approvals import (
+    ApprovalInput,
+    ApprovalRegistry,
+    approval_check,
+    load_approval_registry,
+)
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
 from .platforms import PlatformProvider, detect_platform
 from .state_contract import daemon_config_path, protocol_state_dir
@@ -146,13 +152,23 @@ def install_state_copies(
     status_by_protocol = {
         (status.site_id, status.protocol): status for status in statuses
     }
+    approvals = load_approval_registry(config)
     copies: list[InstallStateCopy] = []
     for site in config.sites:
         for protocol in site.protocols.values():
             if not protocol.enabled:
                 continue
             status = status_by_protocol[(site.id, protocol.name)]
-            copies.extend(_protocol_state_copies(config, site, protocol, provider, status))
+            copies.extend(
+                _protocol_state_copies(
+                    config,
+                    site,
+                    protocol,
+                    provider,
+                    status,
+                    approvals=approvals,
+                )
+            )
     return copies
 
 
@@ -171,13 +187,23 @@ def install_supervisor_actions(
     status_by_protocol = {
         (status.site_id, status.protocol): status for status in statuses
     }
+    approvals = load_approval_registry(config)
     actions: list[InstallSupervisorAction] = []
     for site in config.sites:
         for protocol in site.protocols.values():
             if not protocol.enabled:
                 continue
             status = status_by_protocol[(site.id, protocol.name)]
-            actions.extend(_protocol_supervisor_actions(config, site, protocol, provider, status))
+            actions.extend(
+                _protocol_supervisor_actions(
+                    config,
+                    site,
+                    protocol,
+                    provider,
+                    status,
+                    approvals=approvals,
+                )
+            )
     return actions
 
 
@@ -362,13 +388,14 @@ def _protocol_state_copies(
     protocol: ProtocolConfig,
     provider: PlatformProvider,
     status: TransportStatus,
+    approvals: ApprovalRegistry,
 ) -> list[InstallStateCopy]:
     copies: list[InstallStateCopy] = []
     for artifact in _protocol_install_artifacts(config, site, protocol, provider, status):
         target = _state_copy_target(config, site, protocol, artifact)
         if target is None:
             continue
-        source_exists = artifact.path.exists()
+        approval = approval_check(_approval_input(artifact), approvals)
         copies.append(
             InstallStateCopy(
                 site_id=site.id,
@@ -377,12 +404,12 @@ def _protocol_state_copies(
                 kind=artifact.kind,
                 source=artifact.path,
                 target=target,
-                status="planned" if source_exists else "review",
+                status="planned" if approval.status == "approved" else "review",
                 command=_copy_command(provider, artifact.path, target),
                 message=(
-                    "copy reviewed artifact into managed state before daemon start"
-                    if source_exists
-                    else "review artifact is missing; rerun with --write-artifacts first"
+                    "copy approved artifact into managed state before daemon start"
+                    if approval.status == "approved"
+                    else approval.message
                 ),
             )
         )
@@ -395,6 +422,7 @@ def _protocol_supervisor_actions(
     protocol: ProtocolConfig,
     provider: PlatformProvider,
     status: TransportStatus,
+    approvals: ApprovalRegistry,
 ) -> list[InstallSupervisorAction]:
     actions: list[InstallSupervisorAction] = []
     for artifact in _protocol_install_artifacts(config, site, protocol, provider, status):
@@ -402,7 +430,7 @@ def _protocol_supervisor_actions(
         if service_suffix is None:
             continue
         service = _artifact_service_name(site, protocol, service_suffix)
-        source_exists = artifact.path.exists()
+        approval = approval_check(_approval_input(artifact), approvals)
         actions.append(
             InstallSupervisorAction(
                 site_id=site.id,
@@ -411,12 +439,12 @@ def _protocol_supervisor_actions(
                 kind=artifact.kind,
                 service=service,
                 source=artifact.path,
-                status="planned" if source_exists else "review",
+                status="planned" if approval.status == "approved" else "review",
                 command=_supervisor_start_command(provider, service),
                 message=(
-                    "register and start reviewed supervisor after state config is copied"
-                    if source_exists
-                    else "supervisor artifact is missing; rerun with --write-artifacts first"
+                    "register and start approved supervisor after state config is copied"
+                    if approval.status == "approved"
+                    else approval.message
                 ),
             )
         )
@@ -809,6 +837,17 @@ def _artifact(
         kind=kind,
         path=_artifact_dir(site, protocol, provider) / filename,
         content=content,
+    )
+
+
+def _approval_input(artifact: InstallArtifact) -> ApprovalInput:
+    return ApprovalInput(
+        site_id=artifact.site_id,
+        protocol=artifact.protocol,
+        platform=artifact.platform,
+        kind=artifact.kind,
+        path=artifact.path,
+        content=artifact.content,
     )
 
 

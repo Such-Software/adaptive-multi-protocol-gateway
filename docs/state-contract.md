@@ -4,7 +4,8 @@
 
 AMPG keeps managed daemon state under `gateway.state_dir`. The state contract describes
 which files AMPG owns, which files daemons or adapters write, which paths may contain
-private keys, and which public address files `addresses capture` reads.
+private keys, which artifact approvals AMPG records, and which public address files
+`addresses capture` reads.
 
 ## Command
 
@@ -21,6 +22,9 @@ Each `AMPG_STATE` row includes:
 - `required`: whether a managed deployment expects the path.
 - `sensitive`: whether the path may contain private identity material.
 - `path`: resolved path under `gateway.state_dir` unless an adapter documents otherwise.
+
+AMPG also stores `approvals.json` under `gateway.state_dir`. It records reviewed
+generated-artifact digests and contains no private daemon identity keys.
 
 ## Address Capture
 
@@ -39,8 +43,8 @@ Current managed defaults:
 
 AMPG must never delete sensitive contract paths without an explicit destructive command.
 `apply --dry-run --write-artifacts` prints `AMPG_APPLY_STATE_COPY` rows that show which
-reviewed artifacts would be copied into managed state and `AMPG_APPLY_SUPERVISOR` rows
+approved artifacts would be copied into managed state and `AMPG_APPLY_SUPERVISOR` rows
 for the services that would be registered or started. The accompanying
 `AMPG_APPLY_PREFLIGHT` verdict includes those rows so live apply can refuse mutation when
-state or supervisor inputs still need review. Live apply should perform reviewed copies,
+state or supervisor inputs still need review. Live apply should perform approved copies,
 start daemons, capture public addresses, and then run published health checks.

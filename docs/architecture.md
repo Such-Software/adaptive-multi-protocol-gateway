@@ -112,10 +112,11 @@ render-only environment while making daemon ownership decisions explicit.
 `ampg apply --dry-run` turns daemon status and generated config artifacts into an ordered
 activation sequence. Each enabled protocol gets output, artifact, daemon, and health
 steps, plus an address step when AMPG must capture or confirm a generated transport
-identity. With `--write-artifacts`, it also prints planned copies from reviewed artifacts
-into managed state and planned supervisor start/reload actions. The command emits an
+identity. With `--write-artifacts`, it also prints copies from approved artifacts into
+managed state and planned supervisor start/reload actions. The command emits an
 `AMPG_APPLY_PREFLIGHT` verdict across activation, state-copy, and supervisor rows.
-Blocked preflight items stop the command before any live apply path can touch services.
+Blocked or unapproved preflight items stop mutation before any live apply path can touch
+services.
 
 The dry-run command is intentionally stricter than `doctor`: missing generated output is
 blocked during activation, because AMPG must not point a transport at an unbuilt output
@@ -130,7 +131,9 @@ future live apply support.
 
 With `--write-artifacts`, install-plan writes managed config and supervisor files under
 the configured `plan_root`; those files are review artifacts, not installed service
-state. Generated managed-daemon configs point runtime state at `gateway.state_dir`.
+state. `ampg approvals approve` records reviewed artifact digests under
+`gateway.state_dir`. Generated managed-daemon configs point runtime state at
+`gateway.state_dir`.
 
 Tor and I2P HTTP publishing include the transport daemon and the loopback web-serving
 layer in the install plan, because the hidden service or tunnel must have a local HTTP

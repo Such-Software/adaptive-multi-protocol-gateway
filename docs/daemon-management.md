@@ -49,6 +49,8 @@ python3 -m ampg --config gateway.toml apply --dry-run
 python3 -m ampg --config gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml apply --dry-run --protocol i2p
 python3 -m ampg --config gateway.toml apply --dry-run --write-artifacts
+python3 -m ampg --config gateway.toml approvals list --profile mobile-i2p
+python3 -m ampg --config gateway.toml approvals approve --profile mobile-i2p --all
 python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
 
@@ -82,14 +84,19 @@ address registry under `state_dir`.
 target real transport URLs; preview checks target local loopback preview endpoints.
 Missing output blocks the plan, while placeholder transport addresses are review items.
 
+`approvals list` prints generated artifact candidates and their digest status. `approve`
+requires `--all` or a `--kind` filter, then records approvals only for artifacts that
+exist and match the current generator output. Missing, edited, or stale artifacts remain
+review items.
+
 `apply --dry-run` prints the activation sequence for each enabled protocol: generated
 output readiness, config artifacts to review, daemon action, address capture or reuse,
 and post-apply health checks. It also prints `AMPG_APPLY_PREFLIGHT` plus blocked or
 review preflight items across activation, managed-state copies, and supervisor actions.
 It exits nonzero when the preflight status is blocked. `--write-artifacts` writes
-reviewable config snippets to the configured plan root, then prints the planned copies
-from those reviewed artifacts into `gateway.state_dir` and the supervisor services that
-would be registered or started. It still does not install or reload services.
+reviewable config snippets to the configured plan root, then prints the copies from
+approved artifacts into `gateway.state_dir` and the supervisor services that would be
+registered or started. It still does not install or reload services.
 
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet
 `adopt` failure will block a full activation run, but it will not block

@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ampg.approvals import ApprovalInput, approve_artifacts
 from ampg.cli import main
 from ampg.config import load_config
 from ampg.install_plan import (
@@ -294,7 +295,8 @@ daemon_policy = "auto"
 
         by_kind = {copy.kind: copy for copy in copies}
         self.assertEqual({"daemon-config", "loopback-config"}, set(by_kind))
-        self.assertEqual("planned", by_kind["daemon-config"].status)
+        self.assertEqual("review", by_kind["daemon-config"].status)
+        self.assertIn("not approved", by_kind["daemon-config"].message)
         self.assertEqual(
             root / ".ampg/state/example/i2p/i2pd-tunnels.conf",
             by_kind["daemon-config"].target,
@@ -334,7 +336,8 @@ daemon_policy = "auto"
 
         by_kind = {action.kind: action for action in actions}
         self.assertEqual({"daemon-supervisor", "loopback-supervisor"}, set(by_kind))
-        self.assertEqual("planned", by_kind["daemon-supervisor"].status)
+        self.assertEqual("review", by_kind["daemon-supervisor"].status)
+        self.assertIn("not approved", by_kind["daemon-supervisor"].message)
         self.assertEqual("ampg-example-i2p-i2pd", by_kind["daemon-supervisor"].service)
         self.assertEqual("sv-enable ampg-example-i2p-i2pd", by_kind["daemon-supervisor"].command)
         self.assertEqual(
@@ -345,6 +348,54 @@ daemon_policy = "auto"
             "sv-enable ampg-example-i2p-nginx-loopback",
             by_kind["loopback-supervisor"].command,
         )
+
+    def test_approved_managed_artifacts_enable_copy_and_supervisor_plans(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_config(
+                _write_config(
+                    Path(tmp).resolve(),
+                    """
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+""",
+                )
+            )
+            artifacts = write_install_artifacts(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+            approve_artifacts(
+                config,
+                [
+                    ApprovalInput(
+                        site_id=artifact.site_id,
+                        protocol=artifact.protocol,
+                        platform=artifact.platform,
+                        kind=artifact.kind,
+                        path=artifact.path,
+                        content=artifact.content,
+                    )
+                    for artifact in artifacts
+                ],
+            )
+
+            copies = install_state_copies(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+            actions = install_supervisor_actions(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+
+        self.assertTrue(all(copy.status == "planned" for copy in copies))
+        self.assertTrue(all(action.status == "planned" for action in actions))
 
     def test_install_plan_cli_can_write_managed_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:

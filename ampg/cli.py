@@ -21,6 +21,17 @@ from .addresses import (
     effective_address_records,
     set_address,
 )
+from .approvals import (
+    ACTIVATION_ARTIFACT_KIND,
+    GENERIC_PLATFORM,
+    ApprovalCheck,
+    ApprovalInput,
+    ApprovalWriteResult,
+    approval_check,
+    approval_registry_path,
+    approve_artifacts,
+    load_approval_registry,
+)
 from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
@@ -30,6 +41,7 @@ from .install_plan import (
     InstallStateCopy,
     InstallStep,
     InstallSupervisorAction,
+    install_artifacts,
     blocked_install_steps,
     install_state_copies,
     install_supervisor_actions,
@@ -37,7 +49,7 @@ from .install_plan import (
     write_install_artifacts,
 )
 from .manifest import write_fixture_manifests
-from .plan import plan_gateway, write_plan_artifacts
+from .plan import plan_artifacts, plan_gateway, write_plan_artifacts
 from .platforms import PLATFORM_NAMES, platform_by_name
 from .preview import PreviewServers, preview_endpoints, write_preview_fixture_manifests
 from .route_manifest import (
@@ -106,6 +118,51 @@ def main(argv: list[str] | None = None) -> int:
         "--platform",
         choices=PLATFORM_NAMES,
         help="Override platform detection for dry-run checks.",
+    )
+    approvals_parser = subcommands.add_parser(
+        "approvals",
+        help="Inspect or approve generated artifact digests.",
+    )
+    approvals_subcommands = approvals_parser.add_subparsers(
+        dest="approvals_command",
+        required=True,
+    )
+    approvals_list = approvals_subcommands.add_parser(
+        "list",
+        help="List generated artifacts and approval status.",
+    )
+    _add_target_selection(approvals_list)
+    approvals_list.add_argument(
+        "--platform",
+        choices=PLATFORM_NAMES,
+        help="Override platform detection for approval candidates.",
+    )
+    approvals_list.add_argument(
+        "--kind",
+        action="append",
+        default=[],
+        help="Limit to an approval kind. May be repeated or comma-separated.",
+    )
+    approvals_approve = approvals_subcommands.add_parser(
+        "approve",
+        help="Record approvals for reviewed artifact digests.",
+    )
+    _add_target_selection(approvals_approve)
+    approvals_approve.add_argument(
+        "--platform",
+        choices=PLATFORM_NAMES,
+        help="Override platform detection for approval candidates.",
+    )
+    approvals_approve.add_argument(
+        "--kind",
+        action="append",
+        default=[],
+        help="Limit to an approval kind. May be repeated or comma-separated.",
+    )
+    approvals_approve.add_argument(
+        "--all",
+        action="store_true",
+        help="Approve all selected generated artifact kinds.",
     )
     install_plan_parser = subcommands.add_parser(
         "install-plan",
@@ -272,6 +329,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_doctor(config, args)
         if args.command == "apply":
             return _cmd_apply(config, args)
+        if args.command == "approvals":
+            return _cmd_approvals(config, args)
         if args.command == "install-plan":
             return _cmd_install_plan(config, args)
         if args.command == "health-plan":
@@ -343,6 +402,47 @@ def _cmd_apply(config, args) -> int:
         f"blocked={len(blocked_steps(steps))}"
     )
     return 1 if preflight.status == "blocked" else 0
+
+
+def _cmd_approvals(config, args) -> int:
+    platform_provider = _platform_override(config, args)
+    kinds = _kind_filter(args)
+    candidates = _approval_candidates(config, platform_provider=platform_provider)
+    if kinds:
+        candidates = [candidate for candidate in candidates if candidate.kind in kinds]
+
+    if args.approvals_command == "list":
+        approvals = load_approval_registry(config)
+        checks = [approval_check(candidate, approvals) for candidate in candidates]
+        for check in checks:
+            _print_approval_check(check)
+        _print_approval_summary(
+            mode="list",
+            statuses=[check.status for check in checks],
+            count=len(checks),
+            registry=approval_registry_path(config),
+        )
+        return 0
+
+    if args.approvals_command == "approve":
+        if not args.all and not kinds:
+            print(
+                'AMPG_APPROVAL status=error message="pass --all or --kind before approving"',
+                file=sys.stderr,
+            )
+            return 1
+        results = approve_artifacts(config, candidates)
+        for result in results:
+            _print_approval_write_result(result)
+        _print_approval_summary(
+            mode="approve",
+            statuses=[result.status for result in results],
+            count=len(results),
+            registry=approval_registry_path(config),
+        )
+        return 1 if any(result.status in {"missing", "stale"} for result in results) else 0
+
+    return 1
 
 
 def _cmd_install_plan(config, args) -> int:
@@ -425,6 +525,44 @@ def _write_artifacts_enabled(config, args) -> bool:
         return True
     profile = select_profile(config, getattr(args, "profile", None))
     return bool(profile and profile.write_artifacts)
+
+
+def _approval_candidates(config, *, platform_provider) -> list[ApprovalInput]:
+    candidates: list[ApprovalInput] = []
+    for site in config.sites:
+        for protocol in site.protocols.values():
+            if not protocol.enabled:
+                continue
+            for artifact in plan_artifacts(site, protocol):
+                candidates.append(
+                    ApprovalInput(
+                        site_id=site.id,
+                        protocol=protocol.name,
+                        platform=GENERIC_PLATFORM,
+                        kind=ACTIVATION_ARTIFACT_KIND,
+                        path=artifact.path,
+                        content=artifact.content,
+                    )
+                )
+    candidates.extend(
+        ApprovalInput(
+            site_id=artifact.site_id,
+            protocol=artifact.protocol,
+            platform=artifact.platform,
+            kind=artifact.kind,
+            path=artifact.path,
+            content=artifact.content,
+        )
+        for artifact in install_artifacts(config, platform_provider=platform_provider)
+    )
+    return candidates
+
+
+def _kind_filter(args) -> set[str]:
+    kinds: set[str] = set()
+    for raw_kind in getattr(args, "kind", ()):
+        kinds.update(kind.strip() for kind in raw_kind.split(",") if kind.strip())
+    return kinds
 
 
 def _cmd_status(config, args) -> int:
@@ -604,6 +742,57 @@ def _print_apply_preflight_item(item: ApplyPreflightItem) -> None:
         f"target=\"{_quote(item.target)}\" "
         f"command=\"{_quote(item.command)}\" "
         f"message=\"{_quote(item.message)}\""
+    )
+
+
+def _print_approval_check(check: ApprovalCheck) -> None:
+    candidate = check.candidate
+    print(
+        "AMPG_APPROVAL "
+        f"site={candidate.site_id} "
+        f"protocol={candidate.protocol} "
+        f"platform={candidate.platform} "
+        f"kind={candidate.kind} "
+        f"path=\"{_quote(str(candidate.path))}\" "
+        f"status={check.status} "
+        f"sha256={check.digest} "
+        f"message=\"{_quote(check.message)}\""
+    )
+
+
+def _print_approval_write_result(result: ApprovalWriteResult) -> None:
+    candidate = result.candidate
+    print(
+        "AMPG_APPROVAL_WRITE "
+        f"site={candidate.site_id} "
+        f"protocol={candidate.protocol} "
+        f"platform={candidate.platform} "
+        f"kind={candidate.kind} "
+        f"path=\"{_quote(str(candidate.path))}\" "
+        f"status={result.status} "
+        f"sha256={result.digest} "
+        f"message=\"{_quote(result.message)}\""
+    )
+
+
+def _print_approval_summary(
+    *,
+    mode: str,
+    statuses: list[str],
+    count: int,
+    registry: Path,
+) -> None:
+    print(
+        "AMPG_APPROVAL_SUMMARY "
+        f"mode={mode} "
+        f"candidates={count} "
+        f"approved={statuses.count('approved')} "
+        f"review={statuses.count('review')} "
+        f"written={statuses.count('written')} "
+        f"current={statuses.count('current')} "
+        f"missing={statuses.count('missing')} "
+        f"stale={statuses.count('stale')} "
+        f"registry=\"{_quote(str(registry))}\""
     )
 
 

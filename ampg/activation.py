@@ -5,6 +5,14 @@ from pathlib import Path
 import shlex
 
 from .addresses import AddressRecord, address_registry_path, effective_address_records
+from .approvals import (
+    ACTIVATION_ARTIFACT_KIND,
+    GENERIC_PLATFORM,
+    ApprovalInput,
+    ApprovalRegistry,
+    approval_check,
+    load_approval_registry,
+)
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
 from .install_plan import (
     InstallStateCopy,
@@ -75,6 +83,7 @@ def activation_steps(
         (record.site_id, record.protocol): record
         for record in effective_address_records(config)
     }
+    approvals = load_approval_registry(config)
     steps: list[ActivationStep] = []
 
     for issue in doctor_gateway(
@@ -111,6 +120,7 @@ def activation_steps(
                     transport_status=transport_status,
                     address_record=address_by_protocol[(site.id, protocol.name)],
                     output_ready=output_ready,
+                    approvals=approvals,
                 )
             )
 
@@ -168,6 +178,7 @@ def _protocol_steps(
     transport_status: TransportStatus,
     address_record: AddressRecord,
     output_ready: bool,
+    approvals: ApprovalRegistry,
 ) -> list[ActivationStep]:
     output_root = site.outputs.root / protocol.name
     steps = [
@@ -189,6 +200,17 @@ def _protocol_steps(
     artifacts = plan_artifacts(site, protocol)
     if artifacts:
         for artifact in artifacts:
+            approval = approval_check(
+                ApprovalInput(
+                    site_id=site.id,
+                    protocol=protocol.name,
+                    platform=GENERIC_PLATFORM,
+                    kind=ACTIVATION_ARTIFACT_KIND,
+                    path=artifact.path,
+                    content=artifact.content,
+                ),
+                approvals,
+            )
             steps.append(
                 ActivationStep(
                     site_id=site.id,
@@ -196,8 +218,8 @@ def _protocol_steps(
                     stage="artifact",
                     action="review-config",
                     target=str(artifact.path),
-                    status="review",
-                    message="review generated config before installing or reloading services",
+                    status="ready" if approval.status == "approved" else "review",
+                    message=approval.message,
                 )
             )
     else:

@@ -114,6 +114,8 @@ python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --protocol i2p
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --write-artifacts
+python3 -m ampg --config examples/wownero.gateway.toml approvals list --profile mobile-i2p
+python3 -m ampg --config examples/wownero.gateway.toml approvals approve --profile mobile-i2p --all
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml build --profile tor-i2p
 python3 -m ampg --config examples/wownero.gateway.toml build --protocol tor --protocol i2p
@@ -150,12 +152,16 @@ Captured transport addresses are written under `gateway.state_dir` by
 `addresses capture` or `addresses set`. Fixture manifests and health plans use explicit
 config first, then captured addresses, then deterministic placeholders.
 
+`approvals list` reports whether generated artifact digests are missing, stale,
+unapproved, or approved. `approvals approve` records reviewed digests under
+`gateway.state_dir`; edited or regenerated artifacts automatically fall back to review.
+
 `apply --dry-run` includes an address stage and an `AMPG_APPLY_PREFLIGHT` gate.
 Placeholder addresses remain review items until the generated transport identity is
-captured or configured. With `--write-artifacts`, apply also prints reviewed config
-artifacts that would be copied into managed state and the supervisor services that would
-be registered or started. The preflight gate reports `blocked`, `review`, or `ready`
-across activation steps, managed-state copies, and supervisor actions.
+captured or configured. With `--write-artifacts`, apply also prints config artifacts that
+would be copied into managed state and the supervisor services that would be registered
+or started. The preflight gate reports `blocked`, `review`, or `ready` across activation
+steps, managed-state copies, and supervisor actions.
 
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without
@@ -175,5 +181,6 @@ Explicit `--protocol` and `--platform` flags override the profile when present.
 - [ ] Run `ampg build`; inspect generated variants.
 - [ ] Run AMPB fixture checks against generated manifests.
 - [ ] Run `ampg health-plan`; review post-start transport checks.
+- [ ] Run `ampg approvals approve --all` after reviewing generated artifacts.
 - [ ] Run `ampg apply --dry-run`; review the activation sequence and preflight gate.
 - [ ] Run live apply after the preflight gate is ready.
