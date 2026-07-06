@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .metadata import CONFIG_FIELDS, DAEMON_ADAPTERS, RENDER_PROFILES
+from .metadata import (
+    CONFIG_FIELDS,
+    DAEMON_ADAPTERS,
+    IDENTITY_ADAPTERS,
+    INTERACTION_TIERS,
+    PAYMENT_ADAPTERS,
+    RENDER_PROFILES,
+    TRANSPORT_INTERACTION_CAPABILITIES,
+)
 
 
 GENERATED_DIR = Path("docs/generated")
@@ -12,6 +20,7 @@ def generate_docs(root: Path, *, check: bool = False) -> list[Path]:
     docs = {
         GENERATED_DIR / "config-schema.md": _config_schema_doc(),
         GENERATED_DIR / "daemon-adapters.md": _daemon_adapters_doc(),
+        GENERATED_DIR / "interaction-capabilities.md": _interaction_capabilities_doc(),
         GENERATED_DIR / "render-profiles.md": _render_profiles_doc(),
     }
     changed: list[Path] = []
@@ -82,4 +91,49 @@ def _render_profiles_doc() -> str:
         for default in profile.defaults:
             sections.append(f"- {default}")
         sections.append("")
+    return "\n".join(sections)
+
+
+def _interaction_capabilities_doc() -> str:
+    sections = [_header("Generated Interaction Capabilities")]
+    sections.append("## Tiers\n")
+    sections.append("| Tier | Summary | Examples | Notes |")
+    sections.append("| --- | --- | --- | --- |")
+    for tier in INTERACTION_TIERS:
+        sections.append(
+            f"| `{tier.name}` | {tier.summary} | {', '.join(tier.examples)} | "
+            f"{' '.join(tier.notes)} |"
+        )
+    sections.append("")
+
+    sections.append("## Identity Adapters\n")
+    sections.append("| Adapter | Status | Transports | Notes |")
+    sections.append("| --- | --- | --- | --- |")
+    for adapter in IDENTITY_ADAPTERS:
+        sections.append(
+            f"| `{adapter.name}` | `{adapter.status}` | {', '.join(adapter.transports)} | "
+            f"{' '.join(adapter.notes)} |"
+        )
+    sections.append("")
+
+    sections.append("## Payment Adapters\n")
+    sections.append("| Adapter | Status | Transports | Notes |")
+    sections.append("| --- | --- | --- | --- |")
+    for adapter in PAYMENT_ADAPTERS:
+        sections.append(
+            f"| `{adapter.name}` | `{adapter.status}` | {', '.join(adapter.transports)} | "
+            f"{' '.join(adapter.notes)} |"
+        )
+    sections.append("")
+
+    sections.append("## Transport Limits\n")
+    sections.append("| Transport | Public Max Tier | Identity | Payments | Realtime | Notes |")
+    sections.append("| --- | --- | --- | --- | --- | --- |")
+    for capability in TRANSPORT_INTERACTION_CAPABILITIES:
+        sections.append(
+            f"| `{capability.transport}` | `{capability.public_max_tier}` | "
+            f"{capability.identity} | {capability.payments} | {capability.realtime} | "
+            f"{' '.join(capability.notes)} |"
+        )
+    sections.append("")
     return "\n".join(sections)

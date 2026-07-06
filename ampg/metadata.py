@@ -33,6 +33,40 @@ class DaemonAdapter:
     notes: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class InteractionTier:
+    name: str
+    summary: str
+    examples: tuple[str, ...]
+    notes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class IdentityAdapter:
+    name: str
+    status: str
+    transports: tuple[str, ...]
+    notes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PaymentAdapter:
+    name: str
+    status: str
+    transports: tuple[str, ...]
+    notes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TransportInteractionCapability:
+    transport: str
+    public_max_tier: str
+    identity: str
+    payments: str
+    realtime: str
+    notes: tuple[str, ...]
+
+
 CONFIG_FIELDS = (
     ConfigField("site", "id", "string", True, "", "Stable site identifier used in output paths."),
     ConfigField("site", "domain", "string", True, "", "Canonical public domain for the site."),
@@ -56,6 +90,38 @@ CONFIG_FIELDS = (
         False,
         "[]",
         "Route patterns that must not be published.",
+    ),
+    ConfigField(
+        "site.interactions.route",
+        "match",
+        "glob",
+        False,
+        "",
+        "Route pattern for an explicit interaction policy.",
+    ),
+    ConfigField(
+        "site.interactions.route",
+        "tier",
+        "enum",
+        False,
+        "site.interactions.default_tier",
+        "Interaction tier for a route group.",
+    ),
+    ConfigField(
+        "site.interactions.route",
+        "identity",
+        "enum",
+        False,
+        "none",
+        "Identity adapter required by a route group.",
+    ),
+    ConfigField(
+        "site.interactions.route",
+        "payments",
+        "enum",
+        False,
+        "none",
+        "Payment adapter required by a route group.",
     ),
     ConfigField(
         "site.protocols.<name>",
@@ -104,6 +170,175 @@ CONFIG_FIELDS = (
         False,
         "strip",
         "Script handling policy for privacy-html render targets.",
+    ),
+)
+
+
+INTERACTION_TIERS = (
+    InteractionTier(
+        name="static",
+        summary="Rendered files only.",
+        examples=("documentation", "landing pages", "catalog pages"),
+        notes=("Works across every currently modeled transport.",),
+    ),
+    InteractionTier(
+        name="interactive-lite",
+        summary="Client-visible state with deterministic or server-rendered updates.",
+        examples=("deterministic games", "leaderboards", "quote forms", "status lookups"),
+        notes=(
+            "Does not require accounts or payment confirmation.",
+            "Constrained transports may receive static snapshots or form-style actions.",
+        ),
+    ),
+    InteractionTier(
+        name="identity",
+        summary="Authenticated sessions or signed wallet identity.",
+        examples=("account pages", "wallet sign-in", "claim pages"),
+        notes=(
+            "Requires explicit identity adapter selection.",
+            "HTTP transports can use strict cookies; wallet sign-in uses signed challenges.",
+        ),
+    ),
+    InteractionTier(
+        name="transactional",
+        summary="Server-confirmed orders, wagers, deposits, invoices, or payment intents.",
+        examples=("basic stores", "paid downloads", "game entry fees", "donations"),
+        notes=(
+            "Requires explicit payment adapter selection.",
+            "Callbacks, webhook receivers, and ledger internals remain internal.",
+        ),
+    ),
+    InteractionTier(
+        name="realtime",
+        summary="Live multiplayer, dashboards, websocket streams, or fast state sync.",
+        examples=("multiplayer games", "live markets", "operator consoles"),
+        notes=(
+            "HTTP transports only in the current model.",
+            "Usually clearnet or private Tor/I2P until transport-specific realtime support exists.",
+        ),
+    ),
+    InteractionTier(
+        name="internal",
+        summary="Private/admin/worker surfaces that must not be published automatically.",
+        examples=("admin panels", "webhooks", "worker APIs", "health endpoints"),
+        notes=("Always deny by default on public outputs.",),
+    ),
+)
+
+
+IDENTITY_ADAPTERS = (
+    IdentityAdapter(
+        name="none",
+        status="ready",
+        transports=("clearnet", "tor", "i2p", "gemini", "ipfs", "reticulum"),
+        notes=("No account or signed identity required.",),
+    ),
+    IdentityAdapter(
+        name="http-session",
+        status="planned",
+        transports=("clearnet", "tor", "i2p"),
+        notes=(
+            "Use HTTP-only cookies and strict transport-specific session scope.",
+            "Profiles must not be shared across transports.",
+        ),
+    ),
+    IdentityAdapter(
+        name="siwe",
+        status="planned",
+        transports=("clearnet", "tor", "i2p"),
+        notes=(
+            "Sign-In with Ethereum style challenge/response.",
+            "Wallet transport availability is a browser-shell concern.",
+        ),
+    ),
+    IdentityAdapter(
+        name="signed-link",
+        status="research",
+        transports=("gemini", "reticulum"),
+        notes=("Use only for narrow flows with short-lived, scoped capabilities.",),
+    ),
+)
+
+
+PAYMENT_ADAPTERS = (
+    PaymentAdapter(
+        name="none",
+        status="ready",
+        transports=("clearnet", "tor", "i2p", "gemini", "ipfs", "reticulum"),
+        notes=("No payment required.",),
+    ),
+    PaymentAdapter(
+        name="server-invoice",
+        status="planned",
+        transports=("clearnet", "tor", "i2p"),
+        notes=(
+            "Server creates invoice or payment intent and confirms settlement.",
+            "Callback/webhook routes stay internal.",
+        ),
+    ),
+    PaymentAdapter(
+        name="wallet-signature",
+        status="planned",
+        transports=("clearnet", "tor", "i2p"),
+        notes=("Browser wallet signs a request; server verifies before fulfilling.",),
+    ),
+    PaymentAdapter(
+        name="static-instructions",
+        status="planned",
+        transports=("gemini", "ipfs", "reticulum"),
+        notes=("Render payment instructions or donation addresses without automatic fulfillment.",),
+    ),
+)
+
+
+TRANSPORT_INTERACTION_CAPABILITIES = (
+    TransportInteractionCapability(
+        transport="clearnet",
+        public_max_tier="realtime",
+        identity="http-session, siwe",
+        payments="server-invoice, wallet-signature",
+        realtime="yes",
+        notes=("Highest-fidelity browser surface.",),
+    ),
+    TransportInteractionCapability(
+        transport="tor",
+        public_max_tier="transactional",
+        identity="http-session, siwe",
+        payments="server-invoice, wallet-signature",
+        realtime="private-only",
+        notes=("Prefer server-rendered flows and reduced JavaScript by default.",),
+    ),
+    TransportInteractionCapability(
+        transport="i2p",
+        public_max_tier="transactional",
+        identity="http-session, siwe",
+        payments="server-invoice, wallet-signature",
+        realtime="private-only",
+        notes=("Prefer server-rendered flows and reduced JavaScript by default.",),
+    ),
+    TransportInteractionCapability(
+        transport="gemini",
+        public_max_tier="interactive-lite",
+        identity="signed-link research",
+        payments="static-instructions",
+        realtime="no",
+        notes=("Use curated prompts or polling-friendly status pages.",),
+    ),
+    TransportInteractionCapability(
+        transport="ipfs",
+        public_max_tier="static",
+        identity="none",
+        payments="static-instructions",
+        realtime="no",
+        notes=("Content-addressed snapshots; no server-confirmed state by default.",),
+    ),
+    TransportInteractionCapability(
+        transport="reticulum",
+        public_max_tier="interactive-lite",
+        identity="signed-link research",
+        payments="static-instructions",
+        realtime="research",
+        notes=("Resilient/private routing; not an anonymity layer.",),
     ),
 )
 

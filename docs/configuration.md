@@ -31,6 +31,12 @@ plan_root = "/var/lib/ampg/plans"
 default_tier = "static"
 deny_routes = ["/admin/*", "/internal/*", "/webhooks/*"]
 
+[[site.interactions.route]]
+match = "/checkout/*"
+tier = "transactional"
+identity = "http-session"
+payments = "server-invoice"
+
 [site.protocols.clearnet]
 enabled = true
 renderer = "clearnet"
@@ -151,7 +157,7 @@ upstream = "http://127.0.0.1:8000"
 openapi = "http://127.0.0.1:9000/openapi.json"
 
 [site.interactions]
-default_tier = "forms"
+default_tier = "interactive-lite"
 session_policy = "http-only-cookie"
 deny_routes = ["/admin/*", "/api/internal/*", "/webhooks/*"]
 
@@ -161,11 +167,13 @@ tier = "internal"
 
 [[site.interactions.route]]
 match = "/checkout/*"
-tier = "sessions"
+tier = "transactional"
+identity = "http-session"
+payments = "server-invoice"
 
 [[site.interactions.route]]
 match = "/catalog/*"
-tier = "forms"
+tier = "interactive-lite"
 
 [site.protocols.tor]
 enabled = true
@@ -177,7 +185,7 @@ allow_javascript = false
 enabled = true
 renderer = "gemtext"
 daemon_policy = "auto"
-max_tier = "forms"
+max_tier = "interactive-lite"
 ```
 
 `max_tier` is a hard cap. If a route needs a higher tier than the protocol allows, AMPG

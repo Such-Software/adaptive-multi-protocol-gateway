@@ -79,6 +79,7 @@ internal even when the public site is available on Tor or I2P.
 - [Configuration](docs/configuration.md)
 - [Daemon management](docs/daemon-management.md)
 - [Fixture manifests](docs/fixture-manifests.md)
+- [Interaction capabilities](docs/interaction-capabilities.md)
 - [Interactive applications](docs/interactive-apps.md)
 - [Wownero integration](docs/wownero-integration.md)
 - [Autodocs and drift gates](docs/autodocs.md)
