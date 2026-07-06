@@ -113,6 +113,13 @@ render-only environment while making daemon ownership decisions explicit.
 approvals, address capture, and apply dry-run. It emits stage rows with `ready`, `todo`,
 `review`, `blocked`, or `skipped` status and short next-step commands. It is read-only.
 
+## Clearnet reachability
+
+`ampg dns plan` handles the public web edge for clearnet deployments. Static hosts use
+A/AAAA records. Dynamic or behind-router hosts can use Dynamic DNS, provider-specific
+apex aliases, API-updated records, port forwarding, IPv6, reverse tunnels, or DNS-01
+certificate validation. Provider and router automation should remain opt-in.
+
 ## Activation plan
 
 `ampg apply --dry-run` turns daemon status and generated config artifacts into an ordered

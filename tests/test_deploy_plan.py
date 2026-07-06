@@ -96,8 +96,8 @@ class DeployPlanTest(unittest.TestCase):
                 ]
             )
 
-        self.assertIn("AMPG_DEPLOY_STEP stage=dns status=review", output)
-        self.assertIn("set A/AAAA records for example.test", output)
+        self.assertIn("AMPG_DEPLOY_STEP stage=dns status=todo", output)
+        self.assertIn("dns plan --profile vps-full", output)
 
     def test_deploy_plan_after_build_moves_build_stage_to_ready(self):
         with tempfile.TemporaryDirectory() as tmp:

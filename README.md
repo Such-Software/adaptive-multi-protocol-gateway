@@ -51,6 +51,7 @@ python3 -m ampg --config gateway.toml init site wownero \
   --preset full
 
 python3 -m ampg --config gateway.toml deploy plan --profile vps-full
+python3 -m ampg --config gateway.toml dns plan --mode dynamic --behind-router
 python3 -m ampg --config gateway.toml build
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile vps-full --write-artifacts
@@ -60,7 +61,8 @@ python3 -m ampg --config gateway.toml apply --dry-run --profile vps-full
 
 `init site` writes a readable `gateway.toml` with selected transports enabled and common
 transports left as one-line toggles. `deploy plan` condenses the lower-level checks into
-clear next steps. The current `apply --dry-run` prints the activation sequence and a
+clear next steps. `dns plan` covers static DNS, Dynamic DNS, and behind-router
+reachability hints. The current `apply --dry-run` prints the activation sequence and a
 preflight verdict without changing services. Live apply support will perform only
 approved changes.
 
@@ -107,6 +109,9 @@ The current implementation is dependency-free Python:
 ```sh
 python3 -m ampg --config gateway.toml init site wownero --domain wownero.org --source ../wownero.org-website --preset full
 python3 -m ampg --config examples/wownero.gateway.toml deploy plan --profile vps-full
+python3 -m ampg --config examples/wownero.gateway.toml dns plan --profile vps-full
+python3 -m ampg --config examples/wownero.gateway.toml dns plan --profile vps-full --mode dynamic --behind-router
+python3 -m ampg --config examples/wownero.gateway.toml dns check --profile vps-full
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml status

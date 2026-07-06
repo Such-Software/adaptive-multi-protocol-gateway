@@ -14,6 +14,7 @@ from .approvals import (
     load_approval_registry,
 )
 from .config import GatewayConfig
+from .dns import dns_plan
 from .install_plan import (
     install_artifacts,
     install_plan,
@@ -66,7 +67,7 @@ def deploy_plan(
     steps = (
         _source_step(config),
         _build_step(config, command_context),
-        _dns_step(config),
+        _dns_step(config, command_context),
         _doctor_step(
             config,
             command_context,
@@ -143,21 +144,10 @@ def _build_step(config: GatewayConfig, commands: _CommandContext) -> DeployStep:
     return DeployStep("build", "ready", commands.command("build"), "selected outputs are built")
 
 
-def _dns_step(config: GatewayConfig) -> DeployStep:
-    clearnet_sites = [
-        site.domain
-        for site in config.sites
-        if "clearnet" in site.protocols and site.protocols["clearnet"].enabled
-    ]
-    if not clearnet_sites:
-        return DeployStep("dns", "skipped", "-", "clearnet is not selected")
-    domains = ", ".join(clearnet_sites)
-    return DeployStep(
-        "dns",
-        "review",
-        f"set A/AAAA records for {domains} to this server",
-        "clearnet needs DNS records; provider automation is not implemented yet",
-    )
+def _dns_step(config: GatewayConfig, commands: _CommandContext) -> DeployStep:
+    plan = dns_plan(config)
+    command = "-" if plan.status == "skipped" else commands.command("dns plan")
+    return DeployStep("dns", plan.status, command, plan.message)
 
 
 def _doctor_step(

@@ -38,6 +38,9 @@ config artifacts.
 
 ```sh
 python3 -m ampg --config gateway.toml deploy plan --profile mobile-i2p
+python3 -m ampg --config gateway.toml dns plan --profile vps-full
+python3 -m ampg --config gateway.toml dns plan --profile vps-full --mode dynamic --behind-router
+python3 -m ampg --config gateway.toml dns check --profile vps-full
 python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p
@@ -58,6 +61,12 @@ python3 -m ampg --config gateway.toml doctor --platform android-termux
 `deploy plan` summarizes the current deployment in plain stages: source, build, DNS,
 doctor, daemons, artifacts, addresses, and apply preflight. It prints the next commands
 to run and does not change files or services.
+
+`dns plan` prints clearnet DNS records and reachability hints. Static mode plans A/AAAA
+and `www` records. Dynamic mode supports a Dynamic DNS hostname and warns when apex
+records require provider-specific ALIAS/ANAME or API-updated A/AAAA support. With
+`--behind-router`, it also lists port forwarding, IPv6, explicit router mapping,
+reverse-tunnel, and DNS-01 certificate options.
 
 `status` prints one row per enabled protocol with the selected platform provider,
 adapter, installed/running daemon probe, action, and policy result.

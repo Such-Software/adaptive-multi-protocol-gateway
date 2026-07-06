@@ -36,6 +36,15 @@ from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
 from .deploy import DeployPlan, DeployStep, DeployNextStep, deploy_plan
+from .dns import (
+    ConnectivityHint,
+    DNSCheckResult,
+    DNS_MODES,
+    DNSPlan,
+    DNSRecordPlan,
+    dns_check,
+    dns_plan,
+)
 from .docsgen import generate_docs
 from .health import HealthCheck, blocked_health_checks, health_plan
 from .install_plan import (
@@ -134,6 +143,40 @@ def main(argv: list[str] | None = None) -> int:
         choices=PLATFORM_NAMES,
         help="Override platform detection for deploy planning.",
     )
+    dns_parser = subcommands.add_parser(
+        "dns",
+        help="Plan and check clearnet DNS records.",
+    )
+    dns_subcommands = dns_parser.add_subparsers(dest="dns_command", required=True)
+    dns_plan_parser = dns_subcommands.add_parser(
+        "plan",
+        help="Show DNS and reachability steps for clearnet.",
+    )
+    _add_target_selection(dns_plan_parser)
+    dns_plan_parser.add_argument(
+        "--mode",
+        choices=DNS_MODES,
+        default="static",
+        help="Use static A/AAAA records or dynamic DNS guidance.",
+    )
+    dns_plan_parser.add_argument("--ipv4", help="Public IPv4 address for static DNS.")
+    dns_plan_parser.add_argument("--ipv6", help="Public IPv6 address for static DNS.")
+    dns_plan_parser.add_argument(
+        "--dynamic-hostname",
+        help="Dynamic DNS hostname used in dynamic mode.",
+    )
+    dns_plan_parser.add_argument(
+        "--behind-router",
+        action="store_true",
+        help="Include NAT/router/tunnel reachability hints.",
+    )
+    dns_check_parser = dns_subcommands.add_parser(
+        "check",
+        help="Resolve clearnet domains and compare optional expected addresses.",
+    )
+    _add_target_selection(dns_check_parser)
+    dns_check_parser.add_argument("--ipv4", help="Expected public IPv4 address.")
+    dns_check_parser.add_argument("--ipv6", help="Expected public IPv6 address.")
     plan_parser = subcommands.add_parser("plan", help="Print a dry-run plan.")
     _add_target_selection(plan_parser)
     plan_parser.add_argument(
@@ -393,6 +436,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_doctor(config, args)
         if args.command == "deploy":
             return _cmd_deploy(config, args)
+        if args.command == "dns":
+            return _cmd_dns(config, args)
         if args.command == "apply":
             return _cmd_apply(config, args)
         if args.command == "approvals":
@@ -485,6 +530,41 @@ def _cmd_deploy(config, args) -> int:
             _print_deploy_next(index, next_step)
         _print_deploy_summary(config, plan)
         return 1 if plan.status == "blocked" else 0
+    return 1
+
+
+def _cmd_dns(config, args) -> int:
+    if args.dns_command == "plan":
+        plan = dns_plan(
+            config,
+            mode=args.mode,
+            ipv4=args.ipv4,
+            ipv6=args.ipv6,
+            dynamic_hostname=args.dynamic_hostname,
+            behind_router=args.behind_router,
+        )
+        for record in plan.records:
+            _print_dns_record(record)
+        for hint in plan.hints:
+            _print_connectivity_hint(hint)
+        _print_dns_summary(plan)
+        return 1 if plan.status == "blocked" else 0
+
+    if args.dns_command == "check":
+        results = dns_check(config, ipv4=args.ipv4, ipv6=args.ipv6)
+        for result in results:
+            _print_dns_check(result)
+        failed = [result for result in results if result.status in {"missing", "mismatch"}]
+        print(
+            "AMPG_DNS_CHECK_SUMMARY "
+            f"checks={len(results)} "
+            f"matched={sum(1 for result in results if result.status == 'matched')} "
+            f"resolved={sum(1 for result in results if result.status == 'resolved')} "
+            f"missing={sum(1 for result in results if result.status == 'missing')} "
+            f"mismatch={sum(1 for result in results if result.status == 'mismatch')}"
+        )
+        return 1 if failed else 0
+
     return 1
 
 
@@ -917,6 +997,59 @@ def _print_deploy_summary(config, plan: DeployPlan) -> None:
         f"blocked={statuses.count('blocked')} "
         f"skipped={statuses.count('skipped')} "
         f"message=\"{_quote(plan.message)}\""
+    )
+
+
+def _print_dns_record(record: DNSRecordPlan) -> None:
+    print(
+        "AMPG_DNS_RECORD "
+        f"site={record.site_id} "
+        f"domain={record.domain} "
+        f"name={record.name} "
+        f"type={record.type} "
+        f"value=\"{_quote(record.value)}\" "
+        f"status={record.status} "
+        f"message=\"{_quote(record.message)}\""
+    )
+
+
+def _print_connectivity_hint(hint: ConnectivityHint) -> None:
+    print(
+        "AMPG_CONNECTIVITY_HINT "
+        f"method={hint.method} "
+        f"status={hint.status} "
+        f"command=\"{_quote(hint.command)}\" "
+        f"message=\"{_quote(hint.message)}\""
+    )
+
+
+def _print_dns_summary(plan: DNSPlan) -> None:
+    statuses = [record.status for record in plan.records]
+    statuses.extend(hint.status for hint in plan.hints)
+    print(
+        "AMPG_DNS_SUMMARY "
+        f"status={plan.status} "
+        f"records={len(plan.records)} "
+        f"hints={len(plan.hints)} "
+        f"todo={statuses.count('todo')} "
+        f"review={statuses.count('review')} "
+        f"blocked={statuses.count('blocked')} "
+        f"skipped={statuses.count('skipped')} "
+        f"message=\"{_quote(plan.message)}\""
+    )
+
+
+def _print_dns_check(result: DNSCheckResult) -> None:
+    resolved = ",".join(result.resolved) if result.resolved else "-"
+    print(
+        "AMPG_DNS_CHECK "
+        f"site={result.site_id} "
+        f"domain={result.domain} "
+        f"family={result.family} "
+        f"expected=\"{_quote(result.expected)}\" "
+        f"resolved=\"{_quote(resolved)}\" "
+        f"status={result.status} "
+        f"message=\"{_quote(result.message)}\""
     )
 
 

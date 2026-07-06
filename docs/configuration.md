@@ -41,6 +41,12 @@ Then run `deploy plan` for a concise checklist:
 python3 -m ampg --config gateway.toml deploy plan --profile vps-full
 ```
 
+For clearnet on a changing home/laptop address, use Dynamic DNS planning:
+
+```sh
+python3 -m ampg --config gateway.toml dns plan --mode dynamic --behind-router
+```
+
 ## Minimal Wownero pilot config
 
 ```toml
