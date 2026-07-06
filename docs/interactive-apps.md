@@ -66,6 +66,22 @@ Optional top-level fields:
 - `default_tier`: inherited by route entries without a `tier`.
 - `deny_routes`: route patterns that must not be published.
 
+## Route Exposure Checks
+
+Use route checks before publishing an application target:
+
+```sh
+python3 -m ampg --config gateway.toml routes explain
+python3 -m ampg --config gateway.toml routes validate
+```
+
+`routes explain` prints one decision per route and enabled protocol. Decisions include the
+route source, tier, protocol `max_tier`, status, and reason.
+
+`routes validate` exits nonzero when a public, non-denied route has no compatible enabled
+protocol. Routes marked `internal`, `public_allowed = false`, or matched by
+`deny_routes` are treated as intentionally unpublished.
+
 ## Protocol Mapping
 
 | Tier | Clearnet | Tor/I2P | Gemini | IPFS | Reticulum |

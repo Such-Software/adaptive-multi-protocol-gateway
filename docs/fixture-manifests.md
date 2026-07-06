@@ -60,8 +60,8 @@ Fixture interaction policy defaults to:
 Protocol-level options can declare the base fixture policy that AMPB should check.
 
 When `[[site.interactions.route]]` entries are configured, AMPG emits additional fixtures
-for public route groups. Routes with `tier = "internal"` or `public_allowed = false` are
-not emitted.
+for public route groups. Routes with `tier = "internal"`, `public_allowed = false`, or a
+match covered by `deny_routes` are not emitted.
 
 Routes imported from `site.interactions.route_manifest` are treated the same way as inline
 TOML routes.

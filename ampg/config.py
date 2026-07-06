@@ -59,6 +59,7 @@ class RoutePolicyConfig:
     payments: str = "none"
     realtime: bool = False
     public_allowed: bool = True
+    source: str = "config"
 
 
 @dataclass(frozen=True)
@@ -165,11 +166,11 @@ def _parse_interactions(
     deny_routes = _string_array(manifest_data.get("deny_routes", ()), "route manifest deny_routes")
     deny_routes += _string_array(raw_interactions.get("deny_routes", ()), "site.interactions.deny_routes")
     routes = tuple(
-        _parse_route_policy(raw_route, default_tier)
+        _parse_route_policy(raw_route, default_tier, source="route-manifest")
         for raw_route in _route_array(manifest_data.get("routes", ()), "route manifest routes")
     )
     routes += tuple(
-        _parse_route_policy(raw_route, default_tier)
+        _parse_route_policy(raw_route, default_tier, source="config")
         for raw_route in _route_array(raw_interactions.get("route", ()), "site.interactions.route")
     )
     return InteractionConfig(
@@ -180,7 +181,12 @@ def _parse_interactions(
     )
 
 
-def _parse_route_policy(raw_route: dict[str, Any], default_tier: str) -> RoutePolicyConfig:
+def _parse_route_policy(
+    raw_route: dict[str, Any],
+    default_tier: str,
+    *,
+    source: str,
+) -> RoutePolicyConfig:
     if not isinstance(raw_route, dict):
         raise ValueError("route policy entries must be objects")
     return RoutePolicyConfig(
@@ -190,6 +196,7 @@ def _parse_route_policy(raw_route: dict[str, Any], default_tier: str) -> RoutePo
         payments=str(raw_route.get("payments", "none")),
         realtime=bool(raw_route.get("realtime", False)),
         public_allowed=bool(raw_route.get("public_allowed", True)),
+        source=source,
     )
 
 
@@ -215,6 +222,8 @@ def _load_route_manifest(path: Path, site_id: str) -> dict[str, Any]:
         raise ValueError(
             f"{site_id}: route manifest schema must be {ROUTE_MANIFEST_SCHEMA!r}: {path}"
         )
+    if "routes" not in data:
+        raise ValueError(f"{site_id}: route manifest missing required routes array: {path}")
     return data
 
 

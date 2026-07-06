@@ -6,25 +6,10 @@ from pathlib import Path
 from typing import Any
 
 from .config import GatewayConfig, ProtocolConfig, RoutePolicyConfig, SiteConfig
+from .route_policy import fixture_path, route_exposed
 
 
 SCHEMA = "ampg.fixture-manifest.v1"
-TIER_ORDER = {
-    "static": 0,
-    "interactive-lite": 1,
-    "identity": 2,
-    "transactional": 3,
-    "realtime": 4,
-    "internal": 5,
-}
-DEFAULT_MAX_TIERS = {
-    "clearnet": "realtime",
-    "tor": "transactional",
-    "i2p": "transactional",
-    "gemini": "interactive-lite",
-    "ipfs": "static",
-    "reticulum": "interactive-lite",
-}
 
 
 @dataclass(frozen=True)
@@ -43,7 +28,7 @@ def fixture_manifest(site: SiteConfig) -> dict[str, Any]:
         fixtures.extend(
             _fixture_entry(site, protocol, route_policy)
             for route_policy in site.interactions.routes
-            if _route_is_public(route_policy) and _route_supported(protocol, route_policy)
+            if route_exposed(site, protocol, route_policy)
         )
     return {
         "schema": SCHEMA,
@@ -102,7 +87,7 @@ def _fixture_entry(
     if route_policy:
         entry["route"] = {
             "match": route_policy.match,
-            "fixture_path": _fixture_path(route_policy.match),
+            "fixture_path": fixture_path(route_policy.match),
         }
     return entry
 
@@ -111,22 +96,6 @@ def _transport_for(protocol_name: str) -> str:
     if protocol_name in {"clearnet", "tor", "i2p", "gemini", "reticulum", "ipfs"}:
         return protocol_name
     return protocol_name
-
-
-def _route_is_public(route_policy: RoutePolicyConfig) -> bool:
-    return route_policy.public_allowed and route_policy.tier != "internal"
-
-
-def _route_supported(protocol: ProtocolConfig, route_policy: RoutePolicyConfig) -> bool:
-    max_tier = str(protocol.options.get("max_tier", DEFAULT_MAX_TIERS.get(protocol.name, "static")))
-    return _tier_rank(route_policy.tier) <= _tier_rank(max_tier)
-
-
-def _tier_rank(tier: str) -> int:
-    try:
-        return TIER_ORDER[tier]
-    except KeyError as exc:
-        raise ValueError(f"unsupported interaction tier {tier!r}") from exc
 
 
 def _interaction_policy(
@@ -153,26 +122,16 @@ def _interaction_policy(
 def _url_for_route(base_url: str, route_policy: RoutePolicyConfig | None) -> str:
     if not route_policy:
         return base_url
-    fixture_path = _fixture_path(route_policy.match)
+    route_fixture_path = fixture_path(route_policy.match)
     if base_url.startswith(("rns://", "lxmf://", "nomad://", "ipfs://", "ipns://")):
         return base_url
-    return base_url.rstrip("/") + fixture_path
+    return base_url.rstrip("/") + route_fixture_path
 
 
 def _output_path_for_route(protocol_name: str, route_policy: RoutePolicyConfig | None) -> str:
     if not route_policy:
         return protocol_name
-    return protocol_name + _fixture_path(route_policy.match)
-
-
-def _fixture_path(match: str) -> str:
-    value = match.strip()
-    if not value.startswith("/"):
-        value = "/" + value
-    value = value.replace("*", "")
-    if not value or value == "/":
-        return "/"
-    return value if value.endswith("/") else value + "/"
+    return protocol_name + fixture_path(route_policy.match)
 
 
 def _fixture_url(site: SiteConfig, protocol: ProtocolConfig) -> tuple[str, str]:

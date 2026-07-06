@@ -10,6 +10,7 @@ from .config import load_config
 from .docsgen import generate_docs
 from .manifest import write_fixture_manifests
 from .plan import plan_gateway, write_plan_artifacts
+from .route_policy import RouteExposure, RouteIssue, route_exposures, route_issues
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -29,6 +30,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     subcommands.add_parser("build", help="Build enabled protocol outputs.")
     subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
+    routes_parser = subcommands.add_parser("routes", help="Explain route exposure policy.")
+    routes_subcommands = routes_parser.add_subparsers(dest="routes_command", required=True)
+    routes_subcommands.add_parser("explain", help="Print per-protocol route decisions.")
+    routes_subcommands.add_parser(
+        "validate",
+        help="Fail when a public route has no compatible enabled protocol.",
+    )
     audit_parser = subcommands.add_parser("audit", help="Audit source HTML quality.")
     audit_parser.add_argument(
         "--fail-on-warn",
@@ -56,6 +64,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_build(config)
         if args.command == "manifest":
             return _cmd_manifest(config)
+        if args.command == "routes":
+            return _cmd_routes(config, args)
         if args.command == "audit":
             return _cmd_audit(config, fail_on_warn=args.fail_on_warn)
     except Exception as exc:  # noqa: BLE001 - CLI should print concise failures.
@@ -125,6 +135,59 @@ def _cmd_manifest(config) -> int:
             f"fixtures={manifest.fixture_count}"
         )
     return 0
+
+
+def _cmd_routes(config, args) -> int:
+    exposures = route_exposures(config)
+    issues = route_issues(config)
+    for exposure in exposures:
+        _print_route_exposure(exposure)
+    for issue in issues:
+        _print_route_issue(issue)
+    print(
+        "AMPG_ROUTE_SUMMARY "
+        f"sites={len(config.sites)} "
+        f"routes={sum(len(site.interactions.routes) for site in config.sites)} "
+        f"decisions={len(exposures)} "
+        f"exposed={sum(1 for exposure in exposures if exposure.status == 'exposed')} "
+        f"skipped={sum(1 for exposure in exposures if exposure.status == 'skipped')} "
+        f"issues={len(issues)}"
+    )
+    if args.routes_command == "validate" and issues:
+        return 1
+    return 0
+
+
+def _print_route_exposure(exposure: RouteExposure) -> None:
+    print(
+        "AMPG_ROUTE "
+        f"site={exposure.site_id} "
+        f"protocol={exposure.protocol} "
+        f"route_index={exposure.route_index} "
+        f"route=\"{exposure.match}\" "
+        f"source={exposure.source} "
+        f"tier={exposure.tier} "
+        f"identity={exposure.identity} "
+        f"payments={exposure.payments} "
+        f"realtime={str(exposure.realtime).lower()} "
+        f"public_allowed={str(exposure.public_allowed).lower()} "
+        f"max_tier={exposure.max_tier} "
+        f"status={exposure.status} "
+        f"reason=\"{exposure.reason}\""
+    )
+
+
+def _print_route_issue(issue: RouteIssue) -> None:
+    print(
+        "AMPG_ROUTE_ISSUE "
+        f"site={issue.site_id} "
+        f"route_index={issue.route_index} "
+        f"route=\"{issue.match}\" "
+        f"source={issue.source} "
+        f"tier={issue.tier} "
+        f"code={issue.code} "
+        f"message=\"{issue.message}\""
+    )
 
 
 def _cmd_audit(config, *, fail_on_warn: bool) -> int:
