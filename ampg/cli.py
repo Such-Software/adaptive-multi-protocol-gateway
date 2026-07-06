@@ -10,6 +10,7 @@ from .config import load_config
 from .docsgen import generate_docs
 from .manifest import write_fixture_manifests
 from .plan import plan_gateway, write_plan_artifacts
+from .preview import PreviewServers, preview_endpoints, write_preview_fixture_manifests
 from .route_manifest import (
     load_route_manifest,
     route_manifest_schema_json,
@@ -35,6 +36,24 @@ def main(argv: list[str] | None = None) -> int:
     )
     subcommands.add_parser("build", help="Build enabled protocol outputs.")
     subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
+    preview_parser = subcommands.add_parser("preview", help="Preview generated outputs locally.")
+    preview_subcommands = preview_parser.add_subparsers(dest="preview_command", required=True)
+    for preview_command in ("endpoints", "manifest", "serve"):
+        command_parser = preview_subcommands.add_parser(
+            preview_command,
+            help=f"Preview {preview_command} for generated outputs.",
+        )
+        command_parser.add_argument(
+            "--base-port",
+            type=int,
+            default=19080,
+            help="First loopback port assigned to enabled protocol outputs.",
+        )
+        command_parser.add_argument(
+            "--host",
+            default="127.0.0.1",
+            help="Loopback host for preview URLs.",
+        )
     routes_parser = subcommands.add_parser("routes", help="Explain route exposure policy.")
     routes_subcommands = routes_parser.add_subparsers(dest="routes_command", required=True)
     routes_subcommands.add_parser("explain", help="Print per-protocol route decisions.")
@@ -93,6 +112,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_build(config)
         if args.command == "manifest":
             return _cmd_manifest(config)
+        if args.command == "preview":
+            return _cmd_preview(config, args)
         if args.command == "routes":
             return _cmd_routes(config, args)
         if args.command == "audit":
@@ -164,6 +185,59 @@ def _cmd_manifest(config) -> int:
             f"fixtures={manifest.fixture_count}"
         )
     return 0
+
+
+def _cmd_preview(config, args) -> int:
+    endpoints = preview_endpoints(config, base_port=args.base_port, host=args.host)
+    if args.preview_command == "endpoints":
+        for endpoint in endpoints:
+            _print_preview_endpoint(endpoint)
+        print(
+            "AMPG_PREVIEW_SUMMARY "
+            f"sites={len(config.sites)} endpoints={len(endpoints)}"
+        )
+        return 0
+
+    if args.preview_command == "manifest":
+        for endpoint in endpoints:
+            _print_preview_endpoint(endpoint)
+        for result in write_preview_fixture_manifests(
+            config,
+            base_port=args.base_port,
+            host=args.host,
+        ):
+            print(
+                "AMPG_PREVIEW_MANIFEST "
+                f"site={result.site_id} "
+                f"path={result.path} "
+                f"fixtures={result.fixture_count}"
+            )
+        return 0
+
+    if args.preview_command == "serve":
+        for endpoint in endpoints:
+            _print_preview_endpoint(endpoint)
+        with PreviewServers(endpoints) as servers:
+            print(
+                "AMPG_PREVIEW_SERVE "
+                f"status=running endpoints={len(servers.endpoints)}"
+            )
+            servers.wait_forever()
+        return 0
+
+    return 1
+
+
+def _print_preview_endpoint(endpoint) -> None:
+    print(
+        "AMPG_PREVIEW_ENDPOINT "
+        f"site={endpoint.site_id} "
+        f"protocol={endpoint.protocol} "
+        f"renderer={endpoint.renderer} "
+        f"url={endpoint.url} "
+        f"root={endpoint.root} "
+        f"status={endpoint.status}"
+    )
 
 
 def _cmd_routes(config, args) -> int:

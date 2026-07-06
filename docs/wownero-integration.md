@@ -139,6 +139,8 @@ daemon_policy = "auto"
 - `ampg plan` identifies the Wownero source tree and selected protocols.
 - `ampg build` creates clearnet, Tor, I2P, and Gemini output without requiring Markdown.
 - `ampg build` writes a fixture manifest that AMPB can check.
+- `ampg preview manifest` writes loopback fixture URLs that AMPB can check before live
+  transport daemons are installed or adopted.
 - Tor output contains no `<script>` tags or inline event handlers.
 - Generated Gemini output has readable headings, paragraphs, and links.
 - Generated Micron output fits terminal-first browsing.
@@ -150,6 +152,8 @@ daemon_policy = "auto"
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml manifest
+python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
+python3 -m ampg --config examples/wownero.gateway.toml preview manifest
 python3 -m ampg --config examples/i2p-only.gateway.toml plan
 python3 -m ampg --config examples/i2p-only.gateway.toml build
 ```

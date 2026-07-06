@@ -103,6 +103,8 @@ python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml manifest
+python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
+python3 -m ampg --config examples/wownero.gateway.toml preview manifest
 python3 -m ampg --config examples/wownero.gateway.toml routes explain
 python3 -m ampg --config examples/wownero.gateway.toml routes validate
 python3 tools/generate_route_manifest.py examples/route-catalog.json examples/route-manifest.json
