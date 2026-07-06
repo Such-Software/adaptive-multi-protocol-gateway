@@ -35,6 +35,7 @@ from .approvals import (
 from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
+from .deploy import DeployPlan, DeployStep, DeployNextStep, deploy_plan
 from .docsgen import generate_docs
 from .health import HealthCheck, blocked_health_checks, health_plan
 from .install_plan import (
@@ -117,6 +118,21 @@ def main(argv: list[str] | None = None) -> int:
         "--force",
         action="store_true",
         help="Replace an existing config file.",
+    )
+    deploy_parser = subcommands.add_parser(
+        "deploy",
+        help="Plan or run a guided site deployment.",
+    )
+    deploy_subcommands = deploy_parser.add_subparsers(dest="deploy_command", required=True)
+    deploy_plan_parser = deploy_subcommands.add_parser(
+        "plan",
+        help="Show the simplest next steps for this deployment.",
+    )
+    _add_target_selection(deploy_plan_parser)
+    deploy_plan_parser.add_argument(
+        "--platform",
+        choices=PLATFORM_NAMES,
+        help="Override platform detection for deploy planning.",
     )
     plan_parser = subcommands.add_parser("plan", help="Print a dry-run plan.")
     _add_target_selection(plan_parser)
@@ -375,6 +391,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_status(config, args)
         if args.command == "doctor":
             return _cmd_doctor(config, args)
+        if args.command == "deploy":
+            return _cmd_deploy(config, args)
         if args.command == "apply":
             return _cmd_apply(config, args)
         if args.command == "approvals":
@@ -448,6 +466,25 @@ def _cmd_init(args) -> int:
         for index, command in enumerate(next_commands, start=1):
             print(f"AMPG_INIT_NEXT step={index} command=\"{_quote(command)}\"")
         return 0
+    return 1
+
+
+def _cmd_deploy(config, args) -> int:
+    if args.deploy_command == "plan":
+        platform_provider = _platform_override(config, args)
+        plan = deploy_plan(
+            config,
+            profile=getattr(args, "profile", None),
+            protocols=parse_protocol_filters(getattr(args, "protocol", ())),
+            platform_provider=platform_provider,
+            platform_name=platform_provider.name if platform_provider else None,
+        )
+        for step in plan.steps:
+            _print_deploy_step(step)
+        for index, next_step in enumerate(plan.next_steps, start=1):
+            _print_deploy_next(index, next_step)
+        _print_deploy_summary(config, plan)
+        return 1 if plan.status == "blocked" else 0
     return 1
 
 
@@ -838,6 +875,48 @@ def _print_apply_preflight_item(item: ApplyPreflightItem) -> None:
         f"target=\"{_quote(item.target)}\" "
         f"command=\"{_quote(item.command)}\" "
         f"message=\"{_quote(item.message)}\""
+    )
+
+
+def _print_deploy_step(step: DeployStep) -> None:
+    print(
+        "AMPG_DEPLOY_STEP "
+        f"stage={step.stage} "
+        f"status={step.status} "
+        f"command=\"{_quote(step.command)}\" "
+        f"message=\"{_quote(step.message)}\""
+    )
+
+
+def _print_deploy_next(index: int, next_step: DeployNextStep) -> None:
+    print(
+        "AMPG_DEPLOY_NEXT "
+        f"step={index} "
+        f"stage={next_step.stage} "
+        f"command=\"{_quote(next_step.command)}\" "
+        f"message=\"{_quote(next_step.message)}\""
+    )
+
+
+def _print_deploy_summary(config, plan: DeployPlan) -> None:
+    statuses = [step.status for step in plan.steps]
+    protocol_count = sum(
+        1
+        for site in config.sites
+        for protocol in site.protocols.values()
+        if protocol.enabled
+    )
+    print(
+        "AMPG_DEPLOY_SUMMARY "
+        f"status={plan.status} "
+        f"sites={len(config.sites)} "
+        f"protocols={protocol_count} "
+        f"ready={statuses.count('ready')} "
+        f"todo={statuses.count('todo')} "
+        f"review={statuses.count('review')} "
+        f"blocked={statuses.count('blocked')} "
+        f"skipped={statuses.count('skipped')} "
+        f"message=\"{_quote(plan.message)}\""
     )
 
 

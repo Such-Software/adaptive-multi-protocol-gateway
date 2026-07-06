@@ -107,6 +107,12 @@ python3 -m ampg --config gateway.toml doctor --platform android-termux
 This keeps the same gateway config portable across a VPS, laptop, old phone, or manual
 render-only environment while making daemon ownership decisions explicit.
 
+## Deploy plan
+
+`ampg deploy plan` is the operator-friendly layer over build, doctor, install-plan,
+approvals, address capture, and apply dry-run. It emits stage rows with `ready`, `todo`,
+`review`, `blocked`, or `skipped` status and short next-step commands. It is read-only.
+
 ## Activation plan
 
 `ampg apply --dry-run` turns daemon status and generated config artifacts into an ordered

@@ -35,6 +35,12 @@ The generated config keeps common transports as `enabled = true/false` toggles a
 creates practical profiles such as `vps-full`, `tor-i2p`, and `mobile-i2p` when they
 apply.
 
+Then run `deploy plan` for a concise checklist:
+
+```sh
+python3 -m ampg --config gateway.toml deploy plan --profile vps-full
+```
+
 ## Minimal Wownero pilot config
 
 ```toml

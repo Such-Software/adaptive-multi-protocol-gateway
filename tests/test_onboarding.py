@@ -87,6 +87,31 @@ class OnboardingTest(unittest.TestCase):
         self.assertFalse(config.sites[0].protocols["tor"].enabled)
         self.assertIn("mobile-i2p", config.profiles)
 
+    def test_init_site_full_preset_uses_auto_clearnet_for_new_hosts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = root / "gateway.toml"
+
+            status, _, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "init",
+                    "site",
+                    "example",
+                    "--domain",
+                    "example.test",
+                    "--source",
+                    str(_source(root)),
+                    "--preset",
+                    "full",
+                ]
+            )
+            config = load_config(config_path)
+
+        self.assertEqual(0, status, error)
+        self.assertEqual("auto", config.sites[0].protocols["clearnet"].daemon_policy)
+
     def test_init_site_refuses_overwrite_without_force(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()

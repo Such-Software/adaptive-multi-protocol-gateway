@@ -197,7 +197,7 @@ def _protocol_section(site_id: str, protocol: str, *, enabled: bool) -> list[str
             f"enabled = {_toml_bool(enabled)}",
             'renderer = "clearnet"',
             'daemon = "nginx"',
-            'daemon_policy = "adopt"',
+            'daemon_policy = "auto"',
             "",
         ]
     if protocol == "tor":

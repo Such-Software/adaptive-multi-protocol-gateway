@@ -37,6 +37,7 @@ config artifacts.
 ## Preflight commands
 
 ```sh
+python3 -m ampg --config gateway.toml deploy plan --profile mobile-i2p
 python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p
@@ -53,6 +54,10 @@ python3 -m ampg --config gateway.toml approvals list --profile mobile-i2p
 python3 -m ampg --config gateway.toml approvals approve --profile mobile-i2p --all
 python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
+
+`deploy plan` summarizes the current deployment in plain stages: source, build, DNS,
+doctor, daemons, artifacts, addresses, and apply preflight. It prints the next commands
+to run and does not change files or services.
 
 `status` prints one row per enabled protocol with the selected platform provider,
 adapter, installed/running daemon probe, action, and policy result.
