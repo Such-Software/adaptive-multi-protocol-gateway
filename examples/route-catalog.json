@@ -1,0 +1,38 @@
+{
+  "default_tier": "interactive-lite",
+  "deny_routes": [
+    "/admin/*",
+    "/api/internal/*",
+    "/webhooks/*"
+  ],
+  "routes": [
+    {
+      "name": "play",
+      "method": "GET",
+      "path": "/play/*"
+    },
+    {
+      "name": "checkout",
+      "method": "POST",
+      "path": "/checkout/*",
+      "tier": "transactional",
+      "identity": "http-session",
+      "payments": "server-invoice"
+    },
+    {
+      "name": "live",
+      "method": "GET",
+      "path": "/live/*",
+      "tier": "realtime",
+      "identity": "http-session",
+      "realtime": true
+    },
+    {
+      "name": "admin",
+      "method": "GET",
+      "path": "/admin/*",
+      "tier": "internal",
+      "public_allowed": false
+    }
+  ]
+}

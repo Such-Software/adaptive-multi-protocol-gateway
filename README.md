@@ -105,6 +105,7 @@ python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/wownero.gateway.toml routes explain
 python3 -m ampg --config examples/wownero.gateway.toml routes validate
+python3 tools/generate_route_manifest.py examples/route-catalog.json examples/route-manifest.json
 python3 -m ampg route-manifest validate examples/route-manifest.json
 python3 -m ampg --config examples/wownero.gateway.toml audit
 python3 -m ampg --config examples/i2p-only.gateway.toml build

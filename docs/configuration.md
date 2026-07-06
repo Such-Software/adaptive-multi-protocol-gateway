@@ -207,8 +207,13 @@ The public schema is committed at `schemas/ampg.route-manifest.v1.schema.json`.
 Applications can validate generated manifests before AMPG config parsing:
 
 ```sh
+python3 tools/generate_route_manifest.py examples/route-catalog.json examples/route-manifest.json
 python3 -m ampg route-manifest validate routes.json
 ```
+
+`examples/route-catalog.json` is a neutral app-side input shape. Real framework adapters
+can replace it with generated route data from the application's router, then emit the same
+AMPG route-manifest contract.
 
 ```json
 {

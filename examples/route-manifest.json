@@ -1,5 +1,4 @@
 {
-  "schema": "ampg.route-manifest.v1",
   "default_tier": "interactive-lite",
   "deny_routes": [
     "/admin/*",
@@ -11,21 +10,22 @@
       "match": "/play/*"
     },
     {
-      "match": "/checkout/*",
-      "tier": "transactional",
       "identity": "http-session",
-      "payments": "server-invoice"
+      "match": "/checkout/*",
+      "payments": "server-invoice",
+      "tier": "transactional"
     },
     {
-      "match": "/live/*",
-      "tier": "realtime",
       "identity": "http-session",
-      "realtime": true
+      "match": "/live/*",
+      "realtime": true,
+      "tier": "realtime"
     },
     {
       "match": "/admin/*",
-      "tier": "internal",
-      "public_allowed": false
+      "public_allowed": false,
+      "tier": "internal"
     }
-  ]
+  ],
+  "schema": "ampg.route-manifest.v1"
 }

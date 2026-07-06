@@ -1,6 +1,8 @@
 import contextlib
 import io
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -26,6 +28,45 @@ class RouteManifestTest(unittest.TestCase):
         data = json.loads((ROOT / "examples/route-manifest.json").read_text(encoding="utf-8"))
 
         self.assertEqual([], validate_route_manifest(data))
+
+    def test_route_catalog_generator_matches_example_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "route-manifest.json"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "tools/generate_route_manifest.py",
+                    "examples/route-catalog.json",
+                    str(output),
+                ],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual("", result.stderr)
+            self.assertEqual(0, result.returncode)
+            self.assertEqual(
+                (ROOT / "examples/route-manifest.json").read_text(encoding="utf-8"),
+                output.read_text(encoding="utf-8"),
+            )
+
+            check_result = subprocess.run(
+                [
+                    sys.executable,
+                    "tools/generate_route_manifest.py",
+                    "examples/route-catalog.json",
+                    str(output),
+                    "--check",
+                ],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual("", check_result.stderr)
+            self.assertEqual(0, check_result.returncode)
 
     def test_invalid_route_manifest_reports_all_contract_issues(self):
         issues = validate_route_manifest(

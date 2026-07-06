@@ -59,8 +59,12 @@ The schema is generated at `schemas/ampg.route-manifest.v1.schema.json`, and app
 validate generated manifests with:
 
 ```sh
+python3 tools/generate_route_manifest.py examples/route-catalog.json examples/route-manifest.json
 python3 -m ampg route-manifest validate routes.json
 ```
+
+`examples/route-catalog.json` shows the adapter side of the workflow: app route metadata
+goes in, the stable AMPG route manifest comes out.
 
 Required top-level fields:
 
