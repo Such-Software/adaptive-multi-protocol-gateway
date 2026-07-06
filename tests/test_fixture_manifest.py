@@ -118,9 +118,9 @@ payments = "server-invoice"
             config = load_config(config_path)
             manifest = fixture_manifest(config.sites[0])
 
-        self.assertEqual(
-            {
-                "identity": "http-session",
+            self.assertEqual(
+                {
+                    "identity": "http-session",
                 "payments": "server-invoice",
                 "public_allowed": True,
                 "realtime": False,
@@ -128,6 +128,66 @@ payments = "server-invoice"
             },
             manifest["fixtures"][0]["interaction"],
         )
+
+    def test_manifest_expands_public_route_policies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "site"
+            source.mkdir()
+            (source / "index.html").write_text("<h1>Game</h1>", encoding="utf-8")
+            config_path = root / "gateway.toml"
+            config_path.write_text(
+                """
+[[site]]
+id = "game"
+domain = "game.test"
+
+[site.source]
+kind = "static-html"
+path = "./site"
+canonical_url = "https://game.test"
+
+[site.outputs]
+root = "./out"
+plan_root = "./plan"
+
+[site.interactions]
+default_tier = "static"
+deny_routes = ["/admin/*"]
+
+[[site.interactions.route]]
+match = "/play/*"
+tier = "interactive-lite"
+
+[[site.interactions.route]]
+match = "/checkout/*"
+tier = "transactional"
+identity = "http-session"
+payments = "server-invoice"
+
+[[site.interactions.route]]
+match = "/admin/*"
+tier = "internal"
+public_allowed = false
+
+[site.protocols.tor]
+enabled = true
+renderer = "privacy-html"
+""",
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+            manifest = fixture_manifest(config.sites[0])
+
+        self.assertEqual(3, len(config.sites[0].interactions.routes))
+        self.assertEqual(3, len(manifest["fixtures"]))
+        by_path = {fixture.get("route", {}).get("fixture_path", "/"): fixture for fixture in manifest["fixtures"]}
+        self.assertEqual("http://game.onion/play/", by_path["/play/"]["url"])
+        self.assertEqual("interactive-lite", by_path["/play/"]["interaction"]["tier"])
+        self.assertEqual("http://game.onion/checkout/", by_path["/checkout/"]["url"])
+        self.assertEqual("transactional", by_path["/checkout/"]["interaction"]["tier"])
+        self.assertEqual("server-invoice", by_path["/checkout/"]["interaction"]["payments"])
 
 
 if __name__ == "__main__":

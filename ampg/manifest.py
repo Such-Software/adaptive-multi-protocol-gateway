@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .config import GatewayConfig, ProtocolConfig, SiteConfig
+from .config import GatewayConfig, ProtocolConfig, RoutePolicyConfig, SiteConfig
 
 
 SCHEMA = "ampg.fixture-manifest.v1"
@@ -19,11 +19,16 @@ class ManifestWriteResult:
 
 
 def fixture_manifest(site: SiteConfig) -> dict[str, Any]:
-    fixtures = [
-        _fixture_entry(site, protocol)
-        for protocol in site.protocols.values()
-        if protocol.enabled
-    ]
+    fixtures = []
+    for protocol in site.protocols.values():
+        if not protocol.enabled:
+            continue
+        fixtures.append(_fixture_entry(site, protocol, None))
+        fixtures.extend(
+            _fixture_entry(site, protocol, route_policy)
+            for route_policy in site.interactions.routes
+            if _route_is_public(route_policy)
+        )
     return {
         "schema": SCHEMA,
         "site": {
@@ -59,21 +64,31 @@ def manifest_path(site: SiteConfig) -> Path:
     return site.outputs.root / "ampg-fixture-manifest.json"
 
 
-def _fixture_entry(site: SiteConfig, protocol: ProtocolConfig) -> dict[str, Any]:
+def _fixture_entry(
+    site: SiteConfig,
+    protocol: ProtocolConfig,
+    route_policy: RoutePolicyConfig | None,
+) -> dict[str, Any]:
     url, address_status = _fixture_url(site, protocol)
     transport = _transport_for(protocol.name)
-    return {
+    entry = {
         "protocol": protocol.name,
         "renderer": protocol.renderer,
-        "url": url,
+        "url": _url_for_route(url, route_policy),
         "address_status": address_status,
-        "output_path": protocol.name,
+        "output_path": _output_path_for_route(protocol.name, route_policy),
         "checks": {
             "transport": transport,
             "profile": transport,
         },
-        "interaction": _interaction_policy(protocol),
+        "interaction": _interaction_policy(protocol, route_policy),
     }
+    if route_policy:
+        entry["route"] = {
+            "match": route_policy.match,
+            "fixture_path": _fixture_path(route_policy.match),
+        }
+    return entry
 
 
 def _transport_for(protocol_name: str) -> str:
@@ -82,7 +97,22 @@ def _transport_for(protocol_name: str) -> str:
     return protocol_name
 
 
-def _interaction_policy(protocol: ProtocolConfig) -> dict[str, Any]:
+def _route_is_public(route_policy: RoutePolicyConfig) -> bool:
+    return route_policy.public_allowed and route_policy.tier != "internal"
+
+
+def _interaction_policy(
+    protocol: ProtocolConfig,
+    route_policy: RoutePolicyConfig | None,
+) -> dict[str, Any]:
+    if route_policy:
+        return {
+            "tier": route_policy.tier,
+            "identity": route_policy.identity,
+            "payments": route_policy.payments,
+            "realtime": route_policy.realtime,
+            "public_allowed": route_policy.public_allowed,
+        }
     return {
         "tier": str(protocol.options.get("tier", protocol.options.get("max_tier", "static"))),
         "identity": str(protocol.options.get("identity", "none")),
@@ -90,6 +120,31 @@ def _interaction_policy(protocol: ProtocolConfig) -> dict[str, Any]:
         "realtime": bool(protocol.options.get("realtime", False)),
         "public_allowed": bool(protocol.options.get("public_allowed", True)),
     }
+
+
+def _url_for_route(base_url: str, route_policy: RoutePolicyConfig | None) -> str:
+    if not route_policy:
+        return base_url
+    fixture_path = _fixture_path(route_policy.match)
+    if base_url.startswith(("rns://", "lxmf://", "nomad://", "ipfs://", "ipns://")):
+        return base_url
+    return base_url.rstrip("/") + fixture_path
+
+
+def _output_path_for_route(protocol_name: str, route_policy: RoutePolicyConfig | None) -> str:
+    if not route_policy:
+        return protocol_name
+    return protocol_name + _fixture_path(route_policy.match)
+
+
+def _fixture_path(match: str) -> str:
+    value = match.strip()
+    if not value.startswith("/"):
+        value = "/" + value
+    value = value.replace("*", "")
+    if not value or value == "/":
+        return "/"
+    return value if value.endswith("/") else value + "/"
 
 
 def _fixture_url(site: SiteConfig, protocol: ProtocolConfig) -> tuple[str, str]:

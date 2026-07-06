@@ -49,12 +49,30 @@ class ProtocolConfig:
 
 
 @dataclass(frozen=True)
+class RoutePolicyConfig:
+    match: str
+    tier: str
+    identity: str = "none"
+    payments: str = "none"
+    realtime: bool = False
+    public_allowed: bool = True
+
+
+@dataclass(frozen=True)
+class InteractionConfig:
+    default_tier: str = "static"
+    deny_routes: tuple[str, ...] = ()
+    routes: tuple[RoutePolicyConfig, ...] = ()
+
+
+@dataclass(frozen=True)
 class SiteConfig:
     id: str
     domain: str
     source: SourceConfig
     outputs: OutputConfig
     protocols: dict[str, ProtocolConfig]
+    interactions: InteractionConfig
 
 
 @dataclass(frozen=True)
@@ -76,6 +94,7 @@ def _parse_site(raw_site: dict[str, Any], base_dir: Path) -> SiteConfig:
     source = raw_site.get("source") or {}
     outputs = raw_site.get("outputs") or {}
     protocols = raw_site.get("protocols") or {}
+    interactions = raw_site.get("interactions") or {}
 
     site_id = _required_str(raw_site, "id")
     domain = _required_str(raw_site, "domain")
@@ -103,6 +122,7 @@ def _parse_site(raw_site: dict[str, Any], base_dir: Path) -> SiteConfig:
         ),
         outputs=OutputConfig(root=output_root, plan_root=plan_root),
         protocols=parsed_protocols,
+        interactions=_parse_interactions(interactions),
     )
 
 
@@ -121,6 +141,35 @@ def _parse_protocol(name: str, raw_protocol: dict[str, Any]) -> ProtocolConfig:
         daemon=daemon,
         daemon_policy=policy,
         options=options,
+    )
+
+
+def _parse_interactions(raw_interactions: dict[str, Any]) -> InteractionConfig:
+    raw_routes = raw_interactions.get("route", ())
+    if isinstance(raw_routes, dict):
+        raw_routes = (raw_routes,)
+    if not isinstance(raw_routes, (list, tuple)):
+        raise ValueError("site.interactions.route must be a table array")
+    deny_routes = raw_interactions.get("deny_routes", ())
+    if not isinstance(deny_routes, (list, tuple)):
+        raise ValueError("site.interactions.deny_routes must be an array")
+    return InteractionConfig(
+        default_tier=str(raw_interactions.get("default_tier", "static")),
+        deny_routes=tuple(str(route) for route in deny_routes),
+        routes=tuple(_parse_route_policy(raw_route) for raw_route in raw_routes),
+    )
+
+
+def _parse_route_policy(raw_route: dict[str, Any]) -> RoutePolicyConfig:
+    if not isinstance(raw_route, dict):
+        raise ValueError("site.interactions.route entries must be tables")
+    return RoutePolicyConfig(
+        match=_required_str(raw_route, "match"),
+        tier=str(raw_route.get("tier", "static")),
+        identity=str(raw_route.get("identity", "none")),
+        payments=str(raw_route.get("payments", "none")),
+        realtime=bool(raw_route.get("realtime", False)),
+        public_allowed=bool(raw_route.get("public_allowed", True)),
     )
 
 

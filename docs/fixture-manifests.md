@@ -22,6 +22,7 @@ The manifest contains public route expectations only:
 - expected AMPB transport and profile.
 - declared interaction tier, identity adapter, payment adapter, realtime flag, and
   public exposure flag.
+- optional route-group metadata for configured public route policies.
 
 It must not contain private host inventory, hidden-service keys, tunnel keys, credentials,
 or deployment notes.
@@ -58,3 +59,7 @@ Fixture interaction policy defaults to:
 
 Route-group overrides will be added separately. Until then, protocol-level options can
 declare the fixture-level policy that AMPB should check.
+
+When `[[site.interactions.route]]` entries are configured, AMPG emits additional fixtures
+for public route groups. Routes with `tier = "internal"` or `public_allowed = false` are
+not emitted.

@@ -37,6 +37,11 @@ tier = "transactional"
 identity = "http-session"
 payments = "server-invoice"
 
+[[site.interactions.route]]
+match = "/admin/*"
+tier = "internal"
+public_allowed = false
+
 [site.protocols.clearnet]
 enabled = true
 renderer = "clearnet"

@@ -45,6 +45,10 @@ An application adapter describes what AMPG may expose:
 Adapters do not bypass the application. They translate constrained protocol input into the
 application's public action surface, then render safe responses.
 
+Configured public route groups are emitted into fixture manifests so AMPB can verify the
+route and interaction policy for each selected transport. Internal route groups are not
+emitted.
+
 ## Protocol Mapping
 
 | Tier | Clearnet | Tor/I2P | Gemini | IPFS | Reticulum |
