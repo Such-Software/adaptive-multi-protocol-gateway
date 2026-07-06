@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 from pathlib import Path
 from typing import Any
 import tomllib
 
+
+ROUTE_MANIFEST_SCHEMA = "ampg.route-manifest.v1"
 
 DEFAULT_DAEMONS = {
     "clearnet": "nginx",
@@ -63,6 +66,7 @@ class InteractionConfig:
     default_tier: str = "static"
     deny_routes: tuple[str, ...] = ()
     routes: tuple[RoutePolicyConfig, ...] = ()
+    route_manifest: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -122,7 +126,7 @@ def _parse_site(raw_site: dict[str, Any], base_dir: Path) -> SiteConfig:
         ),
         outputs=OutputConfig(root=output_root, plan_root=plan_root),
         protocols=parsed_protocols,
-        interactions=_parse_interactions(interactions),
+        interactions=_parse_interactions(interactions, base_dir, site_id),
     )
 
 
@@ -144,33 +148,92 @@ def _parse_protocol(name: str, raw_protocol: dict[str, Any]) -> ProtocolConfig:
     )
 
 
-def _parse_interactions(raw_interactions: dict[str, Any]) -> InteractionConfig:
-    raw_routes = raw_interactions.get("route", ())
-    if isinstance(raw_routes, dict):
-        raw_routes = (raw_routes,)
-    if not isinstance(raw_routes, (list, tuple)):
-        raise ValueError("site.interactions.route must be a table array")
-    deny_routes = raw_interactions.get("deny_routes", ())
-    if not isinstance(deny_routes, (list, tuple)):
-        raise ValueError("site.interactions.deny_routes must be an array")
+def _parse_interactions(
+    raw_interactions: dict[str, Any],
+    base_dir: Path,
+    site_id: str,
+) -> InteractionConfig:
+    if not isinstance(raw_interactions, dict):
+        raise ValueError("site.interactions must be a table")
+
+    route_manifest = _route_manifest_path(raw_interactions, base_dir)
+    manifest_data = _load_route_manifest(route_manifest, site_id) if route_manifest else {}
+
+    default_tier = str(
+        raw_interactions.get("default_tier", manifest_data.get("default_tier", "static"))
+    )
+    deny_routes = _string_array(manifest_data.get("deny_routes", ()), "route manifest deny_routes")
+    deny_routes += _string_array(raw_interactions.get("deny_routes", ()), "site.interactions.deny_routes")
+    routes = tuple(
+        _parse_route_policy(raw_route, default_tier)
+        for raw_route in _route_array(manifest_data.get("routes", ()), "route manifest routes")
+    )
+    routes += tuple(
+        _parse_route_policy(raw_route, default_tier)
+        for raw_route in _route_array(raw_interactions.get("route", ()), "site.interactions.route")
+    )
     return InteractionConfig(
-        default_tier=str(raw_interactions.get("default_tier", "static")),
-        deny_routes=tuple(str(route) for route in deny_routes),
-        routes=tuple(_parse_route_policy(raw_route) for raw_route in raw_routes),
+        default_tier=default_tier,
+        deny_routes=tuple(deny_routes),
+        routes=routes,
+        route_manifest=route_manifest,
     )
 
 
-def _parse_route_policy(raw_route: dict[str, Any]) -> RoutePolicyConfig:
+def _parse_route_policy(raw_route: dict[str, Any], default_tier: str) -> RoutePolicyConfig:
     if not isinstance(raw_route, dict):
-        raise ValueError("site.interactions.route entries must be tables")
+        raise ValueError("route policy entries must be objects")
     return RoutePolicyConfig(
         match=_required_str(raw_route, "match"),
-        tier=str(raw_route.get("tier", "static")),
+        tier=str(raw_route.get("tier", default_tier)),
         identity=str(raw_route.get("identity", "none")),
         payments=str(raw_route.get("payments", "none")),
         realtime=bool(raw_route.get("realtime", False)),
         public_allowed=bool(raw_route.get("public_allowed", True)),
     )
+
+
+def _route_manifest_path(raw_interactions: dict[str, Any], base_dir: Path) -> Path | None:
+    raw_path = raw_interactions.get("route_manifest")
+    if raw_path is None:
+        return None
+    if not isinstance(raw_path, str) or not raw_path:
+        raise ValueError("site.interactions.route_manifest must be a path string")
+    return _resolve_path(base_dir, raw_path)
+
+
+def _load_route_manifest(path: Path, site_id: str) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ValueError(f"{site_id}: route manifest not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{site_id}: invalid route manifest JSON: {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"{site_id}: route manifest must be a JSON object: {path}")
+    if data.get("schema") != ROUTE_MANIFEST_SCHEMA:
+        raise ValueError(
+            f"{site_id}: route manifest schema must be {ROUTE_MANIFEST_SCHEMA!r}: {path}"
+        )
+    return data
+
+
+def _route_array(raw_routes: Any, context: str) -> tuple[Any, ...]:
+    if isinstance(raw_routes, dict):
+        return (raw_routes,)
+    if raw_routes is None:
+        return ()
+    if not isinstance(raw_routes, (list, tuple)):
+        raise ValueError(f"{context} must be an array")
+    return tuple(raw_routes)
+
+
+def _string_array(raw_values: Any, context: str) -> tuple[str, ...]:
+    if raw_values is None:
+        return ()
+    if not isinstance(raw_values, (list, tuple)):
+        raise ValueError(f"{context} must be an array")
+    return tuple(str(value) for value in raw_values)
 
 
 def _resolve_path(base_dir: Path, raw_path: str) -> Path:

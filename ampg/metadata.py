@@ -92,6 +92,14 @@ CONFIG_FIELDS = (
         "Route patterns that must not be published.",
     ),
     ConfigField(
+        "site.interactions",
+        "route_manifest",
+        "path",
+        False,
+        "",
+        "JSON route manifest generated or maintained by the application.",
+    ),
+    ConfigField(
         "site.interactions.route",
         "match",
         "glob",
@@ -122,6 +130,22 @@ CONFIG_FIELDS = (
         False,
         "none",
         "Payment adapter required by a route group.",
+    ),
+    ConfigField(
+        "site.interactions.route",
+        "realtime",
+        "boolean",
+        False,
+        "false",
+        "Whether a route group requires live state or streaming updates.",
+    ),
+    ConfigField(
+        "site.interactions.route",
+        "public_allowed",
+        "boolean",
+        False,
+        "true",
+        "Whether this route group may be emitted into public protocol outputs.",
     ),
     ConfigField(
         "site.protocols.<name>",

@@ -163,6 +163,7 @@ openapi = "http://127.0.0.1:9000/openapi.json"
 
 [site.interactions]
 default_tier = "interactive-lite"
+route_manifest = "./routes.json"
 session_policy = "http-only-cookie"
 deny_routes = ["/admin/*", "/api/internal/*", "/webhooks/*"]
 
@@ -195,6 +196,38 @@ max_tier = "interactive-lite"
 
 `max_tier` is a hard cap. If a route needs a higher tier than the protocol allows, AMPG
 omits it or renders a safe alternate page.
+
+## Route manifests
+
+Applications can generate a JSON route manifest instead of hand-maintaining every route
+group in TOML. Paths are resolved relative to `gateway.toml`; inline TOML routes are
+appended after manifest routes.
+
+```json
+{
+  "schema": "ampg.route-manifest.v1",
+  "default_tier": "interactive-lite",
+  "deny_routes": ["/admin/*", "/api/internal/*", "/webhooks/*"],
+  "routes": [
+    {"match": "/play/*"},
+    {
+      "match": "/checkout/*",
+      "tier": "transactional",
+      "identity": "http-session",
+      "payments": "server-invoice"
+    },
+    {
+      "match": "/webhooks/*",
+      "tier": "internal",
+      "public_allowed": false
+    }
+  ]
+}
+```
+
+Route entries use the same fields as `[[site.interactions.route]]`. The manifest should
+describe public intent only; credentials, keys, deployment notes, and private hostnames do
+not belong in it.
 
 ## Protocol-only deployments
 

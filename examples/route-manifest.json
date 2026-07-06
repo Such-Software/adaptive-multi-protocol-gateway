@@ -1,0 +1,31 @@
+{
+  "schema": "ampg.route-manifest.v1",
+  "default_tier": "interactive-lite",
+  "deny_routes": [
+    "/admin/*",
+    "/api/internal/*",
+    "/webhooks/*"
+  ],
+  "routes": [
+    {
+      "match": "/play/*"
+    },
+    {
+      "match": "/checkout/*",
+      "tier": "transactional",
+      "identity": "http-session",
+      "payments": "server-invoice"
+    },
+    {
+      "match": "/live/*",
+      "tier": "realtime",
+      "identity": "http-session",
+      "realtime": true
+    },
+    {
+      "match": "/admin/*",
+      "tier": "internal",
+      "public_allowed": false
+    }
+  ]
+}

@@ -189,6 +189,120 @@ renderer = "privacy-html"
         self.assertEqual("transactional", by_path["/checkout/"]["interaction"]["tier"])
         self.assertEqual("server-invoice", by_path["/checkout/"]["interaction"]["payments"])
 
+    def test_manifest_imports_app_route_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "site"
+            source.mkdir()
+            (source / "index.html").write_text("<h1>App</h1>", encoding="utf-8")
+            (root / "routes.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "ampg.route-manifest.v1",
+                        "default_tier": "interactive-lite",
+                        "deny_routes": ["/admin/*"],
+                        "routes": [
+                            {"match": "/play/*"},
+                            {
+                                "match": "/checkout/*",
+                                "tier": "transactional",
+                                "identity": "http-session",
+                                "payments": "server-invoice",
+                            },
+                            {
+                                "match": "/webhooks/*",
+                                "tier": "internal",
+                                "public_allowed": False,
+                            },
+                        ],
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+            config_path = root / "gateway.toml"
+            config_path.write_text(
+                """
+[[site]]
+id = "app"
+domain = "app.test"
+
+[site.source]
+kind = "static-html"
+path = "./site"
+
+[site.outputs]
+root = "./out"
+plan_root = "./plan"
+
+[site.interactions]
+route_manifest = "./routes.json"
+deny_routes = ["/api/internal/*"]
+
+[[site.interactions.route]]
+match = "/account/*"
+tier = "identity"
+identity = "http-session"
+
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+""",
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+            manifest = fixture_manifest(config.sites[0])
+
+        site = config.sites[0]
+        self.assertEqual("interactive-lite", site.interactions.default_tier)
+        self.assertEqual(("/admin/*", "/api/internal/*"), site.interactions.deny_routes)
+        self.assertEqual(4, len(site.interactions.routes))
+        self.assertEqual(4, len(manifest["fixtures"]))
+
+        by_path = {fixture.get("route", {}).get("fixture_path", "/"): fixture for fixture in manifest["fixtures"]}
+        self.assertEqual("interactive-lite", by_path["/play/"]["interaction"]["tier"])
+        self.assertEqual("http://app.i2p/play/", by_path["/play/"]["url"])
+        self.assertEqual("transactional", by_path["/checkout/"]["interaction"]["tier"])
+        self.assertEqual("server-invoice", by_path["/checkout/"]["interaction"]["payments"])
+        self.assertEqual("identity", by_path["/account/"]["interaction"]["tier"])
+        self.assertNotIn("/webhooks/", by_path)
+
+    def test_route_manifest_schema_is_required(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "site"
+            source.mkdir()
+            (source / "index.html").write_text("<h1>App</h1>", encoding="utf-8")
+            (root / "routes.json").write_text('{"routes": []}', encoding="utf-8")
+            config_path = root / "gateway.toml"
+            config_path.write_text(
+                """
+[[site]]
+id = "app"
+domain = "app.test"
+
+[site.source]
+kind = "static-html"
+path = "./site"
+
+[site.outputs]
+root = "./out"
+plan_root = "./plan"
+
+[site.interactions]
+route_manifest = "./routes.json"
+
+[site.protocols.tor]
+enabled = true
+renderer = "privacy-html"
+""",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ValueError, "route manifest schema"):
+                load_config(config_path)
+
 
 if __name__ == "__main__":
     unittest.main()

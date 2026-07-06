@@ -57,9 +57,11 @@ Fixture interaction policy defaults to:
 }
 ```
 
-Route-group overrides will be added separately. Until then, protocol-level options can
-declare the fixture-level policy that AMPB should check.
+Protocol-level options can declare the base fixture policy that AMPB should check.
 
 When `[[site.interactions.route]]` entries are configured, AMPG emits additional fixtures
 for public route groups. Routes with `tier = "internal"` or `public_allowed = false` are
 not emitted.
+
+Routes imported from `site.interactions.route_manifest` are treated the same way as inline
+TOML routes.

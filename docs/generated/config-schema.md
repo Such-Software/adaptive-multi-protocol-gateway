@@ -15,10 +15,13 @@ This file is generated from code. Do not edit it by hand.
 | site.outputs | `plan_root` | path | no | ../dist/ampg-plan | Generated plan artifact root. |
 | site.interactions | `default_tier` | enum | no | static | Default interaction tier for routes. |
 | site.interactions | `deny_routes` | array<string> | no | [] | Route patterns that must not be published. |
+| site.interactions | `route_manifest` | path | no | - | JSON route manifest generated or maintained by the application. |
 | site.interactions.route | `match` | glob | no | - | Route pattern for an explicit interaction policy. |
 | site.interactions.route | `tier` | enum | no | site.interactions.default_tier | Interaction tier for a route group. |
 | site.interactions.route | `identity` | enum | no | none | Identity adapter required by a route group. |
 | site.interactions.route | `payments` | enum | no | none | Payment adapter required by a route group. |
+| site.interactions.route | `realtime` | boolean | no | false | Whether a route group requires live state or streaming updates. |
+| site.interactions.route | `public_allowed` | boolean | no | true | Whether this route group may be emitted into public protocol outputs. |
 | site.protocols.<name> | `enabled` | boolean | no | false | Whether this protocol target is built and planned. |
 | site.protocols.<name> | `renderer` | enum | no | <protocol> | Renderer profile to use for this protocol. |
 | site.protocols.<name> | `daemon` | enum | no | protocol default | Ingress daemon adapter. |

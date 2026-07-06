@@ -3,7 +3,8 @@
 > Status: draft | Updated 2026-07-05 | Applies to: AMPG contributors and operators
 
 Adaptive Multi-Protocol Gateway, or AMPG, turns one canonical site into transport-appropriate
-published versions for clearnet web, Tor onion services, I2P, Gemini, and Reticulum.
+published versions for clearnet web, Tor onion services, I2P, Gemini, IPFS, and
+Reticulum.
 
 The first use case is practical: start from an existing clearnet static site such as
 `wownero.org`, keep the rich web version intact, and generate privacy-hardened or
@@ -64,14 +65,16 @@ AMPG is static-first, but not static-only. Each site or route group declares the
 interaction tier it wants AMPG to expose:
 
 - `static`: rendered files only.
-- `forms`: server-rendered GET/POST actions with full-page responses.
-- `sessions`: authenticated account flows with HTTP-only cookies or transport-native identity.
-- `realtime`: rich browser/admin surfaces; HTTP transports only.
+- `interactive-lite`: deterministic games, status lookups, quote forms, and other flows
+  without account state or payment confirmation.
+- `identity`: authenticated sessions, wallet sign-in, or signed capability links.
+- `transactional`: server-confirmed orders, deposits, invoices, donations, or payment intents.
+- `realtime`: multiplayer, dashboards, websockets, streaming updates, or fast shared state.
 - `internal`: workers, webhooks, private admin APIs; never published automatically.
 
-Constrained transports receive the safest compatible version. A storefront can have a Gemini
-catalog and inquiry flow without exposing its full JavaScript checkout. A worker API remains
-internal even when the public site is available on Tor or I2P.
+Constrained transports receive the safest compatible version. A storefront can have a
+Gemini catalog and inquiry flow without exposing its full JavaScript checkout. A worker
+API remains internal even when the public site is available on Tor or I2P.
 
 ## Documentation
 

@@ -49,6 +49,23 @@ Configured public route groups are emitted into fixture manifests so AMPB can ve
 route and interaction policy for each selected transport. Internal route groups are not
 emitted.
 
+## Route Manifest Contract
+
+Apps may provide `ampg.route-manifest.v1` JSON. AMPG imports it from
+`site.interactions.route_manifest`, merges its denylist with inline TOML, and appends any
+inline TOML route entries after the imported route entries.
+
+Required top-level fields:
+
+- `schema`: must be `ampg.route-manifest.v1`.
+- `routes`: route policy objects using `match`, `tier`, `identity`, `payments`,
+  `realtime`, and `public_allowed`.
+
+Optional top-level fields:
+
+- `default_tier`: inherited by route entries without a `tier`.
+- `deny_routes`: route patterns that must not be published.
+
 ## Protocol Mapping
 
 | Tier | Clearnet | Tor/I2P | Gemini | IPFS | Reticulum |
