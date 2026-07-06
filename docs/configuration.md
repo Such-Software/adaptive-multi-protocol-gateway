@@ -112,8 +112,8 @@ workflow.
 `[gateway]` paths are resolved relative to `gateway.toml` when they are not absolute.
 
 `state_dir`
-: AMPG-owned durable state. Managed daemon identities, generated transport state, and
-  the captured address registry live here.
+: AMPG-owned durable state. Managed daemon identities, generated transport state, daemon
+  logs, daemon-written addresses, and the captured address registry live here.
 
 `cache_dir`
 : Rebuildable intermediate data.

@@ -66,7 +66,8 @@ blocked.
 `install-plan --write-artifacts` writes managed daemon configs and platform supervisor
 files under the configured `plan_root`, grouped by site, protocol, and platform. For
 Tor/I2P HTTP publishing, AMPG writes both transport-daemon artifacts and loopback nginx
-artifacts.
+artifacts. The generated daemon configs store runtime state, identity keys, logs, and
+daemon-written addresses under `gateway.state_dir`.
 
 `addresses list` prints the effective public address for each enabled protocol:
 configured, captured, derived, or placeholder. `addresses capture` reads daemon-written
@@ -78,10 +79,10 @@ target real transport URLs; preview checks target local loopback preview endpoin
 Missing output blocks the plan, while placeholder transport addresses are review items.
 
 `apply --dry-run` prints the activation sequence for each enabled protocol: generated
-output readiness, config artifacts to review, daemon action, and post-apply health
-checks. It exits nonzero when any step is blocked. `--write-artifacts` writes reviewable
-config snippets to the configured plan root but still does not install or reload
-services.
+output readiness, config artifacts to review, daemon action, address capture or reuse,
+and post-apply health checks. It exits nonzero when any step is blocked. `--write-artifacts`
+writes reviewable config snippets to the configured plan root but still does not install
+or reload services.
 
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet
 `adopt` failure will block a full activation run, but it will not block

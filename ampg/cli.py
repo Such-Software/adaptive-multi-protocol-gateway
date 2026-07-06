@@ -524,6 +524,7 @@ def _print_activation_step(step: ActivationStep) -> None:
         f"action={step.action} "
         f"target={step.target} "
         f"status={step.status} "
+        f"command=\"{_quote(step.command)}\" "
         f"message=\"{_quote(step.message)}\""
     )
 

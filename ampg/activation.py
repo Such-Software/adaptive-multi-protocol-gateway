@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import shlex
 
+from .addresses import AddressRecord, address_registry_path, effective_address_records
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
 from .plan import plan_artifacts, write_plan_artifacts
 from .platforms import PlatformProvider
@@ -23,6 +25,7 @@ class ActivationStep:
     target: str
     status: str
     message: str
+    command: str = "-"
 
 
 def activation_steps(
@@ -38,6 +41,10 @@ def activation_steps(
     )
     status_by_protocol = {
         (status.site_id, status.protocol): status for status in statuses
+    }
+    address_by_protocol = {
+        (record.site_id, record.protocol): record
+        for record in effective_address_records(config)
     }
     steps: list[ActivationStep] = []
 
@@ -69,9 +76,11 @@ def activation_steps(
             transport_status = status_by_protocol[(site.id, protocol.name)]
             steps.extend(
                 _protocol_steps(
+                    config,
                     site,
                     protocol,
                     transport_status=transport_status,
+                    address_record=address_by_protocol[(site.id, protocol.name)],
                     output_ready=output_ready,
                 )
             )
@@ -84,10 +93,12 @@ def blocked_steps(steps: list[ActivationStep]) -> list[ActivationStep]:
 
 
 def _protocol_steps(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     *,
     transport_status: TransportStatus,
+    address_record: AddressRecord,
     output_ready: bool,
 ) -> list[ActivationStep]:
     output_root = site.outputs.root / protocol.name
@@ -145,6 +156,7 @@ def _protocol_steps(
             message=transport_status.message,
         )
     )
+    steps.append(_address_step(config, site, protocol, address_record))
     steps.append(
         ActivationStep(
             site_id=site.id,
@@ -152,19 +164,79 @@ def _protocol_steps(
             stage="health",
             action="check-transport",
             target=protocol.name,
-            status=(
-                "planned"
-                if output_ready and transport_status.status != "error"
-                else "blocked"
+            status=_health_activation_status(
+                output_ready=output_ready,
+                transport_status=transport_status,
+                address_record=address_record,
             ),
-            message=(
-                "verify generated site through this transport after apply"
-                if output_ready and transport_status.status != "error"
-                else "health check is blocked until output and daemon steps are ready"
+            message=_health_activation_message(
+                output_ready=output_ready,
+                transport_status=transport_status,
+                address_record=address_record,
             ),
         )
     )
     return steps
+
+
+def _address_step(
+    config: GatewayConfig,
+    site: SiteConfig,
+    protocol: ProtocolConfig,
+    address_record: AddressRecord,
+) -> ActivationStep:
+    if address_record.address_status == "placeholder":
+        return ActivationStep(
+            site_id=site.id,
+            protocol=protocol.name,
+            stage="address",
+            action="capture-address",
+            target=str(address_registry_path(config)),
+            status="review",
+            message="generated transport address is not known yet",
+            command=_address_capture_command(config, protocol),
+        )
+    return ActivationStep(
+        site_id=site.id,
+        protocol=protocol.name,
+        stage="address",
+        action="use-address",
+        target=address_record.url,
+        status="ready",
+        message=f"using {address_record.address_status} transport address",
+        command="-",
+    )
+
+
+def _address_capture_command(config: GatewayConfig, protocol: ProtocolConfig) -> str:
+    config_path = shlex.quote(str(config.config_path))
+    return f"python3 -m ampg --config {config_path} addresses capture --protocol {protocol.name}"
+
+
+def _health_activation_status(
+    *,
+    output_ready: bool,
+    transport_status: TransportStatus,
+    address_record: AddressRecord,
+) -> str:
+    if not output_ready or transport_status.status == "error":
+        return "blocked"
+    if address_record.address_status == "placeholder":
+        return "review"
+    return "planned"
+
+
+def _health_activation_message(
+    *,
+    output_ready: bool,
+    transport_status: TransportStatus,
+    address_record: AddressRecord,
+) -> str:
+    if not output_ready or transport_status.status == "error":
+        return "health check is blocked until output and daemon steps are ready"
+    if address_record.address_status == "placeholder":
+        return "capture or configure the generated transport address before published checks"
+    return "verify generated site through this transport after apply"
 
 
 def _output_ready(site: SiteConfig, protocol: ProtocolConfig) -> bool:

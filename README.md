@@ -140,11 +140,15 @@ passed. They are reviewable snippets, not installed daemon config.
 
 Managed install artifacts are also written under `dist/ampg-plan/` when
 `install-plan --write-artifacts` is passed. They include reviewable daemon configs and
-platform supervisor files, but are not installed or started.
+platform supervisor files, but are not installed or started. Managed daemon configs point
+runtime state at `gateway.state_dir`.
 
 Captured transport addresses are written under `gateway.state_dir` by
 `addresses capture` or `addresses set`. Fixture manifests and health plans use explicit
 config first, then captured addresses, then deterministic placeholders.
+
+`apply --dry-run` includes an address stage. Placeholder addresses remain review items
+until the generated transport identity is captured or configured.
 
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without

@@ -53,7 +53,7 @@ def install_plan(
             if not protocol.enabled:
                 continue
             status = status_by_protocol[(site.id, protocol.name)]
-            steps.extend(_protocol_install_steps(site, protocol, provider, status))
+            steps.extend(_protocol_install_steps(config, site, protocol, provider, status))
     return steps
 
 
@@ -82,7 +82,7 @@ def install_artifacts(
             if not protocol.enabled:
                 continue
             status = status_by_protocol[(site.id, protocol.name)]
-            artifacts.extend(_protocol_install_artifacts(site, protocol, provider, status))
+            artifacts.extend(_protocol_install_artifacts(config, site, protocol, provider, status))
     return artifacts
 
 
@@ -104,6 +104,7 @@ def write_install_artifacts(
 
 
 def _protocol_install_steps(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     provider: PlatformProvider,
@@ -170,9 +171,9 @@ def _protocol_install_steps(
             provider,
             stage="state",
             action="create-state",
-            target=str(_state_dir(provider, site, protocol)),
+            target=str(_state_dir(config, provider, site, protocol)),
             status="planned",
-            command=_mkdir_command(provider, _state_dir(provider, site, protocol)),
+            command=_mkdir_command(provider, _state_dir(config, provider, site, protocol)),
             message="create AMPG-owned state directory for daemon config, keys, and logs",
         ),
         _step(
@@ -181,7 +182,7 @@ def _protocol_install_steps(
             provider,
             stage="config",
             action="write-managed-config",
-            target=str(_state_dir(provider, site, protocol) / "config"),
+            target=str(_state_dir(config, provider, site, protocol) / "config"),
             status="planned",
             command="-",
             message=f"write managed {adapter.backend} config after plan review",
@@ -212,6 +213,7 @@ def _protocol_install_steps(
 
 
 def _protocol_install_artifacts(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     provider: PlatformProvider,
@@ -227,7 +229,7 @@ def _protocol_install_artifacts(
             provider,
             kind="daemon-config",
             filename=_daemon_config_filename(protocol),
-            content=_daemon_config_content(site, protocol, provider),
+            content=_daemon_config_content(config, site, protocol, provider),
         ),
         _artifact(
             site,
@@ -236,11 +238,12 @@ def _protocol_install_artifacts(
             kind="daemon-supervisor",
             filename=_supervisor_filename(provider, protocol.daemon),
             content=_supervisor_content(
+                config,
                 site,
                 protocol,
                 provider,
                 service_suffix=protocol.daemon,
-                command=_daemon_start_command(site, protocol, provider),
+                command=_daemon_start_command(config, site, protocol, provider),
             ),
         ),
     ]
@@ -253,7 +256,7 @@ def _protocol_install_artifacts(
                     provider,
                     kind="loopback-config",
                     filename="nginx-loopback.conf",
-                    content=_managed_nginx_loopback_content(site, protocol, provider),
+                    content=_managed_nginx_loopback_content(config, site, protocol, provider),
                 ),
                 _artifact(
                     site,
@@ -262,11 +265,12 @@ def _protocol_install_artifacts(
                     kind="loopback-supervisor",
                     filename=_supervisor_filename(provider, "nginx-loopback"),
                     content=_supervisor_content(
+                        config,
                         site,
                         protocol,
                         provider,
                         service_suffix="nginx-loopback",
-                        command=_loopback_start_command(site, protocol, provider),
+                        command=_loopback_start_command(config, site, protocol, provider),
                     ),
                 ),
             )
@@ -347,11 +351,13 @@ def _supervisor_command(
 
 
 def _state_dir(
+    config: GatewayConfig,
     provider: PlatformProvider,
     site: SiteConfig,
     protocol: ProtocolConfig,
 ) -> Path:
-    return provider.state_root / site.id / protocol.name
+    root = config.paths.state_dir if config.paths else provider.state_root
+    return root / site.id / protocol.name
 
 
 def _artifact_dir(
@@ -387,11 +393,12 @@ def _daemon_config_filename(protocol: ProtocolConfig) -> str:
 
 
 def _daemon_config_content(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     provider: PlatformProvider,
 ) -> str:
-    state_dir = _state_dir(provider, site, protocol)
+    state_dir = _state_dir(config, provider, site, protocol)
     if protocol.name == "tor":
         port = int(protocol.options.get("local_port", 18080))
         hidden_service_dir = state_dir / "hidden-service"
@@ -423,7 +430,7 @@ certificate = {state_dir / f"{site.id}.crt"}
 private_key = {state_dir / f"{site.id}.key"}
 """
     if protocol.name == "clearnet":
-        return _managed_nginx_server_content(site, protocol, provider)
+        return _managed_nginx_server_content(config, site, protocol, provider)
     return f"""# Generated by AMPG. Review before installing.
 daemon = {protocol.daemon}
 protocol = {protocol.name}
@@ -433,11 +440,12 @@ state_dir = {state_dir}
 
 
 def _managed_nginx_server_content(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     provider: PlatformProvider,
 ) -> str:
-    state_dir = _state_dir(provider, site, protocol)
+    state_dir = _state_dir(config, provider, site, protocol)
     return f"""# Generated by AMPG. Review before installing.
 worker_processes 1;
 error_log {state_dir / "nginx-error.log"} notice;
@@ -465,11 +473,12 @@ http {{
 
 
 def _managed_nginx_loopback_content(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     provider: PlatformProvider,
 ) -> str:
-    state_dir = _state_dir(provider, site, protocol)
+    state_dir = _state_dir(config, provider, site, protocol)
     port = int(protocol.options.get("local_port", 18080 if protocol.name == "tor" else 18081))
     return f"""# Generated by AMPG. Review before installing.
 worker_processes 1;
@@ -505,6 +514,7 @@ def _supervisor_filename(provider: PlatformProvider, service_suffix: str) -> str
 
 
 def _supervisor_content(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     provider: PlatformProvider,
@@ -522,7 +532,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory={_state_dir(provider, site, protocol)}
+WorkingDirectory={_state_dir(config, provider, site, protocol)}
 ExecStart=/bin/sh -lc '{_shell_single_quote(command)}'
 Restart=on-failure
 RestartSec=5
@@ -555,17 +565,18 @@ WantedBy=multi-user.target
     return f"""#!{shell}
 # Generated by AMPG. Review before installing.
 set -eu
-mkdir -p {_state_dir(provider, site, protocol)}
+mkdir -p {_state_dir(config, provider, site, protocol)}
 {command}
 """
 
 
 def _daemon_start_command(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     provider: PlatformProvider,
 ) -> str:
-    state_dir = _state_dir(provider, site, protocol)
+    state_dir = _state_dir(config, provider, site, protocol)
     if protocol.name == "tor":
         return f"exec tor -f {state_dir / 'torrc'}"
     if protocol.name == "i2p":
@@ -585,11 +596,12 @@ def _daemon_start_command(
 
 
 def _loopback_start_command(
+    config: GatewayConfig,
     site: SiteConfig,
     protocol: ProtocolConfig,
     provider: PlatformProvider,
 ) -> str:
-    state_dir = _state_dir(provider, site, protocol)
+    state_dir = _state_dir(config, provider, site, protocol)
     return f"exec nginx -c {state_dir / 'nginx-loopback.conf'} -g 'daemon off;'"
 
 
