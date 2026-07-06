@@ -300,7 +300,7 @@ renderer = "privacy-html"
                 encoding="utf-8",
             )
 
-            with self.assertRaisesRegex(ValueError, "route manifest schema"):
+            with self.assertRaisesRegex(ValueError, "ampg.route-manifest.v1"):
                 load_config(config_path)
 
     def test_manifest_omits_routes_above_protocol_max_tier(self):

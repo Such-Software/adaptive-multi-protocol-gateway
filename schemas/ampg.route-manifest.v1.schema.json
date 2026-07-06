@@ -1,0 +1,97 @@
+{
+  "$defs": {
+    "identityAdapter": {
+      "enum": [
+        "none",
+        "http-session",
+        "siwe",
+        "signed-link"
+      ]
+    },
+    "interactionTier": {
+      "enum": [
+        "static",
+        "interactive-lite",
+        "identity",
+        "transactional",
+        "realtime",
+        "internal"
+      ]
+    },
+    "paymentAdapter": {
+      "enum": [
+        "none",
+        "server-invoice",
+        "wallet-signature",
+        "static-instructions"
+      ]
+    },
+    "routePattern": {
+      "minLength": 1,
+      "pattern": "^/",
+      "type": "string"
+    },
+    "routePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "$ref": "#/$defs/identityAdapter",
+          "default": "none"
+        },
+        "match": {
+          "$ref": "#/$defs/routePattern"
+        },
+        "payments": {
+          "$ref": "#/$defs/paymentAdapter",
+          "default": "none"
+        },
+        "public_allowed": {
+          "default": true,
+          "type": "boolean"
+        },
+        "realtime": {
+          "default": false,
+          "type": "boolean"
+        },
+        "tier": {
+          "$ref": "#/$defs/interactionTier"
+        }
+      },
+      "required": [
+        "match"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "urn:ampg:schema:route-manifest:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Route policy contract emitted by applications for AMPG.",
+  "properties": {
+    "default_tier": {
+      "$ref": "#/$defs/interactionTier"
+    },
+    "deny_routes": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/routePattern"
+      },
+      "type": "array"
+    },
+    "routes": {
+      "items": {
+        "$ref": "#/$defs/routePolicy"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "ampg.route-manifest.v1"
+    }
+  },
+  "required": [
+    "schema",
+    "routes"
+  ],
+  "title": "AMPG Route Manifest",
+  "type": "object"
+}

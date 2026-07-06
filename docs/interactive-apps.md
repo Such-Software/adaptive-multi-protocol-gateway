@@ -55,6 +55,13 @@ Apps may provide `ampg.route-manifest.v1` JSON. AMPG imports it from
 `site.interactions.route_manifest`, merges its denylist with inline TOML, and appends any
 inline TOML route entries after the imported route entries.
 
+The schema is generated at `schemas/ampg.route-manifest.v1.schema.json`, and app repos can
+validate generated manifests with:
+
+```sh
+python3 -m ampg route-manifest validate routes.json
+```
+
 Required top-level fields:
 
 - `schema`: must be `ampg.route-manifest.v1`.

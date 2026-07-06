@@ -3,25 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
 
+from .capabilities import DEFAULT_MAX_TIERS, TIER_ORDER
 from .config import GatewayConfig, ProtocolConfig, RoutePolicyConfig, SiteConfig
-
-
-TIER_ORDER = {
-    "static": 0,
-    "interactive-lite": 1,
-    "identity": 2,
-    "transactional": 3,
-    "realtime": 4,
-    "internal": 5,
-}
-DEFAULT_MAX_TIERS = {
-    "clearnet": "realtime",
-    "tor": "transactional",
-    "i2p": "transactional",
-    "gemini": "interactive-lite",
-    "ipfs": "static",
-    "reticulum": "interactive-lite",
-}
 
 
 @dataclass(frozen=True)

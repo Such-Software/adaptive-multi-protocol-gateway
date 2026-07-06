@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import json
 from pathlib import Path
 from typing import Any
 import tomllib
 
-
-ROUTE_MANIFEST_SCHEMA = "ampg.route-manifest.v1"
+from .route_manifest import load_route_manifest
 
 DEFAULT_DAEMONS = {
     "clearnet": "nginx",
@@ -158,7 +156,7 @@ def _parse_interactions(
         raise ValueError("site.interactions must be a table")
 
     route_manifest = _route_manifest_path(raw_interactions, base_dir)
-    manifest_data = _load_route_manifest(route_manifest, site_id) if route_manifest else {}
+    manifest_data = load_route_manifest(route_manifest, site_id=site_id) if route_manifest else {}
 
     default_tier = str(
         raw_interactions.get("default_tier", manifest_data.get("default_tier", "static"))
@@ -207,24 +205,6 @@ def _route_manifest_path(raw_interactions: dict[str, Any], base_dir: Path) -> Pa
     if not isinstance(raw_path, str) or not raw_path:
         raise ValueError("site.interactions.route_manifest must be a path string")
     return _resolve_path(base_dir, raw_path)
-
-
-def _load_route_manifest(path: Path, site_id: str) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError as exc:
-        raise ValueError(f"{site_id}: route manifest not found: {path}") from exc
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"{site_id}: invalid route manifest JSON: {path}: {exc}") from exc
-    if not isinstance(data, dict):
-        raise ValueError(f"{site_id}: route manifest must be a JSON object: {path}")
-    if data.get("schema") != ROUTE_MANIFEST_SCHEMA:
-        raise ValueError(
-            f"{site_id}: route manifest schema must be {ROUTE_MANIFEST_SCHEMA!r}: {path}"
-        )
-    if "routes" not in data:
-        raise ValueError(f"{site_id}: route manifest missing required routes array: {path}")
-    return data
 
 
 def _route_array(raw_routes: Any, context: str) -> tuple[Any, ...]:

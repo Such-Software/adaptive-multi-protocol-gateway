@@ -10,6 +10,11 @@ from .config import load_config
 from .docsgen import generate_docs
 from .manifest import write_fixture_manifests
 from .plan import plan_gateway, write_plan_artifacts
+from .route_manifest import (
+    load_route_manifest,
+    route_manifest_schema_json,
+    validate_route_manifest,
+)
 from .route_policy import RouteExposure, RouteIssue, route_exposures, route_issues
 
 
@@ -37,6 +42,28 @@ def main(argv: list[str] | None = None) -> int:
         "validate",
         help="Fail when a public route has no compatible enabled protocol.",
     )
+    manifest_parser = subcommands.add_parser(
+        "route-manifest",
+        help="Validate or print the app route manifest contract.",
+    )
+    manifest_subcommands = manifest_parser.add_subparsers(
+        dest="route_manifest_command",
+        required=True,
+    )
+    manifest_validate = manifest_subcommands.add_parser(
+        "validate",
+        help="Validate an ampg.route-manifest.v1 JSON file.",
+    )
+    manifest_validate.add_argument("path", type=Path, help="Route manifest JSON path.")
+    manifest_schema = manifest_subcommands.add_parser(
+        "schema",
+        help="Print the JSON Schema for route manifests.",
+    )
+    manifest_schema.add_argument(
+        "--output",
+        type=Path,
+        help="Write the JSON Schema to this path instead of stdout.",
+    )
     audit_parser = subcommands.add_parser("audit", help="Audit source HTML quality.")
     audit_parser.add_argument(
         "--fail-on-warn",
@@ -57,6 +84,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "docs":
             return _cmd_docs(args)
+        if args.command == "route-manifest":
+            return _cmd_route_manifest(args)
         config = load_config(args.config)
         if args.command == "plan":
             return _cmd_plan(config, write_artifacts=args.write_artifacts)
@@ -156,6 +185,54 @@ def _cmd_routes(config, args) -> int:
     if args.routes_command == "validate" and issues:
         return 1
     return 0
+
+
+def _cmd_route_manifest(args) -> int:
+    if args.route_manifest_command == "schema":
+        content = route_manifest_schema_json()
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(content, encoding="utf-8")
+            print(f"AMPG_ROUTE_MANIFEST_SCHEMA path={args.output}")
+        else:
+            print(content, end="")
+        return 0
+
+    if args.route_manifest_command == "validate":
+        try:
+            data = load_route_manifest(args.path)
+        except ValueError:
+            try:
+                import json
+
+                data = json.loads(args.path.read_text(encoding="utf-8"))
+                issues = validate_route_manifest(data)
+            except Exception as exc:  # noqa: BLE001 - CLI should print concise failures.
+                print(
+                    "AMPG_ROUTE_MANIFEST "
+                    f"path={args.path} status=error message=\"{exc}\"",
+                    file=sys.stderr,
+                )
+                return 1
+            for issue in issues:
+                print(
+                    "AMPG_ROUTE_MANIFEST_ISSUE "
+                    f"path={args.path} json_path={issue.path} "
+                    f"code={issue.code} message=\"{issue.message}\""
+                )
+            print(
+                "AMPG_ROUTE_MANIFEST "
+                f"path={args.path} status=fail issues={len(issues)}"
+            )
+            return 1
+
+        print(
+            "AMPG_ROUTE_MANIFEST "
+            f"path={args.path} schema={data['schema']} routes={len(data['routes'])} status=ok"
+        )
+        return 0
+
+    return 1
 
 
 def _print_route_exposure(exposure: RouteExposure) -> None:

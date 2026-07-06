@@ -11,6 +11,7 @@ from .metadata import (
     RENDER_PROFILES,
     TRANSPORT_INTERACTION_CAPABILITIES,
 )
+from .route_manifest import ROUTE_MANIFEST_SCHEMA_PATH, route_manifest_schema_json
 
 
 GENERATED_DIR = Path("docs/generated")
@@ -22,6 +23,7 @@ def generate_docs(root: Path, *, check: bool = False) -> list[Path]:
         GENERATED_DIR / "daemon-adapters.md": _daemon_adapters_doc(),
         GENERATED_DIR / "interaction-capabilities.md": _interaction_capabilities_doc(),
         GENERATED_DIR / "render-profiles.md": _render_profiles_doc(),
+        ROUTE_MANIFEST_SCHEMA_PATH: route_manifest_schema_json(),
     }
     changed: list[Path] = []
     for rel_path, content in docs.items():

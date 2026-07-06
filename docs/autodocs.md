@@ -19,6 +19,10 @@ code. Generated artifacts are committed, then checked in CI by regenerating and 
 : Generated from renderer definitions. Lists stripped tags, asset limits, link modes,
   and defaults for each target.
 
+`schemas/ampg.route-manifest.v1.schema.json`
+: Generated from the route-manifest validator. App repos can use it to emit and validate
+  `ampg.route-manifest.v1` without depending on AMPG internals.
+
 `openapi.json`
 : Generated if AMPG exposes a local control API for status, builds, plans, and daemon
   health.
@@ -30,7 +34,7 @@ CI should run:
 ```sh
 python3 -m ampg docs generate
 python3 -m ampg docs generate --check
-git diff --exit-code docs/generated openapi.json
+git diff --exit-code docs/generated schemas openapi.json
 python3 tools/docs_check.py
 ```
 
@@ -58,5 +62,6 @@ outside the public repo.
 - [ ] Generate config schema docs from code.
 - [ ] Generate daemon adapter docs from registered adapters.
 - [ ] Generate renderer docs from renderer defaults.
+- [ ] Generate route-manifest JSON Schema from code.
 - [ ] Commit generated artifacts.
 - [ ] Fail CI when regeneration produces a diff.

@@ -203,6 +203,13 @@ Applications can generate a JSON route manifest instead of hand-maintaining ever
 group in TOML. Paths are resolved relative to `gateway.toml`; inline TOML routes are
 appended after manifest routes.
 
+The public schema is committed at `schemas/ampg.route-manifest.v1.schema.json`.
+Applications can validate generated manifests before AMPG config parsing:
+
+```sh
+python3 -m ampg route-manifest validate routes.json
+```
+
 ```json
 {
   "schema": "ampg.route-manifest.v1",
