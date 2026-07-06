@@ -39,6 +39,7 @@ config artifacts.
 ```sh
 python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
+python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p
 python3 -m ampg --config gateway.toml apply --dry-run
 python3 -m ampg --config gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml apply --dry-run --protocol i2p
@@ -52,6 +53,11 @@ adapter, installed/running daemon probe, action, and policy result.
 `doctor` checks source paths, renderer support, route exposure, output readiness, and
 daemon policy feasibility. It exits nonzero only for errors; missing build output is a
 warning so operators can run it before the first build.
+
+`install-plan` prints the package, state-directory, managed-config, supervisor, and
+health-check steps needed for AMPG-owned daemons. It is dry-run only. Adopted daemons and
+external-policy targets are shown as skipped, while unsupported platform/daemon pairs are
+blocked.
 
 `apply --dry-run` prints the activation sequence for each enabled protocol: generated
 output readiness, config artifacts to review, daemon action, and post-apply health
@@ -74,6 +80,10 @@ Platform providers describe how AMPG may supervise managed daemons:
 - `macos-launchd`: user LaunchAgents or foreground processes.
 - `android-termux`: Termux-style user-space daemons for mobile/server experiments.
 - `unknown`: render and plan only; daemon management is disabled.
+
+Package commands in `install-plan` are review hints, not executed actions. Systemd hosts
+currently emit `apt`-style package hints, Termux emits `pkg`, macOS emits `brew`, and
+user-space Linux asks the operator to use the local user package manager.
 
 ## Adapter notes
 

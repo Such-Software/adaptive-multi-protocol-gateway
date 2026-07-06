@@ -104,6 +104,7 @@ python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml status
 python3 -m ampg --config examples/wownero.gateway.toml doctor
+python3 -m ampg --config examples/wownero.gateway.toml install-plan --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --protocol i2p
@@ -145,6 +146,7 @@ Explicit `--protocol` and `--platform` flags override the profile when present.
 - [ ] Select protocols and daemon policy.
 - [ ] Run `ampg plan`; review output roots, ports, and config changes.
 - [ ] Run `ampg status` or `ampg doctor`; review daemon ownership decisions.
+- [ ] Run `ampg install-plan`; review managed daemon package, state, and supervisor steps.
 - [ ] Run `ampg build`; inspect generated variants.
 - [ ] Run AMPB fixture checks against generated manifests.
 - [ ] Run `ampg apply --dry-run`; review the activation sequence.

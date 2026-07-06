@@ -14,6 +14,7 @@ from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
 from .docsgen import generate_docs
+from .install_plan import InstallStep, blocked_install_steps, install_plan
 from .manifest import write_fixture_manifests
 from .plan import plan_gateway, write_plan_artifacts
 from .platforms import PLATFORM_NAMES, platform_by_name
@@ -83,6 +84,16 @@ def main(argv: list[str] | None = None) -> int:
         "--platform",
         choices=PLATFORM_NAMES,
         help="Override platform detection for dry-run checks.",
+    )
+    install_plan_parser = subcommands.add_parser(
+        "install-plan",
+        help="Print managed daemon package, state, and supervisor steps.",
+    )
+    _add_target_selection(install_plan_parser)
+    install_plan_parser.add_argument(
+        "--platform",
+        choices=PLATFORM_NAMES,
+        help="Override platform detection for install planning.",
     )
     build_parser = subcommands.add_parser("build", help="Build enabled protocol outputs.")
     _add_target_selection(build_parser)
@@ -172,6 +183,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_doctor(config, args)
         if args.command == "apply":
             return _cmd_apply(config, args)
+        if args.command == "install-plan":
+            return _cmd_install_plan(config, args)
         if args.command == "build":
             return _cmd_build(config)
         if args.command == "manifest":
@@ -213,6 +226,23 @@ def _cmd_apply(config, args) -> int:
         f"ready={sum(1 for step in steps if step.status == 'ready')} "
         f"review={sum(1 for step in steps if step.status == 'review')} "
         f"planned={sum(1 for step in steps if step.status == 'planned')} "
+        f"blocked={len(blocked)}"
+    )
+    return 1 if blocked else 0
+
+
+def _cmd_install_plan(config, args) -> int:
+    steps = install_plan(config, platform_provider=_platform_override(config, args))
+    for step in steps:
+        _print_install_step(step)
+    blocked = blocked_install_steps(steps)
+    print(
+        "AMPG_INSTALL_SUMMARY "
+        f"sites={len(config.sites)} "
+        f"steps={len(steps)} "
+        f"planned={sum(1 for step in steps if step.status == 'planned')} "
+        f"ready={sum(1 for step in steps if step.status == 'ready')} "
+        f"skipped={sum(1 for step in steps if step.status == 'skipped')} "
         f"blocked={len(blocked)}"
     )
     return 1 if blocked else 0
@@ -332,6 +362,21 @@ def _cmd_build(config) -> int:
             f"fixtures={manifest.fixture_count}"
         )
     return 0
+
+
+def _print_install_step(step: InstallStep) -> None:
+    print(
+        "AMPG_INSTALL_STEP "
+        f"site={step.site_id} "
+        f"protocol={step.protocol} "
+        f"platform={step.platform} "
+        f"stage={step.stage} "
+        f"action={step.action} "
+        f"target=\"{_quote(step.target)}\" "
+        f"status={step.status} "
+        f"command=\"{_quote(step.command)}\" "
+        f"message=\"{_quote(step.message)}\""
+    )
 
 
 def _print_activation_step(step: ActivationStep) -> None:

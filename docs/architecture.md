@@ -117,6 +117,17 @@ The dry-run command is intentionally stricter than `doctor`: missing generated o
 blocked during activation, because AMPG must not point a transport at an unbuilt output
 root.
 
+## Install plan
+
+`ampg install-plan` translates managed daemon decisions into package, state, config,
+supervisor, and health-check steps. It does not install packages, create directories, or
+start services. The output is a reviewable bridge between daemon ownership decisions and
+future live apply support.
+
+Tor and I2P HTTP publishing include the transport daemon and the loopback web-serving
+layer in the install plan, because the hidden service or tunnel must have a local HTTP
+target.
+
 ## Interaction boundary
 
 v1 is static-first, but the architecture reserves a path for interactive applications.
