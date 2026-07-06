@@ -141,6 +141,8 @@ daemon_policy = "auto"
 - `ampg build` writes a fixture manifest that AMPB can check.
 - `ampg preview manifest` writes loopback fixture URLs that AMPB can check before live
   transport daemons are installed or adopted.
+- `ampg deploy apply --stage state --dry-run` shows approved managed-daemon config copies
+  before any Wownero transport service is started.
 - Tor output contains no `<script>` tags or inline event handlers.
 - Generated Gemini output has readable headings, paragraphs, and links.
 - Generated Micron output fits terminal-first browsing.
@@ -158,6 +160,10 @@ python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/wownero.gateway.toml addresses list
 python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
 python3 -m ampg --config examples/wownero.gateway.toml preview manifest
+python3 -m ampg --config examples/wownero.gateway.toml install-plan --profile mobile-i2p --write-artifacts
+python3 -m ampg --config examples/wownero.gateway.toml approvals list --profile mobile-i2p
+python3 -m ampg --config examples/wownero.gateway.toml approvals approve --profile mobile-i2p --all
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage state --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/i2p-only.gateway.toml plan
 python3 -m ampg --config examples/i2p-only.gateway.toml build
 ```
@@ -170,3 +176,4 @@ python3 -m ampg --config examples/i2p-only.gateway.toml build
 - [ ] Add Gemini conversion fixtures.
 - [ ] Add Reticulum/Micron conversion fixtures.
 - [ ] Enable I2P and Reticulum daemon management only after static outputs are stable.
+- [ ] Copy only reviewed Wownero daemon artifacts into managed state.

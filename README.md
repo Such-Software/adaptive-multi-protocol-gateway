@@ -56,15 +56,18 @@ python3 -m ampg --config gateway.toml build
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile vps-full --write-artifacts
 python3 -m ampg --config gateway.toml approvals list --profile vps-full
+python3 -m ampg --config gateway.toml approvals approve --profile vps-full --all
 python3 -m ampg --config gateway.toml apply --dry-run --profile vps-full
+python3 -m ampg --config gateway.toml deploy apply --stage state --dry-run --profile vps-full
 ```
 
 `init site` writes a readable `gateway.toml` with selected transports enabled and common
 transports left as one-line toggles. `deploy plan` condenses the lower-level checks into
 clear next steps. `dns plan` covers static DNS, Dynamic DNS, and behind-router
-reachability hints. The current `apply --dry-run` prints the activation sequence and a
-preflight verdict without changing services. Live apply support will perform only
-approved changes.
+reachability hints. `apply --dry-run` prints the activation sequence and a preflight
+verdict without changing services. `deploy apply --stage state` copies only approved
+managed-daemon artifacts into AMPG-owned state; later live stages will install and start
+services after the same review gate.
 
 ## Interaction tiers
 
@@ -126,6 +129,8 @@ python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --protoco
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml approvals list --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml approvals approve --profile mobile-i2p --all
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage state --dry-run --profile mobile-i2p
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage state --profile mobile-i2p --yes
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml build --profile tor-i2p
 python3 -m ampg --config examples/wownero.gateway.toml build --protocol tor --protocol i2p
@@ -173,6 +178,11 @@ would be copied into managed state and the supervisor services that would be reg
 or started. The preflight gate reports `blocked`, `review`, or `ready` across activation
 steps, managed-state copies, and supervisor actions.
 
+`deploy apply --stage state --dry-run` shows approved managed-daemon artifacts that are
+ready to copy into `gateway.state_dir`. The live form requires `--yes`; it creates only
+AMPG-owned state directories and copies approved artifact contents. It does not install
+packages, change adopted daemons, start services, or remove keys.
+
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without
 unselected transports blocking the run.
@@ -193,4 +203,5 @@ Explicit `--protocol` and `--platform` flags override the profile when present.
 - [ ] Run `ampg health-plan`; review post-start transport checks.
 - [ ] Run `ampg approvals approve --all` after reviewing generated artifacts.
 - [ ] Run `ampg apply --dry-run`; review the activation sequence and preflight gate.
+- [ ] Run `ampg deploy apply --stage state --dry-run`; confirm approved state copies.
 - [ ] Run live apply after the preflight gate is ready.

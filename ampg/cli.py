@@ -21,6 +21,7 @@ from .addresses import (
     effective_address_records,
     set_address,
 )
+from .apply import StateApplyResult, apply_state
 from .approvals import (
     ACTIVATION_ARTIFACT_KIND,
     GENERIC_PLATFORM,
@@ -142,6 +143,32 @@ def main(argv: list[str] | None = None) -> int:
         "--platform",
         choices=PLATFORM_NAMES,
         help="Override platform detection for deploy planning.",
+    )
+    deploy_apply_parser = deploy_subcommands.add_parser(
+        "apply",
+        help="Apply an approved deployment stage.",
+    )
+    _add_target_selection(deploy_apply_parser)
+    deploy_apply_parser.add_argument(
+        "--stage",
+        choices=("state",),
+        required=True,
+        help="Deployment stage to apply.",
+    )
+    deploy_apply_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would change without writing files.",
+    )
+    deploy_apply_parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Required for live stage application.",
+    )
+    deploy_apply_parser.add_argument(
+        "--platform",
+        choices=PLATFORM_NAMES,
+        help="Override platform detection for deploy apply.",
     )
     dns_parser = subcommands.add_parser(
         "dns",
@@ -530,6 +557,35 @@ def _cmd_deploy(config, args) -> int:
             _print_deploy_next(index, next_step)
         _print_deploy_summary(config, plan)
         return 1 if plan.status == "blocked" else 0
+    if args.deploy_command == "apply":
+        if not args.dry_run and not args.yes:
+            print(
+                'AMPG_DEPLOY_APPLY status=error message="live deploy apply requires --yes or rerun with --dry-run"',
+                file=sys.stderr,
+            )
+            return 1
+        platform_provider = _platform_override(config, args)
+        if args.stage == "state":
+            results = apply_state(
+                config,
+                dry_run=args.dry_run,
+                platform_provider=platform_provider,
+            )
+            for result in results:
+                _print_state_apply_result(result)
+            blocked = [result for result in results if result.status == "blocked"]
+            written = [result for result in results if result.status == "written"]
+            planned = [result for result in results if result.status == "planned"]
+            print(
+                "AMPG_DEPLOY_APPLY_SUMMARY "
+                f"stage=state "
+                f"mode={'dry-run' if args.dry_run else 'live'} "
+                f"results={len(results)} "
+                f"planned={len(planned)} "
+                f"written={len(written)} "
+                f"blocked={len(blocked)}"
+            )
+            return 1 if blocked else 0
     return 1
 
 
@@ -997,6 +1053,21 @@ def _print_deploy_summary(config, plan: DeployPlan) -> None:
         f"blocked={statuses.count('blocked')} "
         f"skipped={statuses.count('skipped')} "
         f"message=\"{_quote(plan.message)}\""
+    )
+
+
+def _print_state_apply_result(result: StateApplyResult) -> None:
+    print(
+        "AMPG_DEPLOY_STATE "
+        f"site={result.site_id} "
+        f"protocol={result.protocol} "
+        f"platform={result.platform} "
+        f"kind={result.kind} "
+        f"mode={result.mode} "
+        f"source=\"{_quote(str(result.source))}\" "
+        f"target=\"{_quote(str(result.target))}\" "
+        f"status={result.status} "
+        f"message=\"{_quote(result.message)}\""
     )
 
 

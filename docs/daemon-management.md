@@ -55,6 +55,8 @@ python3 -m ampg --config gateway.toml apply --dry-run --protocol i2p
 python3 -m ampg --config gateway.toml apply --dry-run --write-artifacts
 python3 -m ampg --config gateway.toml approvals list --profile mobile-i2p
 python3 -m ampg --config gateway.toml approvals approve --profile mobile-i2p --all
+python3 -m ampg --config gateway.toml deploy apply --stage state --dry-run --profile mobile-i2p
+python3 -m ampg --config gateway.toml deploy apply --stage state --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
 
@@ -111,6 +113,12 @@ It exits nonzero when the preflight status is blocked. `--write-artifacts` write
 reviewable config snippets to the configured plan root, then prints the copies from
 approved artifacts into `gateway.state_dir` and the supervisor services that would be
 registered or started. It still does not install or reload services.
+
+`deploy apply --stage state` is the first live apply stage. Dry-run mode prints
+`AMPG_DEPLOY_STATE` rows. Live mode requires `--yes`, refuses unapproved or stale
+artifacts, creates AMPG-owned state directories, and copies approved managed-daemon
+config into `gateway.state_dir`. It does not install packages, edit adopted daemon
+configs, start services, or delete identity material.
 
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet
 `adopt` failure will block a full activation run, but it will not block

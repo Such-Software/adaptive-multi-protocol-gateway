@@ -46,5 +46,9 @@ AMPG must never delete sensitive contract paths without an explicit destructive 
 approved artifacts would be copied into managed state and `AMPG_APPLY_SUPERVISOR` rows
 for the services that would be registered or started. The accompanying
 `AMPG_APPLY_PREFLIGHT` verdict includes those rows so live apply can refuse mutation when
-state or supervisor inputs still need review. Live apply should perform approved copies,
-start daemons, capture public addresses, and then run published health checks.
+state or supervisor inputs still need review.
+
+`deploy apply --stage state` performs the approved copy portion only. It requires
+`--yes` for live writes, refuses unapproved or stale artifacts, writes only under
+`gateway.state_dir`, and leaves daemon start, address capture, and published health
+checks for later stages.

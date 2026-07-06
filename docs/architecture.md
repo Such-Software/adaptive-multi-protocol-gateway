@@ -131,6 +131,12 @@ managed state and planned supervisor start/reload actions. The command emits an
 Blocked or unapproved preflight items stop mutation before any live apply path can touch
 services.
 
+`ampg deploy apply --stage state` is the narrow live stage for managed state. It reads
+the same approved artifact plan, refuses missing, stale, or unapproved inputs, and copies
+only approved generated daemon config into AMPG-owned state. Service installation,
+supervisor registration, daemon start, address capture, and health verification remain
+separate stages.
+
 The dry-run command is intentionally stricter than `doctor`: missing generated output is
 blocked during activation, because AMPG must not point a transport at an unbuilt output
 root.
