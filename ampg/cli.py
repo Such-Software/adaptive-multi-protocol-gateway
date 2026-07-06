@@ -24,6 +24,7 @@ from .route_manifest import (
     validate_route_manifest,
 )
 from .route_policy import RouteExposure, RouteIssue, route_exposures, route_issues
+from .selection import parse_protocol_filters, select_protocols
 from .status import DoctorIssue, TransportStatus, doctor_gateway, gateway_status
 
 
@@ -37,6 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     subcommands = parser.add_subparsers(dest="command", required=True)
     plan_parser = subcommands.add_parser("plan", help="Print a dry-run plan.")
+    _add_protocol_filter(plan_parser)
     plan_parser.add_argument(
         "--write-artifacts",
         action="store_true",
@@ -46,6 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         "status",
         help="Show enabled transport daemon decisions.",
     )
+    _add_protocol_filter(status_parser)
     status_parser.add_argument(
         "--platform",
         choices=PLATFORM_NAMES,
@@ -55,6 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         "doctor",
         help="Check source, renderer, route, and daemon readiness.",
     )
+    _add_protocol_filter(doctor_parser)
     doctor_parser.add_argument(
         "--platform",
         choices=PLATFORM_NAMES,
@@ -64,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
         "apply",
         help="Show or run the transport activation sequence.",
     )
+    _add_protocol_filter(apply_parser)
     apply_parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -79,8 +84,10 @@ def main(argv: list[str] | None = None) -> int:
         choices=PLATFORM_NAMES,
         help="Override platform detection for dry-run checks.",
     )
-    subcommands.add_parser("build", help="Build enabled protocol outputs.")
-    subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
+    build_parser = subcommands.add_parser("build", help="Build enabled protocol outputs.")
+    _add_protocol_filter(build_parser)
+    fixture_parser = subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
+    _add_protocol_filter(fixture_parser)
     preview_parser = subcommands.add_parser("preview", help="Preview generated outputs locally.")
     preview_subcommands = preview_parser.add_subparsers(dest="preview_command", required=True)
     for preview_command in ("endpoints", "manifest", "serve"):
@@ -88,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
             preview_command,
             help=f"Preview {preview_command} for generated outputs.",
         )
+        _add_protocol_filter(command_parser)
         command_parser.add_argument(
             "--base-port",
             type=int,
@@ -101,11 +109,16 @@ def main(argv: list[str] | None = None) -> int:
         )
     routes_parser = subcommands.add_parser("routes", help="Explain route exposure policy.")
     routes_subcommands = routes_parser.add_subparsers(dest="routes_command", required=True)
-    routes_subcommands.add_parser("explain", help="Print per-protocol route decisions.")
-    routes_subcommands.add_parser(
+    routes_explain = routes_subcommands.add_parser(
+        "explain",
+        help="Print per-protocol route decisions.",
+    )
+    _add_protocol_filter(routes_explain)
+    routes_validate = routes_subcommands.add_parser(
         "validate",
         help="Fail when a public route has no compatible enabled protocol.",
     )
+    _add_protocol_filter(routes_validate)
     manifest_parser = subcommands.add_parser(
         "route-manifest",
         help="Validate or print the app route manifest contract.",
@@ -150,7 +163,7 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_docs(args)
         if args.command == "route-manifest":
             return _cmd_route_manifest(args)
-        config = load_config(args.config)
+        config = _selected_config(load_config(args.config), args)
         if args.command == "plan":
             return _cmd_plan(config, write_artifacts=args.write_artifacts)
         if args.command == "status":
@@ -203,6 +216,20 @@ def _cmd_apply(config, args) -> int:
         f"blocked={len(blocked)}"
     )
     return 1 if blocked else 0
+
+
+def _add_protocol_filter(parser) -> None:
+    parser.add_argument(
+        "--protocol",
+        action="append",
+        default=[],
+        help="Limit this command to one protocol. May be repeated or comma-separated.",
+    )
+
+
+def _selected_config(config, args):
+    protocols = parse_protocol_filters(getattr(args, "protocol", None))
+    return select_protocols(config, protocols)
 
 
 def _cmd_status(config, args) -> int:

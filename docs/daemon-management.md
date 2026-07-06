@@ -40,6 +40,7 @@ config artifacts.
 python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml apply --dry-run
+python3 -m ampg --config gateway.toml apply --dry-run --protocol i2p
 python3 -m ampg --config gateway.toml apply --dry-run --write-artifacts
 python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
@@ -56,6 +57,10 @@ output readiness, config artifacts to review, daemon action, and post-apply heal
 checks. It exits nonzero when any step is blocked. `--write-artifacts` writes reviewable
 config snippets to the configured plan root but still does not install or reload
 services.
+
+`--protocol` scopes operational commands to selected enabled protocols. A clearnet
+`adopt` failure will block a full activation run, but it will not block
+`apply --dry-run --protocol i2p` because clearnet is outside that selected run.
 
 Platform providers describe how AMPG may supervise managed daemons:
 
