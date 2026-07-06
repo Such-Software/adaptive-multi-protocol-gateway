@@ -9,6 +9,22 @@ from .config import GatewayConfig, ProtocolConfig, RoutePolicyConfig, SiteConfig
 
 
 SCHEMA = "ampg.fixture-manifest.v1"
+TIER_ORDER = {
+    "static": 0,
+    "interactive-lite": 1,
+    "identity": 2,
+    "transactional": 3,
+    "realtime": 4,
+    "internal": 5,
+}
+DEFAULT_MAX_TIERS = {
+    "clearnet": "realtime",
+    "tor": "transactional",
+    "i2p": "transactional",
+    "gemini": "interactive-lite",
+    "ipfs": "static",
+    "reticulum": "interactive-lite",
+}
 
 
 @dataclass(frozen=True)
@@ -27,7 +43,7 @@ def fixture_manifest(site: SiteConfig) -> dict[str, Any]:
         fixtures.extend(
             _fixture_entry(site, protocol, route_policy)
             for route_policy in site.interactions.routes
-            if _route_is_public(route_policy)
+            if _route_is_public(route_policy) and _route_supported(protocol, route_policy)
         )
     return {
         "schema": SCHEMA,
@@ -99,6 +115,18 @@ def _transport_for(protocol_name: str) -> str:
 
 def _route_is_public(route_policy: RoutePolicyConfig) -> bool:
     return route_policy.public_allowed and route_policy.tier != "internal"
+
+
+def _route_supported(protocol: ProtocolConfig, route_policy: RoutePolicyConfig) -> bool:
+    max_tier = str(protocol.options.get("max_tier", DEFAULT_MAX_TIERS.get(protocol.name, "static")))
+    return _tier_rank(route_policy.tier) <= _tier_rank(max_tier)
+
+
+def _tier_rank(tier: str) -> int:
+    try:
+        return TIER_ORDER[tier]
+    except KeyError as exc:
+        raise ValueError(f"unsupported interaction tier {tier!r}") from exc
 
 
 def _interaction_policy(

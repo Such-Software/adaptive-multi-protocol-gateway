@@ -28,3 +28,4 @@ This file is generated from code. Do not edit it by hand.
 | site.protocols.<name> | `daemon_policy` | enum | no | protocol default | Whether AMPG adopts, manages, or only renders config. |
 | site.protocols.<name> | `max_asset_bytes` | integer | no | 1048576 | Maximum asset size copied by privacy-html render targets. |
 | site.protocols.<name> | `script_policy` | enum | no | strip | Script handling policy for privacy-html render targets. |
+| site.protocols.<name> | `max_tier` | enum | no | transport default | Maximum interaction tier this protocol target may expose. |

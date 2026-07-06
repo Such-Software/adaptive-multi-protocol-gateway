@@ -65,3 +65,7 @@ not emitted.
 
 Routes imported from `site.interactions.route_manifest` are treated the same way as inline
 TOML routes.
+
+AMPG also omits route fixtures whose interaction tier exceeds the protocol target's
+`max_tier`. When `max_tier` is not configured, AMPG uses the transport capability defaults
+from the generated interaction capability matrix.

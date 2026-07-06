@@ -195,6 +195,14 @@ CONFIG_FIELDS = (
         "strip",
         "Script handling policy for privacy-html render targets.",
     ),
+    ConfigField(
+        "site.protocols.<name>",
+        "max_tier",
+        "enum",
+        False,
+        "transport default",
+        "Maximum interaction tier this protocol target may expose.",
+    ),
 )
 
 

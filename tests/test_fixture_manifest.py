@@ -303,6 +303,70 @@ renderer = "privacy-html"
             with self.assertRaisesRegex(ValueError, "route manifest schema"):
                 load_config(config_path)
 
+    def test_manifest_omits_routes_above_protocol_max_tier(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "site"
+            source.mkdir()
+            (source / "index.html").write_text("<h1>App</h1>", encoding="utf-8")
+            config_path = root / "gateway.toml"
+            config_path.write_text(
+                """
+[[site]]
+id = "app"
+domain = "app.test"
+
+[site.source]
+kind = "static-html"
+path = "./site"
+
+[site.outputs]
+root = "./out"
+plan_root = "./plan"
+
+[[site.interactions.route]]
+match = "/play/*"
+tier = "interactive-lite"
+
+[[site.interactions.route]]
+match = "/checkout/*"
+tier = "transactional"
+
+[[site.interactions.route]]
+match = "/live/*"
+tier = "realtime"
+realtime = true
+
+[site.protocols.tor]
+enabled = true
+renderer = "privacy-html"
+max_tier = "interactive-lite"
+
+[site.protocols.gemini]
+enabled = true
+renderer = "gemtext"
+
+[site.protocols.ipfs]
+enabled = true
+renderer = "clearnet"
+cid = "bafyexample"
+""",
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+            manifest = fixture_manifest(config.sites[0])
+
+        by_protocol = {}
+        for fixture in manifest["fixtures"]:
+            by_protocol.setdefault(fixture["protocol"], []).append(
+                fixture.get("route", {}).get("fixture_path", "/")
+            )
+
+        self.assertEqual(["/", "/play/"], by_protocol["tor"])
+        self.assertEqual(["/", "/play/"], by_protocol["gemini"])
+        self.assertEqual(["/"], by_protocol["ipfs"])
+
 
 if __name__ == "__main__":
     unittest.main()
