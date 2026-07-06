@@ -40,6 +40,7 @@ config artifacts.
 python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p
+python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p --write-artifacts
 python3 -m ampg --config gateway.toml apply --dry-run
 python3 -m ampg --config gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml apply --dry-run --protocol i2p
@@ -58,6 +59,11 @@ warning so operators can run it before the first build.
 health-check steps needed for AMPG-owned daemons. It is dry-run only. Adopted daemons and
 external-policy targets are shown as skipped, while unsupported platform/daemon pairs are
 blocked.
+
+`install-plan --write-artifacts` writes managed daemon configs and platform supervisor
+files under the configured `plan_root`, grouped by site, protocol, and platform. For
+Tor/I2P HTTP publishing, AMPG writes both transport-daemon artifacts and loopback nginx
+artifacts.
 
 `apply --dry-run` prints the activation sequence for each enabled protocol: generated
 output readiness, config artifacts to review, daemon action, and post-apply health

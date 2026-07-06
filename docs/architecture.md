@@ -124,6 +124,10 @@ supervisor, and health-check steps. It does not install packages, create directo
 start services. The output is a reviewable bridge between daemon ownership decisions and
 future live apply support.
 
+With `--write-artifacts`, install-plan writes managed config and supervisor files under
+the configured `plan_root`; those files are review artifacts, not installed service
+state.
+
 Tor and I2P HTTP publishing include the transport daemon and the loopback web-serving
 layer in the install plan, because the hidden service or tunnel must have a local HTTP
 target.

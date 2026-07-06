@@ -6,7 +6,12 @@ from pathlib import Path
 
 from ampg.cli import main
 from ampg.config import load_config
-from ampg.install_plan import blocked_install_steps, install_plan
+from ampg.install_plan import (
+    blocked_install_steps,
+    install_artifacts,
+    install_plan,
+    write_install_artifacts,
+)
 from ampg.platforms import platform_by_name
 from ampg.status import DaemonProbe
 
@@ -181,6 +186,140 @@ daemon_policy = "auto"
         self.assertIn('command="pkg install i2pd"', output)
         self.assertIn("blocked=0", output)
         self.assertNotIn("protocol=clearnet", output)
+
+    def test_managed_i2p_artifacts_include_daemon_loopback_and_supervisors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = load_config(
+                _write_config(
+                    root,
+                    """
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+local_port = 19081
+keys_file = "example-web.dat"
+tunnel_name = "example-web"
+""",
+                )
+            )
+
+            artifacts = install_artifacts(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+
+        by_name = {artifact.path.name: artifact for artifact in artifacts}
+        self.assertEqual(
+            {
+                "i2pd-tunnels.conf",
+                "i2pd.run",
+                "nginx-loopback.conf",
+                "nginx-loopback.run",
+            },
+            set(by_name),
+        )
+        self.assertIn("[example-web]", by_name["i2pd-tunnels.conf"].content)
+        self.assertIn("keys =", by_name["i2pd-tunnels.conf"].content)
+        self.assertIn("listen 127.0.0.1:19081", by_name["nginx-loopback.conf"].content)
+        self.assertIn("exec i2pd", by_name["i2pd.run"].content)
+        self.assertIn("exec nginx", by_name["nginx-loopback.run"].content)
+
+    def test_write_install_artifacts_creates_review_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = load_config(
+                _write_config(
+                    root,
+                    """
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+""",
+                )
+            )
+
+            artifacts = write_install_artifacts(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+
+            for artifact in artifacts:
+                self.assertTrue(artifact.path.exists())
+            self.assertTrue(
+                (
+                    root
+                    / "plan/example/i2p/managed/android-termux/i2pd-tunnels.conf"
+                ).exists()
+            )
+
+    def test_install_plan_cli_can_write_managed_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config_path = _write_config(
+                root,
+                """
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+""",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                status = main(
+                    [
+                        "--config",
+                        str(config_path),
+                        "install-plan",
+                        "--profile",
+                        "mobile-i2p",
+                        "--write-artifacts",
+                    ]
+                )
+
+            output = stdout.getvalue()
+            self.assertEqual(0, status)
+            self.assertIn("AMPG_INSTALL_ARTIFACT", output)
+            self.assertIn("kind=daemon-config", output)
+            self.assertTrue(
+                (
+                    root
+                    / "plan/example/i2p/managed/android-termux/i2pd-tunnels.conf"
+                ).exists()
+            )
+
+    def test_systemd_supervisor_wraps_start_command_in_shell(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_config(
+                _write_config(
+                    Path(tmp),
+                    """
+[site.protocols.tor]
+enabled = true
+renderer = "privacy-html"
+daemon = "tor"
+daemon_policy = "auto"
+""",
+                )
+            )
+
+            artifacts = install_artifacts(
+                config,
+                platform_provider=platform_by_name("linux-systemd"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+
+        service = next(artifact for artifact in artifacts if artifact.path.name == "tor.service")
+        self.assertIn("ExecStart=/bin/sh -lc 'exec tor", service.content)
 
 
 if __name__ == "__main__":

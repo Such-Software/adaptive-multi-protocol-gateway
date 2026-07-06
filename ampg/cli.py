@@ -14,7 +14,12 @@ from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
 from .docsgen import generate_docs
-from .install_plan import InstallStep, blocked_install_steps, install_plan
+from .install_plan import (
+    InstallStep,
+    blocked_install_steps,
+    install_plan,
+    write_install_artifacts,
+)
 from .manifest import write_fixture_manifests
 from .plan import plan_gateway, write_plan_artifacts
 from .platforms import PLATFORM_NAMES, platform_by_name
@@ -94,6 +99,11 @@ def main(argv: list[str] | None = None) -> int:
         "--platform",
         choices=PLATFORM_NAMES,
         help="Override platform detection for install planning.",
+    )
+    install_plan_parser.add_argument(
+        "--write-artifacts",
+        action="store_true",
+        help="Write managed daemon config and supervisor artifacts to the plan root.",
     )
     build_parser = subcommands.add_parser("build", help="Build enabled protocol outputs.")
     _add_target_selection(build_parser)
@@ -232,7 +242,21 @@ def _cmd_apply(config, args) -> int:
 
 
 def _cmd_install_plan(config, args) -> int:
-    steps = install_plan(config, platform_provider=_platform_override(config, args))
+    platform_provider = _platform_override(config, args)
+    if _write_artifacts_enabled(config, args):
+        for artifact in write_install_artifacts(
+            config,
+            platform_provider=platform_provider,
+        ):
+            print(
+                "AMPG_INSTALL_ARTIFACT "
+                f"site={artifact.site_id} "
+                f"protocol={artifact.protocol} "
+                f"platform={artifact.platform} "
+                f"kind={artifact.kind} "
+                f"path={artifact.path}"
+            )
+    steps = install_plan(config, platform_provider=platform_provider)
     for step in steps:
         _print_install_step(step)
     blocked = blocked_install_steps(steps)

@@ -105,6 +105,7 @@ python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml status
 python3 -m ampg --config examples/wownero.gateway.toml doctor
 python3 -m ampg --config examples/wownero.gateway.toml install-plan --profile mobile-i2p
+python3 -m ampg --config examples/wownero.gateway.toml install-plan --profile mobile-i2p --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --protocol i2p
@@ -131,6 +132,10 @@ that marker is present.
 
 Plan artifacts are written under `dist/ampg-plan/` only when `--write-artifacts` is
 passed. They are reviewable snippets, not installed daemon config.
+
+Managed install artifacts are also written under `dist/ampg-plan/` when
+`install-plan --write-artifacts` is passed. They include reviewable daemon configs and
+platform supervisor files, but are not installed or started.
 
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without
