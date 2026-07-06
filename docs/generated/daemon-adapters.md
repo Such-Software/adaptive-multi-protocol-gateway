@@ -54,3 +54,14 @@ Notes:
 Notes:
 - IPFS output is static web content for a local gateway or later pinning.
 - IPFS is content-addressed distribution, not an anonymity layer.
+
+## rnsd
+
+- Protocols: reticulum
+- Default policy: `auto`
+- Generated artifacts: Reticulum page-service plan
+
+Notes:
+- Reticulum output is planned as small page-service content.
+- Reticulum is resilient/private routing, not an anonymity layer.
+- Physical interfaces may require explicit operator setup.

@@ -465,4 +465,15 @@ DAEMON_ADAPTERS = (
             "IPFS is content-addressed distribution, not an anonymity layer.",
         ),
     ),
+    DaemonAdapter(
+        daemon=DEFAULT_DAEMONS["reticulum"],
+        protocols=("reticulum",),
+        default_policy=DEFAULT_POLICIES["reticulum"],
+        generated_artifacts=("Reticulum page-service plan",),
+        notes=(
+            "Reticulum output is planned as small page-service content.",
+            "Reticulum is resilient/private routing, not an anonymity layer.",
+            "Physical interfaces may require explicit operator setup.",
+        ),
+    ),
 )

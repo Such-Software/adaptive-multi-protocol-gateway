@@ -91,6 +91,22 @@ Daemon adapters provide a common interface:
 Adapters must be conservative. They do not modify non-AMPG config without showing a
 plan first, and managed config lives under AMPG-owned state directories.
 
+## Platform providers
+
+Platform providers decide what daemon management means on the current host. AMPG detects
+systemd Linux, user-space Linux, macOS user launchd, Termux-style Android, and unknown
+platforms. A provider can allow managed daemons without allowing system config writes.
+
+Operators can override detection for dry runs:
+
+```sh
+python3 -m ampg --config gateway.toml doctor --platform linux-systemd
+python3 -m ampg --config gateway.toml doctor --platform android-termux
+```
+
+This keeps the same gateway config portable across a VPS, laptop, old phone, or manual
+render-only environment while making daemon ownership decisions explicit.
+
 ## Interaction boundary
 
 v1 is static-first, but the architecture reserves a path for interactive applications.

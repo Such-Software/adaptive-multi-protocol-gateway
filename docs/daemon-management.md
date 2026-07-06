@@ -31,13 +31,37 @@ For each enabled protocol, AMPG checks:
 3. Common system services and ports.
 4. Known config paths for supported daemons.
 
-The result is shown in `ampg plan`.
+The result is shown in `ampg status`. `ampg plan` shows rendered outputs and reviewable
+config artifacts.
+
+## Preflight commands
+
+```sh
+python3 -m ampg --config gateway.toml status
+python3 -m ampg --config gateway.toml doctor
+python3 -m ampg --config gateway.toml doctor --platform android-termux
+```
+
+`status` prints one row per enabled protocol with the selected platform provider,
+adapter, installed/running daemon probe, action, and policy result.
+
+`doctor` checks source paths, renderer support, route exposure, output readiness, and
+daemon policy feasibility. It exits nonzero only for errors; missing build output is a
+warning so operators can run it before the first build.
+
+Platform providers describe how AMPG may supervise managed daemons:
+
+- `linux-systemd`: system service management after approval.
+- `linux-user`: user-space foreground or user service management.
+- `macos-launchd`: user LaunchAgents or foreground processes.
+- `android-termux`: Termux-style user-space daemons for mobile/server experiments.
+- `unknown`: render and plan only; daemon management is disabled.
 
 ## Adapter notes
 
 ### Clearnet
 
-Default daemon: Caddy.
+Default daemon: nginx.
 
 AMPG should usually adopt clearnet ingress instead of managing it. Existing TLS,
 firewall, and reverse proxy rules are operator-owned. Managed clearnet is useful for

@@ -10,6 +10,7 @@ from .config import load_config
 from .docsgen import generate_docs
 from .manifest import write_fixture_manifests
 from .plan import plan_gateway, write_plan_artifacts
+from .platforms import PLATFORM_NAMES, platform_by_name
 from .preview import PreviewServers, preview_endpoints, write_preview_fixture_manifests
 from .route_manifest import (
     load_route_manifest,
@@ -17,6 +18,7 @@ from .route_manifest import (
     validate_route_manifest,
 )
 from .route_policy import RouteExposure, RouteIssue, route_exposures, route_issues
+from .status import DoctorIssue, TransportStatus, doctor_gateway, gateway_status
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -33,6 +35,24 @@ def main(argv: list[str] | None = None) -> int:
         "--write-artifacts",
         action="store_true",
         help="Write generated config snippets to the configured plan root.",
+    )
+    status_parser = subcommands.add_parser(
+        "status",
+        help="Show enabled transport daemon decisions.",
+    )
+    status_parser.add_argument(
+        "--platform",
+        choices=PLATFORM_NAMES,
+        help="Override platform detection for dry-run checks.",
+    )
+    doctor_parser = subcommands.add_parser(
+        "doctor",
+        help="Check source, renderer, route, and daemon readiness.",
+    )
+    doctor_parser.add_argument(
+        "--platform",
+        choices=PLATFORM_NAMES,
+        help="Override platform detection for dry-run checks.",
     )
     subcommands.add_parser("build", help="Build enabled protocol outputs.")
     subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
@@ -108,6 +128,10 @@ def main(argv: list[str] | None = None) -> int:
         config = load_config(args.config)
         if args.command == "plan":
             return _cmd_plan(config, write_artifacts=args.write_artifacts)
+        if args.command == "status":
+            return _cmd_status(config, args)
+        if args.command == "doctor":
+            return _cmd_doctor(config, args)
         if args.command == "build":
             return _cmd_build(config)
         if args.command == "manifest":
@@ -122,6 +146,41 @@ def main(argv: list[str] | None = None) -> int:
         print(f"AMPG status=error message={exc}", file=sys.stderr)
         return 1
     return 1
+
+
+def _cmd_status(config, args) -> int:
+    statuses = gateway_status(config, platform_provider=_platform_override(args))
+    for status in statuses:
+        _print_transport_status(status)
+    print(
+        "AMPG_STATUS_SUMMARY "
+        f"sites={len(config.sites)} "
+        f"protocols={len(statuses)} "
+        f"ok={sum(1 for status in statuses if status.status == 'ok')} "
+        f"warnings={sum(1 for status in statuses if status.status == 'warn')} "
+        f"errors={sum(1 for status in statuses if status.status == 'error')}"
+    )
+    return 0
+
+
+def _cmd_doctor(config, args) -> int:
+    platform_provider = _platform_override(args)
+    statuses = gateway_status(config, platform_provider=platform_provider)
+    issues = doctor_gateway(config, platform_provider=platform_provider, statuses=statuses)
+    for status in statuses:
+        _print_transport_status(status)
+    for issue in issues:
+        _print_doctor_issue(issue)
+    errors = sum(1 for issue in issues if issue.severity == "error")
+    warnings = sum(1 for issue in issues if issue.severity == "warning")
+    print(
+        "AMPG_DOCTOR_SUMMARY "
+        f"sites={len(config.sites)} "
+        f"checks={len(statuses) + len(issues)} "
+        f"warnings={warnings} "
+        f"errors={errors}"
+    )
+    return 1 if errors else 0
 
 
 def _cmd_plan(config, *, write_artifacts: bool) -> int:
@@ -174,6 +233,41 @@ def _cmd_build(config) -> int:
             f"fixtures={manifest.fixture_count}"
         )
     return 0
+
+
+def _print_transport_status(status: TransportStatus) -> None:
+    executable_path = status.executable_path or "-"
+    print(
+        "AMPG_STATUS "
+        f"site={status.site_id} "
+        f"protocol={status.protocol} "
+        f"renderer={status.renderer} "
+        f"daemon={status.daemon} "
+        f"policy={status.daemon_policy} "
+        f"platform={status.platform} "
+        f"supervisor={status.supervisor} "
+        f"adapter={status.adapter} "
+        f"backend={status.backend} "
+        f"installed={_bool(status.installed)} "
+        f"running={_bool(status.running)} "
+        f"adoptable={_bool(status.adoptable)} "
+        f"manageable={_bool(status.manageable)} "
+        f"executable={executable_path} "
+        f"status={status.status} "
+        f"action={status.action} "
+        f"message=\"{_quote(status.message)}\""
+    )
+
+
+def _print_doctor_issue(issue: DoctorIssue) -> None:
+    print(
+        "AMPG_DOCTOR "
+        f"site={issue.site_id} "
+        f"protocol={issue.protocol} "
+        f"severity={issue.severity} "
+        f"code={issue.code} "
+        f"message=\"{_quote(issue.message)}\""
+    )
 
 
 def _cmd_manifest(config) -> int:
@@ -366,3 +460,17 @@ def _cmd_docs(args) -> int:
         print(f"AMPG_DOCS status=ok mode={mode} changed={changed_text}")
         return 0
     return 1
+
+
+def _platform_override(args):
+    if getattr(args, "platform", None):
+        return platform_by_name(args.platform)
+    return None
+
+
+def _bool(value: bool) -> str:
+    return str(value).lower()
+
+
+def _quote(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')

@@ -101,6 +101,8 @@ The current implementation is dependency-free Python:
 ```sh
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
+python3 -m ampg --config examples/wownero.gateway.toml status
+python3 -m ampg --config examples/wownero.gateway.toml doctor
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
@@ -127,6 +129,7 @@ passed. They are reviewable snippets, not installed daemon config.
 - [ ] Pick source kind: `static-html`, `markdown`, or `ssg-output`.
 - [ ] Select protocols and daemon policy.
 - [ ] Run `ampg plan`; review output roots, ports, and config changes.
+- [ ] Run `ampg status` or `ampg doctor`; review daemon ownership decisions.
 - [ ] Run `ampg build`; inspect generated variants.
 - [ ] Run AMPB fixture checks against generated manifests.
 - [ ] Run `ampg apply`; publish through adopted or managed daemons.
