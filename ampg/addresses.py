@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
+from .state_contract import address_capture_candidates
 
 
 SCHEMA = "ampg.address-registry.v1"
@@ -244,7 +245,7 @@ def _capture_protocol_address(
             message="address is set in config; registry unchanged",
         )
 
-    candidates = _address_file_candidates(config, site, protocol)
+    candidates = address_capture_candidates(config, site, protocol)
     if protocol.name not in CAPTURE_PROTOCOLS and not protocol.options.get("address_file"):
         return AddressCaptureResult(
             site_id=site.id,
@@ -284,41 +285,6 @@ def _capture_protocol_address(
     )
 
 
-def _address_file_candidates(
-    config: GatewayConfig,
-    site: SiteConfig,
-    protocol: ProtocolConfig,
-) -> tuple[Path, ...]:
-    configured_file = protocol.options.get("address_file")
-    candidates: list[Path] = []
-    if configured_file:
-        path = Path(str(configured_file)).expanduser()
-        if not path.is_absolute():
-            path = config.config_path.parent / path
-        candidates.append(path.resolve())
-
-    state_dir = _state_dir(config, site, protocol)
-    if protocol.name == "tor":
-        candidates.extend(
-            [
-                state_dir / "hidden-service/hostname",
-                state_dir / "hostname",
-                state_dir / "address.txt",
-            ]
-        )
-    elif protocol.name == "i2p":
-        candidates.extend(
-            [
-                state_dir / "hostname.txt",
-                state_dir / "b32.txt",
-                state_dir / "address.txt",
-            ]
-        )
-    else:
-        candidates.extend([state_dir / "address.txt", state_dir / "hostname"])
-    return tuple(candidates)
-
-
 def _placeholder_or_derived_address(site: SiteConfig, protocol: ProtocolConfig) -> AddressRecord:
     if protocol.name == "clearnet":
         url = site.source.canonical_url or f"https://{site.domain}/"
@@ -356,11 +322,6 @@ def _require_declared_protocol(config: GatewayConfig, site_id: str, protocol: st
             raise ValueError(f"{site_id}: protocol {protocol!r} is not declared")
         return
     raise ValueError(f"unknown site {site_id!r}")
-
-
-def _state_dir(config: GatewayConfig, site: SiteConfig, protocol: ProtocolConfig) -> Path:
-    root = config.paths.state_dir if config.paths else config.config_path.parent / ".ampg/state"
-    return root / site.id / protocol.name
 
 
 def _first_nonempty_line(path: Path) -> str:

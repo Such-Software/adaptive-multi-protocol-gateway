@@ -83,6 +83,7 @@ API remains internal even when the public site is available on Tor or I2P.
 - [Configuration](docs/configuration.md)
 - [Daemon management](docs/daemon-management.md)
 - [Fixture manifests](docs/fixture-manifests.md)
+- [State contract](docs/state-contract.md)
 - [Interaction capabilities](docs/interaction-capabilities.md)
 - [Interactive applications](docs/interactive-apps.md)
 - [Wownero integration](docs/wownero-integration.md)
@@ -119,6 +120,7 @@ python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/wownero.gateway.toml addresses list
 python3 -m ampg --config examples/wownero.gateway.toml addresses capture --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml addresses set --site wownero --protocol i2p --url example.b32.i2p
+python3 -m ampg --config examples/wownero.gateway.toml state-contract --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
 python3 -m ampg --config examples/wownero.gateway.toml preview manifest
 python3 -m ampg --config examples/wownero.gateway.toml routes explain

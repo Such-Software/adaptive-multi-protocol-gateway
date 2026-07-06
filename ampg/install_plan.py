@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
 from .platforms import PlatformProvider, detect_platform
+from .state_contract import daemon_config_path, protocol_state_dir
 from .status import DaemonProbeFunc, TransportStatus, gateway_status
 from .transports import fallback_transport_adapter, transport_adapter
 
@@ -182,7 +183,7 @@ def _protocol_install_steps(
             provider,
             stage="config",
             action="write-managed-config",
-            target=str(_state_dir(config, provider, site, protocol) / "config"),
+            target=str(daemon_config_path(config, site, protocol)),
             status="planned",
             command="-",
             message=f"write managed {adapter.backend} config after plan review",
@@ -356,8 +357,7 @@ def _state_dir(
     site: SiteConfig,
     protocol: ProtocolConfig,
 ) -> Path:
-    root = config.paths.state_dir if config.paths else provider.state_root
-    return root / site.id / protocol.name
+    return protocol_state_dir(config, site, protocol)
 
 
 def _artifact_dir(

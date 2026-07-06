@@ -40,6 +40,7 @@ from .route_manifest import (
 )
 from .route_policy import RouteExposure, RouteIssue, route_exposures, route_issues
 from .selection import protocols_for_selection, select_profile, select_protocols
+from .state_contract import StatePathContract, state_contract
 from .status import DoctorIssue, TransportStatus, doctor_gateway, gateway_status
 
 
@@ -175,6 +176,11 @@ def main(argv: list[str] | None = None) -> int:
         default="manual",
         help="Source label stored with the captured address.",
     )
+    state_contract_parser = subcommands.add_parser(
+        "state-contract",
+        help="Print AMPG-owned state paths and daemon-written files.",
+    )
+    _add_target_selection(state_contract_parser)
     preview_parser = subcommands.add_parser("preview", help="Preview generated outputs locally.")
     preview_subcommands = preview_parser.add_subparsers(dest="preview_command", required=True)
     for preview_command in ("endpoints", "manifest", "serve"):
@@ -269,6 +275,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_manifest(config)
         if args.command == "addresses":
             return _cmd_addresses(config, args)
+        if args.command == "state-contract":
+            return _cmd_state_contract(config)
         if args.command == "preview":
             return _cmd_preview(config, args)
         if args.command == "routes":
@@ -621,6 +629,34 @@ def _cmd_addresses(config, args) -> int:
         return 0
 
     return 1
+
+
+def _cmd_state_contract(config) -> int:
+    contracts = state_contract(config)
+    for contract in contracts:
+        _print_state_contract(contract)
+    print(
+        "AMPG_STATE_SUMMARY "
+        f"sites={len(config.sites)} "
+        f"entries={len(contracts)} "
+        f"required={sum(1 for contract in contracts if contract.required)} "
+        f"sensitive={sum(1 for contract in contracts if contract.sensitive)}"
+    )
+    return 0
+
+
+def _print_state_contract(contract: StatePathContract) -> None:
+    print(
+        "AMPG_STATE "
+        f"site={contract.site_id} "
+        f"protocol={contract.protocol} "
+        f"role={contract.role} "
+        f"owner={contract.owner} "
+        f"required={_bool(contract.required)} "
+        f"sensitive={_bool(contract.sensitive)} "
+        f"path=\"{_quote(str(contract.path))}\" "
+        f"description=\"{_quote(contract.description)}\""
+    )
 
 
 def _print_address(record: AddressRecord) -> None:

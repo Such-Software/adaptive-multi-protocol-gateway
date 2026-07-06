@@ -41,6 +41,7 @@ python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p --write-artifacts
+python3 -m ampg --config gateway.toml state-contract --profile mobile-i2p
 python3 -m ampg --config gateway.toml addresses list --profile mobile-i2p
 python3 -m ampg --config gateway.toml addresses capture --profile mobile-i2p
 python3 -m ampg --config gateway.toml health-plan --profile mobile-i2p
@@ -68,6 +69,9 @@ files under the configured `plan_root`, grouped by site, protocol, and platform.
 Tor/I2P HTTP publishing, AMPG writes both transport-daemon artifacts and loopback nginx
 artifacts. The generated daemon configs store runtime state, identity keys, logs, and
 daemon-written addresses under `gateway.state_dir`.
+
+`state-contract` prints the resolved managed-state paths for enabled protocols, including
+which paths are AMPG-owned, daemon-written, required, or sensitive.
 
 `addresses list` prints the effective public address for each enabled protocol:
 configured, captured, derived, or placeholder. `addresses capture` reads daemon-written
