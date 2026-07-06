@@ -29,3 +29,7 @@ This file is generated from code. Do not edit it by hand.
 | site.protocols.<name> | `max_asset_bytes` | integer | no | 1048576 | Maximum asset size copied by privacy-html render targets. |
 | site.protocols.<name> | `script_policy` | enum | no | strip | Script handling policy for privacy-html render targets. |
 | site.protocols.<name> | `max_tier` | enum | no | transport default | Maximum interaction tier this protocol target may expose. |
+| profiles.<name> | `description` | string | no | - | Human-readable deployment profile description. |
+| profiles.<name> | `protocols` | array<string> | no | all enabled protocols | Enabled protocols selected by this deployment profile. |
+| profiles.<name> | `platform` | enum | no | detected platform | Platform provider used by status, doctor, and apply when not overridden. |
+| profiles.<name> | `write_artifacts` | boolean | no | false | Whether plan/apply dry-run writes review artifacts by default. |

@@ -203,6 +203,38 @@ CONFIG_FIELDS = (
         "transport default",
         "Maximum interaction tier this protocol target may expose.",
     ),
+    ConfigField(
+        "profiles.<name>",
+        "description",
+        "string",
+        False,
+        "",
+        "Human-readable deployment profile description.",
+    ),
+    ConfigField(
+        "profiles.<name>",
+        "protocols",
+        "array<string>",
+        False,
+        "all enabled protocols",
+        "Enabled protocols selected by this deployment profile.",
+    ),
+    ConfigField(
+        "profiles.<name>",
+        "platform",
+        "enum",
+        False,
+        "detected platform",
+        "Platform provider used by status, doctor, and apply when not overridden.",
+    ),
+    ConfigField(
+        "profiles.<name>",
+        "write_artifacts",
+        "boolean",
+        False,
+        "false",
+        "Whether plan/apply dry-run writes review artifacts by default.",
+    ),
 )
 
 

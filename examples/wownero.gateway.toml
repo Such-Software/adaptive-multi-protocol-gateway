@@ -4,6 +4,21 @@ cache_dir = "./.ampg/cache"
 run_dir = "./.ampg/run"
 user = "ampg"
 
+[profiles.mobile-i2p]
+description = "User-space I2P-only deployment for Android/Termux-style hosts."
+protocols = ["i2p"]
+platform = "android-termux"
+
+[profiles.tor-i2p]
+description = "Privacy-network deployment without clearnet ingress."
+protocols = ["tor", "i2p"]
+
+[profiles.vps-full]
+description = "Full VPS deployment for clearnet plus generated alternate transports."
+protocols = ["clearnet", "tor", "i2p", "gemini"]
+platform = "linux-systemd"
+write_artifacts = true
+
 [[site]]
 id = "wownero"
 domain = "wownero.org"

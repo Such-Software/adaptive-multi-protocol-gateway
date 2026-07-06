@@ -40,6 +40,7 @@ config artifacts.
 python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml apply --dry-run
+python3 -m ampg --config gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml apply --dry-run --protocol i2p
 python3 -m ampg --config gateway.toml apply --dry-run --write-artifacts
 python3 -m ampg --config gateway.toml doctor --platform android-termux
@@ -61,6 +62,10 @@ services.
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet
 `adopt` failure will block a full activation run, but it will not block
 `apply --dry-run --protocol i2p` because clearnet is outside that selected run.
+
+`--profile` loads named command defaults from `gateway.toml`. Profiles can set selected
+protocols, platform provider, and safe artifact-writing defaults. Explicit command-line
+flags override profile defaults.
 
 Platform providers describe how AMPG may supervise managed daemons:
 

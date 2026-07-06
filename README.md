@@ -105,9 +105,11 @@ python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml status
 python3 -m ampg --config examples/wownero.gateway.toml doctor
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run
+python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --protocol i2p
 python3 -m ampg --config examples/wownero.gateway.toml apply --dry-run --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml build
+python3 -m ampg --config examples/wownero.gateway.toml build --profile tor-i2p
 python3 -m ampg --config examples/wownero.gateway.toml build --protocol tor --protocol i2p
 python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
@@ -132,6 +134,10 @@ passed. They are reviewable snippets, not installed daemon config.
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without
 unselected transports blocking the run.
+
+Use `--profile` to load a named deployment target from `gateway.toml`. Profiles can set
+selected protocols, a default platform provider, and safe artifact-writing defaults.
+Explicit `--protocol` and `--platform` flags override the profile when present.
 
 ## Reusable checklist
 

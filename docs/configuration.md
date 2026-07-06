@@ -45,7 +45,7 @@ public_allowed = false
 [site.protocols.clearnet]
 enabled = true
 renderer = "clearnet"
-daemon = "caddy"
+daemon = "nginx"
 daemon_policy = "adopt"
 
 [site.protocols.tor]
@@ -100,7 +100,7 @@ workflow.
 
 | Protocol | Default renderer | Default daemon | Default policy |
 | --- | --- | --- | --- |
-| clearnet | `clearnet` | `caddy` | `adopt` |
+| clearnet | `clearnet` | `nginx` | `adopt` |
 | tor | `privacy-html` | `tor` | `auto` |
 | i2p | `privacy-html` | `i2pd` | `auto` |
 | gemini | `gemtext` | `agate` | `auto` |
@@ -245,6 +245,33 @@ not belong in it.
 
 Enabled protocols are independent. A config can omit clearnet entirely and publish only
 to I2P, Tor, Gemini, IPFS, Reticulum, or any combination of supported targets.
+
+## Deployment profiles
+
+Profiles are named command defaults stored in `gateway.toml`. They can select enabled
+protocols, set a default platform provider, and turn on safe plan artifact writes.
+
+```toml
+[profiles.mobile-i2p]
+description = "User-space I2P-only deployment for Android/Termux-style hosts."
+protocols = ["i2p"]
+platform = "android-termux"
+
+[profiles.vps-full]
+description = "Full VPS deployment."
+protocols = ["clearnet", "tor", "i2p", "gemini"]
+platform = "linux-systemd"
+write_artifacts = true
+```
+
+Use profiles with operational commands:
+
+```sh
+python3 -m ampg --config gateway.toml build --profile mobile-i2p
+python3 -m ampg --config gateway.toml apply --dry-run --profile mobile-i2p
+```
+
+Explicit `--protocol` and `--platform` flags override profile defaults for that command.
 
 For an existing HTML site that should publish only to I2P:
 

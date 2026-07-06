@@ -79,9 +79,19 @@ class SiteConfig:
 
 
 @dataclass(frozen=True)
+class ProfileConfig:
+    name: str
+    protocols: tuple[str, ...] = ()
+    platform: str | None = None
+    write_artifacts: bool = False
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class GatewayConfig:
     config_path: Path
     sites: list[SiteConfig]
+    profiles: dict[str, ProfileConfig] = field(default_factory=dict)
 
 
 def load_config(path: Path) -> GatewayConfig:
@@ -90,7 +100,36 @@ def load_config(path: Path) -> GatewayConfig:
     sites = [_parse_site(raw_site, config_path.parent) for raw_site in data.get("site", [])]
     if not sites:
         raise ValueError("config must declare at least one [[site]]")
-    return GatewayConfig(config_path=config_path, sites=sites)
+    profiles = _parse_profiles(data.get("profiles", {}))
+    return GatewayConfig(config_path=config_path, sites=sites, profiles=profiles)
+
+
+def _parse_profiles(raw_profiles: Any) -> dict[str, ProfileConfig]:
+    if raw_profiles is None:
+        return {}
+    if not isinstance(raw_profiles, dict):
+        raise ValueError("profiles must be a table")
+    profiles: dict[str, ProfileConfig] = {}
+    for name, raw_profile in raw_profiles.items():
+        if not isinstance(raw_profile, dict):
+            raise ValueError(f"profile {name!r} must be a table")
+        platform = raw_profile.get("platform")
+        if platform is not None and not isinstance(platform, str):
+            raise ValueError(f"profile {name!r}.platform must be a string")
+        description = raw_profile.get("description", "")
+        if not isinstance(description, str):
+            raise ValueError(f"profile {name!r}.description must be a string")
+        profiles[str(name)] = ProfileConfig(
+            name=str(name),
+            protocols=_string_array(
+                raw_profile.get("protocols", ()),
+                f"profile {name!r}.protocols",
+            ),
+            platform=platform,
+            write_artifacts=bool(raw_profile.get("write_artifacts", False)),
+            description=description,
+        )
+    return profiles
 
 
 def _parse_site(raw_site: dict[str, Any], base_dir: Path) -> SiteConfig:

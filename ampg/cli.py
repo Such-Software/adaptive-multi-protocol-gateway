@@ -24,7 +24,7 @@ from .route_manifest import (
     validate_route_manifest,
 )
 from .route_policy import RouteExposure, RouteIssue, route_exposures, route_issues
-from .selection import parse_protocol_filters, select_protocols
+from .selection import protocols_for_selection, select_profile, select_protocols
 from .status import DoctorIssue, TransportStatus, doctor_gateway, gateway_status
 
 
@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     subcommands = parser.add_subparsers(dest="command", required=True)
     plan_parser = subcommands.add_parser("plan", help="Print a dry-run plan.")
-    _add_protocol_filter(plan_parser)
+    _add_target_selection(plan_parser)
     plan_parser.add_argument(
         "--write-artifacts",
         action="store_true",
@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         "status",
         help="Show enabled transport daemon decisions.",
     )
-    _add_protocol_filter(status_parser)
+    _add_target_selection(status_parser)
     status_parser.add_argument(
         "--platform",
         choices=PLATFORM_NAMES,
@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         "doctor",
         help="Check source, renderer, route, and daemon readiness.",
     )
-    _add_protocol_filter(doctor_parser)
+    _add_target_selection(doctor_parser)
     doctor_parser.add_argument(
         "--platform",
         choices=PLATFORM_NAMES,
@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
         "apply",
         help="Show or run the transport activation sequence.",
     )
-    _add_protocol_filter(apply_parser)
+    _add_target_selection(apply_parser)
     apply_parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -85,9 +85,9 @@ def main(argv: list[str] | None = None) -> int:
         help="Override platform detection for dry-run checks.",
     )
     build_parser = subcommands.add_parser("build", help="Build enabled protocol outputs.")
-    _add_protocol_filter(build_parser)
+    _add_target_selection(build_parser)
     fixture_parser = subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
-    _add_protocol_filter(fixture_parser)
+    _add_target_selection(fixture_parser)
     preview_parser = subcommands.add_parser("preview", help="Preview generated outputs locally.")
     preview_subcommands = preview_parser.add_subparsers(dest="preview_command", required=True)
     for preview_command in ("endpoints", "manifest", "serve"):
@@ -95,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
             preview_command,
             help=f"Preview {preview_command} for generated outputs.",
         )
-        _add_protocol_filter(command_parser)
+        _add_target_selection(command_parser)
         command_parser.add_argument(
             "--base-port",
             type=int,
@@ -113,12 +113,12 @@ def main(argv: list[str] | None = None) -> int:
         "explain",
         help="Print per-protocol route decisions.",
     )
-    _add_protocol_filter(routes_explain)
+    _add_target_selection(routes_explain)
     routes_validate = routes_subcommands.add_parser(
         "validate",
         help="Fail when a public route has no compatible enabled protocol.",
     )
-    _add_protocol_filter(routes_validate)
+    _add_target_selection(routes_validate)
     manifest_parser = subcommands.add_parser(
         "route-manifest",
         help="Validate or print the app route manifest contract.",
@@ -165,7 +165,7 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_route_manifest(args)
         config = _selected_config(load_config(args.config), args)
         if args.command == "plan":
-            return _cmd_plan(config, write_artifacts=args.write_artifacts)
+            return _cmd_plan(config, write_artifacts=_write_artifacts_enabled(config, args))
         if args.command == "status":
             return _cmd_status(config, args)
         if args.command == "doctor":
@@ -196,11 +196,11 @@ def _cmd_apply(config, args) -> int:
         )
         return 1
 
-    if args.write_artifacts:
+    if _write_artifacts_enabled(config, args):
         for path in write_activation_artifacts(config):
             print(f"AMPG_APPLY_ARTIFACT path={path} status=written")
 
-    steps = activation_steps(config, platform_provider=_platform_override(args))
+    steps = activation_steps(config, platform_provider=_platform_override(config, args))
     for step in steps:
         _print_activation_step(step)
 
@@ -218,7 +218,11 @@ def _cmd_apply(config, args) -> int:
     return 1 if blocked else 0
 
 
-def _add_protocol_filter(parser) -> None:
+def _add_target_selection(parser) -> None:
+    parser.add_argument(
+        "--profile",
+        help="Named deployment profile from gateway config.",
+    )
     parser.add_argument(
         "--protocol",
         action="append",
@@ -228,12 +232,23 @@ def _add_protocol_filter(parser) -> None:
 
 
 def _selected_config(config, args):
-    protocols = parse_protocol_filters(getattr(args, "protocol", None))
+    protocols = protocols_for_selection(
+        config,
+        raw_protocols=getattr(args, "protocol", None),
+        profile_name=getattr(args, "profile", None),
+    )
     return select_protocols(config, protocols)
 
 
+def _write_artifacts_enabled(config, args) -> bool:
+    if getattr(args, "write_artifacts", False):
+        return True
+    profile = select_profile(config, getattr(args, "profile", None))
+    return bool(profile and profile.write_artifacts)
+
+
 def _cmd_status(config, args) -> int:
-    statuses = gateway_status(config, platform_provider=_platform_override(args))
+    statuses = gateway_status(config, platform_provider=_platform_override(config, args))
     for status in statuses:
         _print_transport_status(status)
     print(
@@ -248,7 +263,7 @@ def _cmd_status(config, args) -> int:
 
 
 def _cmd_doctor(config, args) -> int:
-    platform_provider = _platform_override(args)
+    platform_provider = _platform_override(config, args)
     statuses = gateway_status(config, platform_provider=platform_provider)
     issues = doctor_gateway(config, platform_provider=platform_provider, statuses=statuses)
     for status in statuses:
@@ -559,9 +574,12 @@ def _cmd_docs(args) -> int:
     return 1
 
 
-def _platform_override(args):
+def _platform_override(config, args):
     if getattr(args, "platform", None):
         return platform_by_name(args.platform)
+    profile = select_profile(config, getattr(args, "profile", None))
+    if profile and profile.platform:
+        return platform_by_name(profile.platform)
     return None
 
 
