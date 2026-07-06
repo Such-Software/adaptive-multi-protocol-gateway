@@ -45,21 +45,22 @@ The default for selected non-clearnet protocols is `auto`.
 ## Target workflow
 
 ```sh
-ampg init site wownero \
+python3 -m ampg --config gateway.toml init site wownero \
   --domain wownero.org \
   --source ../wownero.org-website \
-  --source-kind static-html
+  --preset full
 
-ampg enable wownero tor gemini i2p reticulum
-ampg plan
-ampg build
-ampg apply --dry-run
+python3 -m ampg --config gateway.toml build
+python3 -m ampg --config gateway.toml doctor
+python3 -m ampg --config gateway.toml install-plan --profile vps-full --write-artifacts
+python3 -m ampg --config gateway.toml approvals list --profile vps-full
+python3 -m ampg --config gateway.toml apply --dry-run --profile vps-full
 ```
 
-`plan` prints rendered output paths, daemon decisions, port bindings, config diffs, and
-operator actions. The current `apply --dry-run` prints the activation sequence and a
-preflight verdict without changing services. Live apply support will perform only
-approved changes.
+`init site` writes a readable `gateway.toml` with selected transports enabled and common
+transports left as one-line toggles. The current `apply --dry-run` prints the activation
+sequence and a preflight verdict without changing services. Live apply support will
+perform only approved changes.
 
 ## Interaction tiers
 
@@ -102,6 +103,7 @@ python3 -m ampg docs generate --check
 The current implementation is dependency-free Python:
 
 ```sh
+python3 -m ampg --config gateway.toml init site wownero --domain wownero.org --source ../wownero.org-website --preset full
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml status

@@ -5,6 +5,36 @@
 AMPG is configured from one TOML file. The file declares global paths, sites, source
 adapters, render targets, and daemon policy.
 
+## Create A Config
+
+For an existing static HTML site, start with `init site`:
+
+```sh
+python3 -m ampg --config gateway.toml init site example \
+  --domain example.org \
+  --source ../example.org \
+  --preset full
+```
+
+Presets are concise transport bundles:
+
+- `full`: clearnet, Tor, and I2P.
+- `privacy`: Tor and I2P.
+- `i2p-only`, `tor-only`, `clearnet-only`, or `gemini-only`: one transport.
+
+Use `--protocol` to select exact transports instead of a preset:
+
+```sh
+python3 -m ampg --config gateway.toml init site example \
+  --domain example.org \
+  --source ../example.org \
+  --protocol i2p
+```
+
+The generated config keeps common transports as `enabled = true/false` toggles and
+creates practical profiles such as `vps-full`, `tor-i2p`, and `mobile-i2p` when they
+apply.
+
 ## Minimal Wownero pilot config
 
 ```toml

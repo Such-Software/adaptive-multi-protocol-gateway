@@ -49,6 +49,7 @@ from .install_plan import (
     write_install_artifacts,
 )
 from .manifest import write_fixture_manifests
+from .onboarding import PRESETS, init_site_config, parse_protocol_filters
 from .plan import plan_artifacts, plan_gateway, write_plan_artifacts
 from .platforms import PLATFORM_NAMES, platform_by_name
 from .preview import PreviewServers, preview_endpoints, write_preview_fixture_manifests
@@ -72,6 +73,51 @@ def main(argv: list[str] | None = None) -> int:
         help="Path to gateway TOML config.",
     )
     subcommands = parser.add_subparsers(dest="command", required=True)
+    init_parser = subcommands.add_parser(
+        "init",
+        help="Create a gateway config for an existing site.",
+    )
+    init_subcommands = init_parser.add_subparsers(dest="init_command", required=True)
+    init_site = init_subcommands.add_parser(
+        "site",
+        help="Create gateway.toml for an existing static HTML site.",
+    )
+    init_site.add_argument("site_id", help="Stable site id used in output/state paths.")
+    init_site.add_argument("--domain", required=True, help="Canonical clearnet domain.")
+    init_site.add_argument("--source", required=True, type=Path, help="Existing site source tree.")
+    init_site.add_argument(
+        "--source-kind",
+        default="static-html",
+        choices=("static-html",),
+        help="Source adapter kind.",
+    )
+    init_site.add_argument(
+        "--preset",
+        choices=sorted(PRESETS),
+        default="full",
+        help="Transport preset to enable when --protocol is omitted.",
+    )
+    init_site.add_argument(
+        "--protocol",
+        action="append",
+        default=[],
+        help="Protocol to enable. May be repeated or comma-separated.",
+    )
+    init_site.add_argument(
+        "--output-root",
+        type=Path,
+        help="Generated output root. Defaults to ./dist/<site>.",
+    )
+    init_site.add_argument(
+        "--plan-root",
+        type=Path,
+        help="Generated review artifact root. Defaults to ./dist/ampg-plan.",
+    )
+    init_site.add_argument(
+        "--force",
+        action="store_true",
+        help="Replace an existing config file.",
+    )
     plan_parser = subcommands.add_parser("plan", help="Print a dry-run plan.")
     _add_target_selection(plan_parser)
     plan_parser.add_argument(
@@ -316,6 +362,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        if args.command == "init":
+            return _cmd_init(args)
         if args.command == "docs":
             return _cmd_docs(args)
         if args.command == "route-manifest":
@@ -352,6 +400,54 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001 - CLI should print concise failures.
         print(f"AMPG status=error message={exc}", file=sys.stderr)
         return 1
+    return 1
+
+
+def _cmd_init(args) -> int:
+    if args.init_command == "site":
+        result = init_site_config(
+            config_path=args.config,
+            site_id=args.site_id,
+            domain=args.domain,
+            source=args.source,
+            source_kind=args.source_kind,
+            preset=args.preset,
+            protocols=parse_protocol_filters(args.protocol),
+            output_root=args.output_root,
+            plan_root=args.plan_root,
+            force=args.force,
+        )
+        protocol_text = ",".join(result.protocols)
+        print(
+            "AMPG_INIT_SITE "
+            f"status=written "
+            f"path=\"{_quote(str(result.config_path))}\" "
+            f"site={result.site_id} "
+            f"domain={result.domain} "
+            f"protocols={protocol_text}"
+        )
+        for profile in result.profiles:
+            print(f"AMPG_INIT_PROFILE name={profile}")
+        for protocol in ("clearnet", "tor", "i2p", "gemini"):
+            enabled = protocol in result.protocols
+            print(
+                "AMPG_INIT_TOGGLE "
+                f"protocol={protocol} "
+                f"enabled={_bool(enabled)} "
+                f"field=\"[site.protocols.{protocol}].enabled\""
+            )
+        config_arg = str(result.config_path)
+        profile_arg = result.profiles[0] if result.profiles else "-"
+        next_commands = [
+            f"python3 -m ampg --config {config_arg} build",
+            f"python3 -m ampg --config {config_arg} doctor",
+            f"python3 -m ampg --config {config_arg} install-plan --profile {profile_arg} --write-artifacts",
+            f"python3 -m ampg --config {config_arg} approvals list --profile {profile_arg}",
+            f"python3 -m ampg --config {config_arg} apply --dry-run --profile {profile_arg}",
+        ]
+        for index, command in enumerate(next_commands, start=1):
+            print(f"AMPG_INIT_NEXT step={index} command=\"{_quote(command)}\"")
+        return 0
     return 1
 
 
