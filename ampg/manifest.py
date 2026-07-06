@@ -72,6 +72,7 @@ def _fixture_entry(site: SiteConfig, protocol: ProtocolConfig) -> dict[str, Any]
             "transport": transport,
             "profile": transport,
         },
+        "interaction": _interaction_policy(protocol),
     }
 
 
@@ -79,6 +80,16 @@ def _transport_for(protocol_name: str) -> str:
     if protocol_name in {"clearnet", "tor", "i2p", "gemini", "reticulum", "ipfs"}:
         return protocol_name
     return protocol_name
+
+
+def _interaction_policy(protocol: ProtocolConfig) -> dict[str, Any]:
+    return {
+        "tier": str(protocol.options.get("tier", protocol.options.get("max_tier", "static"))),
+        "identity": str(protocol.options.get("identity", "none")),
+        "payments": str(protocol.options.get("payments", "none")),
+        "realtime": bool(protocol.options.get("realtime", False)),
+        "public_allowed": bool(protocol.options.get("public_allowed", True)),
+    }
 
 
 def _fixture_url(site: SiteConfig, protocol: ProtocolConfig) -> tuple[str, str]:

@@ -73,6 +73,61 @@ cid = "bafyexample"
             self.assertEqual("gemini://example.test/", by_protocol["gemini"]["url"])
             self.assertEqual("ipfs://bafyexample", by_protocol["ipfs"]["url"])
             self.assertEqual({"transport": "ipfs", "profile": "ipfs"}, by_protocol["ipfs"]["checks"])
+            self.assertEqual(
+                {
+                    "identity": "none",
+                    "payments": "none",
+                    "public_allowed": True,
+                    "realtime": False,
+                    "tier": "static",
+                },
+                by_protocol["ipfs"]["interaction"],
+            )
+
+    def test_manifest_includes_configured_interaction_policy(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "site"
+            source.mkdir()
+            (source / "index.html").write_text("<h1>Store</h1>", encoding="utf-8")
+            config_path = root / "gateway.toml"
+            config_path.write_text(
+                """
+[[site]]
+id = "store"
+domain = "store.test"
+
+[site.source]
+kind = "static-html"
+path = "./site"
+
+[site.outputs]
+root = "./out"
+plan_root = "./plan"
+
+[site.protocols.tor]
+enabled = true
+renderer = "privacy-html"
+tier = "transactional"
+identity = "http-session"
+payments = "server-invoice"
+""",
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+            manifest = fixture_manifest(config.sites[0])
+
+        self.assertEqual(
+            {
+                "identity": "http-session",
+                "payments": "server-invoice",
+                "public_allowed": True,
+                "realtime": False,
+                "tier": "transactional",
+            },
+            manifest["fixtures"][0]["interaction"],
+        )
 
 
 if __name__ == "__main__":

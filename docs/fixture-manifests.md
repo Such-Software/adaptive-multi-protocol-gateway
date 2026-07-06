@@ -20,6 +20,8 @@ The manifest contains public route expectations only:
 - protocol renderer and relative output path.
 - route URL for AMPB checks.
 - expected AMPB transport and profile.
+- declared interaction tier, identity adapter, payment adapter, realtime flag, and
+  public exposure flag.
 
 It must not contain private host inventory, hidden-service keys, tunnel keys, credentials,
 or deployment notes.
@@ -39,3 +41,20 @@ manifest and does not rebuild protocol outputs.
 Some transports may not have final public addresses when a fixture is generated. In those
 cases AMPG uses route-valid placeholders such as `http://wownero.onion/` so AMPB can still
 verify transport selection without contacting the network.
+
+## Interaction Policy
+
+Fixture interaction policy defaults to:
+
+```json
+{
+  "tier": "static",
+  "identity": "none",
+  "payments": "none",
+  "realtime": false,
+  "public_allowed": true
+}
+```
+
+Route-group overrides will be added separately. Until then, protocol-level options can
+declare the fixture-level policy that AMPB should check.
