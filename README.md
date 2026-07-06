@@ -52,6 +52,7 @@ python3 -m ampg --config gateway.toml init site wownero \
 
 python3 -m ampg --config gateway.toml deploy plan --profile vps-full
 python3 -m ampg --config gateway.toml dns plan --mode dynamic --behind-router
+python3 -m ampg --config gateway.toml dns plan --free-domain-hints
 python3 -m ampg --config gateway.toml build
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile vps-full --write-artifacts
@@ -91,6 +92,7 @@ API remains internal even when the public site is available on Tor or I2P.
 - [Architecture](docs/architecture.md)
 - [Configuration](docs/configuration.md)
 - [Daemon management](docs/daemon-management.md)
+- [Domain onboarding](docs/domain-onboarding.md)
 - [Fixture manifests](docs/fixture-manifests.md)
 - [State contract](docs/state-contract.md)
 - [Interaction capabilities](docs/interaction-capabilities.md)
@@ -113,6 +115,7 @@ The current implementation is dependency-free Python:
 python3 -m ampg --config gateway.toml init site wownero --domain wownero.org --source ../wownero.org-website --preset full
 python3 -m ampg --config examples/wownero.gateway.toml deploy plan --profile vps-full
 python3 -m ampg --config examples/wownero.gateway.toml dns plan --profile vps-full
+python3 -m ampg --config examples/wownero.gateway.toml dns plan --profile vps-full --free-domain-hints
 python3 -m ampg --config examples/wownero.gateway.toml dns plan --profile vps-full --mode dynamic --behind-router
 python3 -m ampg --config examples/wownero.gateway.toml dns check --profile vps-full
 python3 -m ampg --config examples/wownero.gateway.toml plan
@@ -182,6 +185,11 @@ steps, managed-state copies, and supervisor actions.
 ready to copy into `gateway.state_dir`. The live form requires `--yes`; it creates only
 AMPG-owned state directories and copies approved artifact contents. It does not install
 packages, change adopted daemons, start services, or remove keys.
+
+`dns plan --free-domain-hints` prints optional community subdomain services that may help
+new users get a clearnet name without buying a domain. These are third-party registries;
+operators still need to review current terms, availability, content rules, and DNS
+record support before relying on one.
 
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without

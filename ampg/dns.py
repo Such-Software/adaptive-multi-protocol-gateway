@@ -29,10 +29,23 @@ class ConnectivityHint:
 
 
 @dataclass(frozen=True)
+class FreeDomainHint:
+    provider: str
+    suffixes: tuple[str, ...]
+    fit: str
+    records: str
+    workflow: str
+    status: str
+    url: str
+    message: str
+
+
+@dataclass(frozen=True)
 class DNSPlan:
     status: str
     records: tuple[DNSRecordPlan, ...]
     hints: tuple[ConnectivityHint, ...]
+    free_domains: tuple[FreeDomainHint, ...]
     message: str
 
 
@@ -55,6 +68,7 @@ def dns_plan(
     ipv6: str | None = None,
     dynamic_hostname: str | None = None,
     behind_router: bool = False,
+    free_domain_hints: bool = False,
 ) -> DNSPlan:
     if mode not in DNS_MODES:
         raise ValueError(f"unsupported DNS mode {mode!r}")
@@ -64,6 +78,7 @@ def dns_plan(
             status="skipped",
             records=(),
             hints=(),
+            free_domains=(),
             message="clearnet is not selected",
         )
 
@@ -74,13 +89,70 @@ def dns_plan(
         else:
             records.extend(_dynamic_records(site_id, domain, dynamic_hostname=dynamic_hostname))
     hints = _connectivity_hints(behind_router=behind_router)
+    free_domains = FREE_DOMAIN_HINTS if free_domain_hints else ()
     status = _plan_status([record.status for record in records] + [hint.status for hint in hints])
     return DNSPlan(
         status=status,
         records=tuple(records),
         hints=tuple(hints),
+        free_domains=free_domains,
         message=_plan_message(status),
     )
+
+
+FREE_DOMAIN_HINTS: tuple[FreeDomainHint, ...] = (
+    FreeDomainHint(
+        provider="is-a.dev",
+        suffixes=("is-a.dev",),
+        fit="developer personal sites and projects",
+        records="DNS records through reviewed repository changes",
+        workflow="fork repository, add domain config, open pull request",
+        status="community-reviewed",
+        url="https://github.com/is-a-dev/register",
+        message="good beginner option when a developer-branded subdomain is acceptable",
+    ),
+    FreeDomainHint(
+        provider="JS.ORG",
+        suffixes=("js.org",),
+        fit="JavaScript ecosystem projects",
+        records="CNAME",
+        workflow="configure hosting custom domain, then open pull request",
+        status="strict-scope",
+        url="https://github.com/js-org/js.org",
+        message="only use for sites directly related to the JavaScript community",
+    ),
+    FreeDomainHint(
+        provider="Open Domains",
+        suffixes=("is-cool.dev", "is-local.org", "is-not-a.dev", "localplayer.dev"),
+        fit="students and open-source projects",
+        records="A, AAAA, CNAME, NS, TXT, and related DNS records",
+        workflow="register through the current Open Domains web app",
+        status="verify-current-domains",
+        url="https://opendomains.andrewstech.me/",
+        message="GitHub registry moved to a web app; verify the current domain list before use",
+    ),
+    FreeDomainHint(
+        provider="Community GitHub registries",
+        suffixes=(
+            "is-an.app",
+            "cluster.ws",
+            "wip.la",
+            "thedev.id",
+            "io.day",
+            "jsid.dev",
+            "is-a.co",
+            "is-a-good.dev",
+            "is-really.cool",
+            "js.cool",
+        ),
+        fit="personal sites, hobby apps, and open-source projects",
+        records="varies by registry",
+        workflow="review registry terms, then open the requested issue or pull request",
+        status="verify-before-use",
+        url="https://github.com/tarampampam/domains",
+        message="treat as optional naming ideas; availability and rules can change",
+    ),
+)
 
 
 def dns_check(

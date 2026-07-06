@@ -93,6 +93,27 @@ class DNSTest(unittest.TestCase):
         self.assertIn("AMPG_CONNECTIVITY_HINT method=port-forward", output)
         self.assertIn("AMPG_CONNECTIVITY_HINT method=reverse-tunnel", output)
 
+    def test_dns_plan_can_include_free_domain_hints(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config_path = _init_config(Path(tmp).resolve())
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "dns",
+                    "plan",
+                    "--free-domain-hints",
+                ]
+            )
+
+        self.assertEqual(0, status, error)
+        self.assertIn("AMPG_FREE_DOMAIN_HINT", output)
+        self.assertIn('provider="is-a.dev"', output)
+        self.assertIn('suffixes="js.org"', output)
+        self.assertIn("status=verify-before-use", output)
+        self.assertIn("free_domain_hints=4", output)
+
     def test_dns_plan_skips_when_clearnet_is_not_selected(self):
         with tempfile.TemporaryDirectory() as tmp:
             config_path = _init_config(Path(tmp).resolve(), preset="i2p-only")

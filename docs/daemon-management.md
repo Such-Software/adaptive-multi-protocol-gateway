@@ -39,6 +39,7 @@ config artifacts.
 ```sh
 python3 -m ampg --config gateway.toml deploy plan --profile mobile-i2p
 python3 -m ampg --config gateway.toml dns plan --profile vps-full
+python3 -m ampg --config gateway.toml dns plan --profile vps-full --free-domain-hints
 python3 -m ampg --config gateway.toml dns plan --profile vps-full --mode dynamic --behind-router
 python3 -m ampg --config gateway.toml dns check --profile vps-full
 python3 -m ampg --config gateway.toml status
@@ -68,7 +69,9 @@ to run and does not change files or services.
 and `www` records. Dynamic mode supports a Dynamic DNS hostname and warns when apex
 records require provider-specific ALIAS/ANAME or API-updated A/AAAA support. With
 `--behind-router`, it also lists port forwarding, IPv6, explicit router mapping,
-reverse-tunnel, and DNS-01 certificate options.
+reverse-tunnel, and DNS-01 certificate options. With `--free-domain-hints`, it also
+prints optional third-party community subdomain registries for operators who do not yet
+own a domain.
 
 `status` prints one row per enabled protocol with the selected platform provider,
 adapter, installed/running daemon probe, action, and policy result.

@@ -43,6 +43,7 @@ from .dns import (
     DNS_MODES,
     DNSPlan,
     DNSRecordPlan,
+    FreeDomainHint,
     dns_check,
     dns_plan,
 )
@@ -196,6 +197,11 @@ def main(argv: list[str] | None = None) -> int:
         "--behind-router",
         action="store_true",
         help="Include NAT/router/tunnel reachability hints.",
+    )
+    dns_plan_parser.add_argument(
+        "--free-domain-hints",
+        action="store_true",
+        help="Include optional free subdomain registries to consider.",
     )
     dns_check_parser = dns_subcommands.add_parser(
         "check",
@@ -598,11 +604,14 @@ def _cmd_dns(config, args) -> int:
             ipv6=args.ipv6,
             dynamic_hostname=args.dynamic_hostname,
             behind_router=args.behind_router,
+            free_domain_hints=args.free_domain_hints,
         )
         for record in plan.records:
             _print_dns_record(record)
         for hint in plan.hints:
             _print_connectivity_hint(hint)
+        for hint in plan.free_domains:
+            _print_free_domain_hint(hint)
         _print_dns_summary(plan)
         return 1 if plan.status == "blocked" else 0
 
@@ -1094,6 +1103,20 @@ def _print_connectivity_hint(hint: ConnectivityHint) -> None:
     )
 
 
+def _print_free_domain_hint(hint: FreeDomainHint) -> None:
+    print(
+        "AMPG_FREE_DOMAIN_HINT "
+        f"provider=\"{_quote(hint.provider)}\" "
+        f"suffixes=\"{_quote(','.join(hint.suffixes))}\" "
+        f"fit=\"{_quote(hint.fit)}\" "
+        f"records=\"{_quote(hint.records)}\" "
+        f"workflow=\"{_quote(hint.workflow)}\" "
+        f"status={hint.status} "
+        f"url=\"{_quote(hint.url)}\" "
+        f"message=\"{_quote(hint.message)}\""
+    )
+
+
 def _print_dns_summary(plan: DNSPlan) -> None:
     statuses = [record.status for record in plan.records]
     statuses.extend(hint.status for hint in plan.hints)
@@ -1102,6 +1125,7 @@ def _print_dns_summary(plan: DNSPlan) -> None:
         f"status={plan.status} "
         f"records={len(plan.records)} "
         f"hints={len(plan.hints)} "
+        f"free_domain_hints={len(plan.free_domains)} "
         f"todo={statuses.count('todo')} "
         f"review={statuses.count('review')} "
         f"blocked={statuses.count('blocked')} "
