@@ -33,6 +33,8 @@ or deployment notes.
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/wownero.gateway.toml preview manifest
+python3 -m ampg --config examples/wownero.gateway.toml health-plan
+python3 -m ampg --config examples/wownero.gateway.toml health-plan --mode preview
 ```
 
 `build` emits the manifest after writing protocol outputs. `manifest` rewrites only the
@@ -48,6 +50,9 @@ Preview manifests point fixture URLs at loopback HTTP servers for generated outp
 They preserve the intended published URL and transport checks under each fixture's
 `published` metadata. Use preview manifests to verify generated output with AMPB before
 real Tor, I2P, Gemini, or other transport daemons are installed or adopted.
+
+`health-plan` consumes the same fixture contract. Published mode prints checks for real
+transport URLs. Preview mode prints loopback checks against generated preview URLs.
 
 ## Address Status
 

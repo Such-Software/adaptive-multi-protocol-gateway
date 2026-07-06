@@ -14,6 +14,7 @@ from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
 from .docsgen import generate_docs
+from .health import HealthCheck, blocked_health_checks, health_plan
 from .install_plan import (
     InstallStep,
     blocked_install_steps,
@@ -105,6 +106,28 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Write managed daemon config and supervisor artifacts to the plan root.",
     )
+    health_parser = subcommands.add_parser(
+        "health-plan",
+        help="Print fixture-based transport health checks.",
+    )
+    _add_target_selection(health_parser)
+    health_parser.add_argument(
+        "--mode",
+        choices=("published", "preview"),
+        default="published",
+        help="Plan checks against published transport URLs or local preview URLs.",
+    )
+    health_parser.add_argument(
+        "--base-port",
+        type=int,
+        default=19080,
+        help="First loopback port assigned to preview health checks.",
+    )
+    health_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Loopback host for preview health checks.",
+    )
     build_parser = subcommands.add_parser("build", help="Build enabled protocol outputs.")
     _add_target_selection(build_parser)
     fixture_parser = subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
@@ -195,6 +218,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_apply(config, args)
         if args.command == "install-plan":
             return _cmd_install_plan(config, args)
+        if args.command == "health-plan":
+            return _cmd_health_plan(config, args)
         if args.command == "build":
             return _cmd_build(config)
         if args.command == "manifest":
@@ -267,6 +292,28 @@ def _cmd_install_plan(config, args) -> int:
         f"planned={sum(1 for step in steps if step.status == 'planned')} "
         f"ready={sum(1 for step in steps if step.status == 'ready')} "
         f"skipped={sum(1 for step in steps if step.status == 'skipped')} "
+        f"blocked={len(blocked)}"
+    )
+    return 1 if blocked else 0
+
+
+def _cmd_health_plan(config, args) -> int:
+    checks = health_plan(
+        config,
+        mode=args.mode,
+        base_port=args.base_port,
+        host=args.host,
+    )
+    for check in checks:
+        _print_health_check(check)
+    blocked = blocked_health_checks(checks)
+    print(
+        "AMPG_HEALTH_SUMMARY "
+        f"mode={args.mode} "
+        f"sites={len(config.sites)} "
+        f"checks={len(checks)} "
+        f"planned={sum(1 for check in checks if check.status == 'planned')} "
+        f"review={sum(1 for check in checks if check.status == 'review')} "
         f"blocked={len(blocked)}"
     )
     return 1 if blocked else 0
@@ -386,6 +433,26 @@ def _cmd_build(config) -> int:
             f"fixtures={manifest.fixture_count}"
         )
     return 0
+
+
+def _print_health_check(check: HealthCheck) -> None:
+    print(
+        "AMPG_HEALTH_CHECK "
+        f"site={check.site_id} "
+        f"protocol={check.protocol} "
+        f"mode={check.mode} "
+        f"route={check.route} "
+        f"url=\"{_quote(check.url)}\" "
+        f"output_root=\"{_quote(str(check.output_root))}\" "
+        f"output_path={check.output_path} "
+        f"transport={check.transport} "
+        f"profile={check.profile} "
+        f"address_status={check.address_status} "
+        f"status={check.status} "
+        f"action={check.action} "
+        f"command=\"{_quote(check.command)}\" "
+        f"message=\"{_quote(check.message)}\""
+    )
 
 
 def _print_install_step(step: InstallStep) -> None:

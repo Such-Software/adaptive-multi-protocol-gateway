@@ -41,6 +41,7 @@ python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p --write-artifacts
+python3 -m ampg --config gateway.toml health-plan --profile mobile-i2p
 python3 -m ampg --config gateway.toml apply --dry-run
 python3 -m ampg --config gateway.toml apply --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml apply --dry-run --protocol i2p
@@ -64,6 +65,10 @@ blocked.
 files under the configured `plan_root`, grouped by site, protocol, and platform. For
 Tor/I2P HTTP publishing, AMPG writes both transport-daemon artifacts and loopback nginx
 artifacts.
+
+`health-plan` prints fixture-based checks to run after services start. Published checks
+target real transport URLs; preview checks target local loopback preview endpoints.
+Missing output blocks the plan, while placeholder transport addresses are review items.
 
 `apply --dry-run` prints the activation sequence for each enabled protocol: generated
 output readiness, config artifacts to review, daemon action, and post-apply health

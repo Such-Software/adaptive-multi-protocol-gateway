@@ -132,6 +132,16 @@ Tor and I2P HTTP publishing include the transport daemon and the loopback web-se
 layer in the install plan, because the hidden service or tunnel must have a local HTTP
 target.
 
+## Health plan
+
+`ampg health-plan` turns fixture manifests into post-start verification checks. Published
+mode targets real transport URLs. Preview mode rewrites checks to loopback HTTP preview
+endpoints so local generated output can be verified before live daemons exist.
+
+Missing generated output blocks health checks. Placeholder transport addresses are
+reported for review, because the operator must capture the real onion, I2P destination,
+or other transport identity before published checks are exact.
+
 ## Interaction boundary
 
 v1 is static-first, but the architecture reserves a path for interactive applications.
