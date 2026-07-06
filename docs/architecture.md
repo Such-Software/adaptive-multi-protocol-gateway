@@ -112,7 +112,9 @@ render-only environment while making daemon ownership decisions explicit.
 `ampg apply --dry-run` turns daemon status and generated config artifacts into an ordered
 activation sequence. Each enabled protocol gets output, artifact, daemon, and health
 steps, plus an address step when AMPG must capture or confirm a generated transport
-identity. Blocked steps stop the command before any live apply path can touch services.
+identity. With `--write-artifacts`, it also prints planned copies from reviewed artifacts
+into managed state. Blocked steps stop the command before any live apply path can touch
+services.
 
 The dry-run command is intentionally stricter than `doctor`: missing generated output is
 blocked during activation, because AMPG must not point a transport at an unbuilt output

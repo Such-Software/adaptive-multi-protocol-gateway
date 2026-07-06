@@ -10,6 +10,7 @@ from ampg.install_plan import (
     blocked_install_steps,
     install_artifacts,
     install_plan,
+    install_state_copies,
     write_install_artifacts,
 )
 from ampg.platforms import platform_by_name
@@ -262,6 +263,46 @@ daemon_policy = "auto"
                     / "plan/example/i2p/managed/android-termux/i2pd-tunnels.conf"
                 ).exists()
             )
+
+    def test_state_copy_plan_maps_review_artifacts_to_managed_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config = load_config(
+                _write_config(
+                    root,
+                    """
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+""",
+                )
+            )
+            write_install_artifacts(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+
+            copies = install_state_copies(
+                config,
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_probe(installed=False, running=False),
+            )
+
+        by_kind = {copy.kind: copy for copy in copies}
+        self.assertEqual({"daemon-config", "loopback-config"}, set(by_kind))
+        self.assertEqual("planned", by_kind["daemon-config"].status)
+        self.assertEqual(
+            root / ".ampg/state/example/i2p/i2pd-tunnels.conf",
+            by_kind["daemon-config"].target,
+        )
+        self.assertEqual(
+            root / ".ampg/state/example/i2p/nginx-loopback.conf",
+            by_kind["loopback-config"].target,
+        )
+        self.assertIn("cp", by_kind["daemon-config"].command)
 
     def test_install_plan_cli_can_write_managed_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:

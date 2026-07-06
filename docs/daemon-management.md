@@ -85,7 +85,8 @@ Missing output blocks the plan, while placeholder transport addresses are review
 `apply --dry-run` prints the activation sequence for each enabled protocol: generated
 output readiness, config artifacts to review, daemon action, address capture or reuse,
 and post-apply health checks. It exits nonzero when any step is blocked. `--write-artifacts`
-writes reviewable config snippets to the configured plan root but still does not install
+writes reviewable config snippets to the configured plan root, then prints the planned
+copies from those reviewed artifacts into `gateway.state_dir`. It still does not install
 or reload services.
 
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet

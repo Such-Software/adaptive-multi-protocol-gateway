@@ -24,8 +24,10 @@ from .config import load_config
 from .docsgen import generate_docs
 from .health import HealthCheck, blocked_health_checks, health_plan
 from .install_plan import (
+    InstallStateCopy,
     InstallStep,
     blocked_install_steps,
+    install_state_copies,
     install_plan,
     write_install_artifacts,
 )
@@ -297,11 +299,14 @@ def _cmd_apply(config, args) -> int:
         )
         return 1
 
+    platform_provider = _platform_override(config, args)
     if _write_artifacts_enabled(config, args):
-        for path in write_activation_artifacts(config):
+        for path in write_activation_artifacts(config, platform_provider=platform_provider):
             print(f"AMPG_APPLY_ARTIFACT path={path} status=written")
+        for copy in install_state_copies(config, platform_provider=platform_provider):
+            _print_install_state_copy(copy)
 
-    steps = activation_steps(config, platform_provider=_platform_override(config, args))
+    steps = activation_steps(config, platform_provider=platform_provider)
     for step in steps:
         _print_activation_step(step)
 
@@ -520,6 +525,21 @@ def _print_install_step(step: InstallStep) -> None:
         f"status={step.status} "
         f"command=\"{_quote(step.command)}\" "
         f"message=\"{_quote(step.message)}\""
+    )
+
+
+def _print_install_state_copy(copy: InstallStateCopy) -> None:
+    print(
+        "AMPG_APPLY_STATE_COPY "
+        f"site={copy.site_id} "
+        f"protocol={copy.protocol} "
+        f"platform={copy.platform} "
+        f"kind={copy.kind} "
+        f"source=\"{_quote(str(copy.source))}\" "
+        f"target=\"{_quote(str(copy.target))}\" "
+        f"status={copy.status} "
+        f"command=\"{_quote(copy.command)}\" "
+        f"message=\"{_quote(copy.message)}\""
     )
 
 

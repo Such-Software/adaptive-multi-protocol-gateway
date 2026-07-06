@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import shlex
 
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
 from .platforms import PlatformProvider, detect_platform
@@ -31,6 +32,19 @@ class InstallArtifact:
     kind: str
     path: Path
     content: str
+
+
+@dataclass(frozen=True)
+class InstallStateCopy:
+    site_id: str
+    protocol: str
+    platform: str
+    kind: str
+    source: Path
+    target: Path
+    status: str
+    command: str
+    message: str
 
 
 def install_plan(
@@ -102,6 +116,31 @@ def write_install_artifacts(
         artifact.path.parent.mkdir(parents=True, exist_ok=True)
         artifact.path.write_text(artifact.content, encoding="utf-8")
     return artifacts
+
+
+def install_state_copies(
+    config: GatewayConfig,
+    *,
+    platform_provider: PlatformProvider | None = None,
+    daemon_probe: DaemonProbeFunc | None = None,
+) -> list[InstallStateCopy]:
+    provider = platform_provider or detect_platform()
+    statuses = gateway_status(
+        config,
+        platform_provider=provider,
+        daemon_probe=daemon_probe,
+    )
+    status_by_protocol = {
+        (status.site_id, status.protocol): status for status in statuses
+    }
+    copies: list[InstallStateCopy] = []
+    for site in config.sites:
+        for protocol in site.protocols.values():
+            if not protocol.enabled:
+                continue
+            status = status_by_protocol[(site.id, protocol.name)]
+            copies.extend(_protocol_state_copies(config, site, protocol, provider, status))
+    return copies
 
 
 def _protocol_install_steps(
@@ -279,6 +318,52 @@ def _protocol_install_artifacts(
     return artifacts
 
 
+def _protocol_state_copies(
+    config: GatewayConfig,
+    site: SiteConfig,
+    protocol: ProtocolConfig,
+    provider: PlatformProvider,
+    status: TransportStatus,
+) -> list[InstallStateCopy]:
+    copies: list[InstallStateCopy] = []
+    for artifact in _protocol_install_artifacts(config, site, protocol, provider, status):
+        target = _state_copy_target(config, site, protocol, artifact)
+        if target is None:
+            continue
+        source_exists = artifact.path.exists()
+        copies.append(
+            InstallStateCopy(
+                site_id=site.id,
+                protocol=protocol.name,
+                platform=provider.name,
+                kind=artifact.kind,
+                source=artifact.path,
+                target=target,
+                status="planned" if source_exists else "review",
+                command=_copy_command(provider, artifact.path, target),
+                message=(
+                    "copy reviewed artifact into managed state before daemon start"
+                    if source_exists
+                    else "review artifact is missing; rerun with --write-artifacts first"
+                ),
+            )
+        )
+    return copies
+
+
+def _state_copy_target(
+    config: GatewayConfig,
+    site: SiteConfig,
+    protocol: ProtocolConfig,
+    artifact: InstallArtifact,
+) -> Path | None:
+    if artifact.kind == "daemon-config":
+        return daemon_config_path(config, site, protocol)
+    if artifact.kind == "loopback-config":
+        return protocol_state_dir(config, site, protocol) / artifact.path.name
+    return None
+
+
 def _package_step(
     site: SiteConfig,
     protocol: ProtocolConfig,
@@ -332,6 +417,14 @@ def _package_command(provider: PlatformProvider, package: str) -> str:
 def _mkdir_command(provider: PlatformProvider, path: Path) -> str:
     prefix = "sudo " if provider.can_write_system_config else ""
     return f"{prefix}mkdir -p {path}"
+
+
+def _copy_command(provider: PlatformProvider, source: Path, target: Path) -> str:
+    prefix = "sudo " if provider.can_write_system_config else ""
+    parent = shlex.quote(str(target.parent))
+    source_text = shlex.quote(str(source))
+    target_text = shlex.quote(str(target))
+    return f"{prefix}mkdir -p {parent} && {prefix}cp {source_text} {target_text}"
 
 
 def _supervisor_command(

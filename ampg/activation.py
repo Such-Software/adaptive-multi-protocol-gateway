@@ -6,6 +6,7 @@ import shlex
 
 from .addresses import AddressRecord, address_registry_path, effective_address_records
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
+from .install_plan import write_install_artifacts
 from .plan import plan_artifacts, write_plan_artifacts
 from .platforms import PlatformProvider
 from .status import (
@@ -257,5 +258,19 @@ def _transport_activation_status(status: TransportStatus) -> str:
     return "ready"
 
 
-def write_activation_artifacts(config: GatewayConfig) -> tuple[Path, ...]:
-    return tuple(artifact.path for artifact in write_plan_artifacts(config))
+def write_activation_artifacts(
+    config: GatewayConfig,
+    *,
+    platform_provider: PlatformProvider | None = None,
+    daemon_probe: DaemonProbeFunc | None = None,
+) -> tuple[Path, ...]:
+    paths = [artifact.path for artifact in write_plan_artifacts(config)]
+    paths.extend(
+        artifact.path
+        for artifact in write_install_artifacts(
+            config,
+            platform_provider=platform_provider,
+            daemon_probe=daemon_probe,
+        )
+    )
+    return tuple(paths)

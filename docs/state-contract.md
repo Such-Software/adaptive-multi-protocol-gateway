@@ -38,5 +38,7 @@ Current managed defaults:
 ## Safety
 
 AMPG must never delete sensitive contract paths without an explicit destructive command.
-Live apply should copy reviewed config artifacts into their contract `daemon-config`
-paths, start daemons, capture public addresses, and then run published health checks.
+`apply --dry-run --write-artifacts` prints `AMPG_APPLY_STATE_COPY` rows that show which
+reviewed artifacts would be copied into managed state. Live apply should perform those
+reviewed copies, start daemons, capture public addresses, and then run published health
+checks.
