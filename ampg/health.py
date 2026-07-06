@@ -40,7 +40,7 @@ def health_plan(
     endpoints = preview_endpoints(config, base_port=base_port, host=host) if mode == "preview" else []
     checks: list[HealthCheck] = []
     for site in config.sites:
-        manifest = _manifest_for_mode(site, mode=mode, endpoints=endpoints)
+        manifest = _manifest_for_mode(config, site, mode=mode, endpoints=endpoints)
         for fixture in manifest["fixtures"]:
             checks.append(_health_check(site, fixture, mode=mode))
     return checks
@@ -51,14 +51,15 @@ def blocked_health_checks(checks: list[HealthCheck]) -> list[HealthCheck]:
 
 
 def _manifest_for_mode(
+    config: GatewayConfig,
     site: SiteConfig,
     *,
     mode: str,
     endpoints,
 ) -> dict[str, Any]:
     if mode == "preview":
-        return preview_fixture_manifest(site, endpoints)
-    return fixture_manifest(site)
+        return preview_fixture_manifest(config, site, endpoints)
+    return fixture_manifest(config, site)
 
 
 def _health_check(site: SiteConfig, fixture: dict[str, Any], *, mode: str) -> HealthCheck:

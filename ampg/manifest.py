@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .addresses import AddressRecord, effective_address
 from .config import GatewayConfig, ProtocolConfig, RoutePolicyConfig, SiteConfig
 from .route_policy import fixture_path, route_exposed
 
@@ -19,14 +20,15 @@ class ManifestWriteResult:
     fixture_count: int
 
 
-def fixture_manifest(site: SiteConfig) -> dict[str, Any]:
+def fixture_manifest(config: GatewayConfig, site: SiteConfig) -> dict[str, Any]:
     fixtures = []
     for protocol in site.protocols.values():
         if not protocol.enabled:
             continue
-        fixtures.append(_fixture_entry(site, protocol, None))
+        address = effective_address(config, site, protocol)
+        fixtures.append(_fixture_entry(site, protocol, None, address))
         fixtures.extend(
-            _fixture_entry(site, protocol, route_policy)
+            _fixture_entry(site, protocol, route_policy, address)
             for route_policy in site.interactions.routes
             if route_exposed(site, protocol, route_policy)
         )
@@ -44,7 +46,7 @@ def fixture_manifest(site: SiteConfig) -> dict[str, Any]:
 def write_fixture_manifests(config: GatewayConfig) -> list[ManifestWriteResult]:
     results: list[ManifestWriteResult] = []
     for site in config.sites:
-        manifest = fixture_manifest(site)
+        manifest = fixture_manifest(config, site)
         path = manifest_path(site)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
@@ -69,8 +71,9 @@ def _fixture_entry(
     site: SiteConfig,
     protocol: ProtocolConfig,
     route_policy: RoutePolicyConfig | None,
+    address: AddressRecord | None,
 ) -> dict[str, Any]:
-    url, address_status = _fixture_url(site, protocol)
+    url, address_status = _fixture_url(site, protocol, address)
     transport = _transport_for(protocol.name)
     entry = {
         "protocol": protocol.name,
@@ -134,10 +137,16 @@ def _output_path_for_route(protocol_name: str, route_policy: RoutePolicyConfig |
     return protocol_name + fixture_path(route_policy.match)
 
 
-def _fixture_url(site: SiteConfig, protocol: ProtocolConfig) -> tuple[str, str]:
+def _fixture_url(
+    site: SiteConfig,
+    protocol: ProtocolConfig,
+    address: AddressRecord | None,
+) -> tuple[str, str]:
     configured_url = protocol.options.get("fixture_url") or protocol.options.get("browser_url")
     if configured_url:
         return _with_trailing_slash(str(configured_url)), "configured"
+    if address:
+        return address.url, address.address_status
 
     if protocol.name == "clearnet":
         if site.source.canonical_url:

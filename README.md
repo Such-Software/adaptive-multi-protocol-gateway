@@ -1,6 +1,6 @@
 # Adaptive Multi-Protocol Gateway
 
-> Status: draft | Updated 2026-07-05 | Applies to: AMPG contributors and operators
+> Status: draft | Updated 2026-07-06 | Applies to: AMPG contributors and operators
 
 Adaptive Multi-Protocol Gateway, or AMPG, turns one canonical site into transport-appropriate
 published versions for clearnet web, Tor onion services, I2P, Gemini, IPFS, and
@@ -116,6 +116,9 @@ python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml build --profile tor-i2p
 python3 -m ampg --config examples/wownero.gateway.toml build --protocol tor --protocol i2p
 python3 -m ampg --config examples/wownero.gateway.toml manifest
+python3 -m ampg --config examples/wownero.gateway.toml addresses list
+python3 -m ampg --config examples/wownero.gateway.toml addresses capture --profile mobile-i2p
+python3 -m ampg --config examples/wownero.gateway.toml addresses set --site wownero --protocol i2p --url example.b32.i2p
 python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
 python3 -m ampg --config examples/wownero.gateway.toml preview manifest
 python3 -m ampg --config examples/wownero.gateway.toml routes explain
@@ -138,6 +141,10 @@ passed. They are reviewable snippets, not installed daemon config.
 Managed install artifacts are also written under `dist/ampg-plan/` when
 `install-plan --write-artifacts` is passed. They include reviewable daemon configs and
 platform supervisor files, but are not installed or started.
+
+Captured transport addresses are written under `gateway.state_dir` by
+`addresses capture` or `addresses set`. Fixture manifests and health plans use explicit
+config first, then captured addresses, then deterministic placeholders.
 
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without

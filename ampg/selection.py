@@ -60,6 +60,7 @@ def select_protocols(config: GatewayConfig, protocols: tuple[str, ...]) -> Gatew
         config_path=config.config_path,
         sites=sites,
         profiles=config.profiles,
+        paths=config.paths,
     )
 
 

@@ -32,6 +32,8 @@ or deployment notes.
 ```sh
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml manifest
+python3 -m ampg --config examples/wownero.gateway.toml addresses list
+python3 -m ampg --config examples/wownero.gateway.toml addresses capture --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml preview manifest
 python3 -m ampg --config examples/wownero.gateway.toml health-plan
 python3 -m ampg --config examples/wownero.gateway.toml health-plan --mode preview
@@ -59,6 +61,11 @@ transport URLs. Preview mode prints loopback checks against generated preview UR
 Some transports may not have final public addresses when a fixture is generated. In those
 cases AMPG uses route-valid placeholders such as `http://wownero.onion/` so AMPB can still
 verify transport selection without contacting the network.
+
+When a managed or adopted daemon writes an actual address, run `addresses capture`.
+Captured addresses are stored under `gateway.state_dir` and replace placeholders in
+fixture manifests and published health plans. Operators can also use `addresses set` to
+store an address manually.
 
 ## Interaction Policy
 

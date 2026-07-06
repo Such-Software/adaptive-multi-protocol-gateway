@@ -6,6 +6,10 @@ This file is generated from code. Do not edit it by hand.
 
 | Section | Field | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- | --- |
+| gateway | `state_dir` | path | no | ./.ampg/state | AMPG-owned daemon state and captured address registry root. |
+| gateway | `cache_dir` | path | no | ./.ampg/cache | AMPG cache root for generated intermediate data. |
+| gateway | `run_dir` | path | no | ./.ampg/run | Runtime socket and process metadata root for managed daemons. |
+| gateway | `user` | string | no | - | Preferred service user for generated managed-daemon artifacts. |
 | site | `id` | string | yes | - | Stable site identifier used in output paths. |
 | site | `domain` | string | yes | - | Canonical public domain for the site. |
 | site.source | `kind` | enum | yes | static-html | Source adapter kind. |
@@ -26,6 +30,9 @@ This file is generated from code. Do not edit it by hand.
 | site.protocols.<name> | `renderer` | enum | no | <protocol> | Renderer profile to use for this protocol. |
 | site.protocols.<name> | `daemon` | enum | no | protocol default | Ingress daemon adapter. |
 | site.protocols.<name> | `daemon_policy` | enum | no | protocol default | Whether AMPG adopts, manages, or only renders config. |
+| site.protocols.<name> | `fixture_url` | url | no | - | Published URL used in fixture manifests and health plans. |
+| site.protocols.<name> | `browser_url` | url | no | - | Browser-facing URL alias used when fixture_url is not set. |
+| site.protocols.<name> | `address_file` | path | no | - | Daemon-written public address file consumed by addresses capture. |
 | site.protocols.<name> | `max_asset_bytes` | integer | no | 1048576 | Maximum asset size copied by privacy-html render targets. |
 | site.protocols.<name> | `script_policy` | enum | no | strip | Script handling policy for privacy-html render targets. |
 | site.protocols.<name> | `max_tier` | enum | no | transport default | Maximum interaction tier this protocol target may expose. |

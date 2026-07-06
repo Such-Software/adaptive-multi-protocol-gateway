@@ -152,6 +152,7 @@ daemon_policy = "auto"
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml manifest
+python3 -m ampg --config examples/wownero.gateway.toml addresses list
 python3 -m ampg --config examples/wownero.gateway.toml preview endpoints
 python3 -m ampg --config examples/wownero.gateway.toml preview manifest
 python3 -m ampg --config examples/i2p-only.gateway.toml plan

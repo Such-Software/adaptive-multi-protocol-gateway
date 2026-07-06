@@ -10,6 +10,14 @@ from .activation import (
     blocked_steps,
     write_activation_artifacts,
 )
+from .addresses import (
+    AddressCaptureResult,
+    AddressRecord,
+    address_registry_path,
+    capture_addresses,
+    effective_address_records,
+    set_address,
+)
 from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
@@ -132,6 +140,41 @@ def main(argv: list[str] | None = None) -> int:
     _add_target_selection(build_parser)
     fixture_parser = subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
     _add_target_selection(fixture_parser)
+    addresses_parser = subcommands.add_parser(
+        "addresses",
+        help="Inspect or update captured transport addresses.",
+    )
+    addresses_subcommands = addresses_parser.add_subparsers(
+        dest="addresses_command",
+        required=True,
+    )
+    addresses_list = addresses_subcommands.add_parser(
+        "list",
+        help="Print effective configured, captured, derived, and placeholder addresses.",
+    )
+    _add_target_selection(addresses_list)
+    addresses_capture = addresses_subcommands.add_parser(
+        "capture",
+        help="Capture generated transport addresses from daemon state files.",
+    )
+    _add_target_selection(addresses_capture)
+    addresses_set = addresses_subcommands.add_parser(
+        "set",
+        help="Manually store a generated transport address in AMPG state.",
+    )
+    addresses_set.add_argument("--site", required=True, help="Site id to update.")
+    addresses_set.add_argument(
+        "--protocol",
+        dest="address_protocol",
+        required=True,
+        help="Protocol name to update.",
+    )
+    addresses_set.add_argument("--url", required=True, help="Public transport URL or hostname.")
+    addresses_set.add_argument(
+        "--source",
+        default="manual",
+        help="Source label stored with the captured address.",
+    )
     preview_parser = subcommands.add_parser("preview", help="Preview generated outputs locally.")
     preview_subcommands = preview_parser.add_subparsers(dest="preview_command", required=True)
     for preview_command in ("endpoints", "manifest", "serve"):
@@ -224,6 +267,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_build(config)
         if args.command == "manifest":
             return _cmd_manifest(config)
+        if args.command == "addresses":
+            return _cmd_addresses(config, args)
         if args.command == "preview":
             return _cmd_preview(config, args)
         if args.command == "routes":
@@ -527,6 +572,79 @@ def _cmd_manifest(config) -> int:
             f"fixtures={manifest.fixture_count}"
         )
     return 0
+
+
+def _cmd_addresses(config, args) -> int:
+    if args.addresses_command == "list":
+        records = effective_address_records(config)
+        for record in records:
+            _print_address(record)
+        print(
+            "AMPG_ADDRESS_SUMMARY "
+            f"sites={len(config.sites)} "
+            f"addresses={len(records)} "
+            f"configured={sum(1 for record in records if record.address_status == 'configured')} "
+            f"captured={sum(1 for record in records if record.address_status == 'captured')} "
+            f"derived={sum(1 for record in records if record.address_status == 'derived')} "
+            f"placeholder={sum(1 for record in records if record.address_status == 'placeholder')} "
+            f"registry={address_registry_path(config)}"
+        )
+        return 0
+
+    if args.addresses_command == "capture":
+        results = capture_addresses(config)
+        for result in results:
+            _print_address_capture(result)
+        print(
+            "AMPG_ADDRESS_CAPTURE_SUMMARY "
+            f"sites={len(config.sites)} "
+            f"results={len(results)} "
+            f"captured={sum(1 for result in results if result.status == 'captured')} "
+            f"configured={sum(1 for result in results if result.status == 'configured')} "
+            f"skipped={sum(1 for result in results if result.status == 'skipped')} "
+            f"missing={sum(1 for result in results if result.status == 'missing')} "
+            f"registry={address_registry_path(config)}"
+        )
+        return 0
+
+    if args.addresses_command == "set":
+        record = set_address(
+            config,
+            site_id=args.site,
+            protocol=args.address_protocol,
+            url=args.url,
+            source=args.source,
+        )
+        _print_address(record)
+        print(f"AMPG_ADDRESS_SET status=written registry={address_registry_path(config)}")
+        return 0
+
+    return 1
+
+
+def _print_address(record: AddressRecord) -> None:
+    print(
+        "AMPG_ADDRESS "
+        f"site={record.site_id} "
+        f"protocol={record.protocol} "
+        f"url=\"{_quote(record.url)}\" "
+        f"address_status={record.address_status} "
+        f"source=\"{_quote(record.source)}\""
+    )
+
+
+def _print_address_capture(result: AddressCaptureResult) -> None:
+    path = str(result.path) if result.path else "-"
+    print(
+        "AMPG_ADDRESS_CAPTURE "
+        f"site={result.site_id} "
+        f"protocol={result.protocol} "
+        f"status={result.status} "
+        f"url=\"{_quote(result.url)}\" "
+        f"source=\"{_quote(result.source)}\" "
+        f"path=\"{_quote(path)}\" "
+        f"message=\"{_quote(result.message)}\""
+    )
 
 
 def _cmd_preview(config, args) -> int:

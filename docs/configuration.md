@@ -1,6 +1,6 @@
 # Configuration
 
-> Status: draft | Updated 2026-07-05 | Applies to: `gateway.toml`
+> Status: draft | Updated 2026-07-06 | Applies to: `gateway.toml`
 
 AMPG is configured from one TOML file. The file declares global paths, sites, source
 adapters, render targets, and daemon policy.
@@ -106,6 +106,34 @@ workflow.
 | gemini | `gemtext` | `agate` | `auto` |
 | ipfs | `clearnet` | `ipfs` | `auto` |
 | reticulum | `micron` | `rnsd` | `auto` |
+
+## Gateway paths
+
+`[gateway]` paths are resolved relative to `gateway.toml` when they are not absolute.
+
+`state_dir`
+: AMPG-owned durable state. Managed daemon identities, generated transport state, and
+  the captured address registry live here.
+
+`cache_dir`
+: Rebuildable intermediate data.
+
+`run_dir`
+: Runtime sockets, pid files, and process metadata for managed daemons.
+
+`user`
+: Preferred service user emitted into generated managed-daemon artifacts.
+
+Transport URLs are resolved in this order:
+
+1. Explicit protocol config such as `fixture_url`, `browser_url`, `onion_url`, `i2p_url`,
+   `gemini_url`, `rns_url`, `ipfs_url`, or `cid`.
+2. Captured state from `ampg addresses capture` or `ampg addresses set`.
+3. A derived URL for clearnet/Gemini or a deterministic placeholder for identity-based
+   transports whose final address is not known yet.
+
+Use `address_file` on a protocol target when an adopted daemon writes its public hostname
+outside AMPG's managed state layout.
 
 ## Renderer defaults
 

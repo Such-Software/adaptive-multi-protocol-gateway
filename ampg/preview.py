@@ -67,6 +67,7 @@ def preview_endpoints(
 
 
 def preview_fixture_manifest(
+    config: GatewayConfig,
     site: SiteConfig,
     endpoints: list[PreviewEndpoint],
 ) -> dict[str, Any]:
@@ -75,7 +76,7 @@ def preview_fixture_manifest(
         for endpoint in endpoints
         if endpoint.site_id == site.id
     }
-    manifest = fixture_manifest(site)
+    manifest = fixture_manifest(config, site)
     manifest["mode"] = "preview"
     for fixture in manifest["fixtures"]:
         endpoint = by_protocol[fixture["protocol"]]
@@ -110,7 +111,7 @@ def write_preview_fixture_manifests(
     endpoints = preview_endpoints(config, base_port=base_port, host=host)
     results: list[PreviewManifestWriteResult] = []
     for site in config.sites:
-        manifest = preview_fixture_manifest(site, endpoints)
+        manifest = preview_fixture_manifest(config, site, endpoints)
         path = preview_manifest_path(site)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")

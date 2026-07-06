@@ -56,7 +56,7 @@ cid = "bafyexample"
             )
 
             config = load_config(config_path)
-            manifest = fixture_manifest(config.sites[0])
+            manifest = fixture_manifest(config, config.sites[0])
             written = write_fixture_manifests(config)
 
             self.assertEqual("ampg.fixture-manifest.v1", manifest["schema"])
@@ -116,7 +116,7 @@ payments = "server-invoice"
             )
 
             config = load_config(config_path)
-            manifest = fixture_manifest(config.sites[0])
+            manifest = fixture_manifest(config, config.sites[0])
 
             self.assertEqual(
                 {
@@ -178,7 +178,7 @@ renderer = "privacy-html"
             )
 
             config = load_config(config_path)
-            manifest = fixture_manifest(config.sites[0])
+            manifest = fixture_manifest(config, config.sites[0])
 
         self.assertEqual(3, len(config.sites[0].interactions.routes))
         self.assertEqual(3, len(manifest["fixtures"]))
@@ -252,7 +252,7 @@ renderer = "privacy-html"
             )
 
             config = load_config(config_path)
-            manifest = fixture_manifest(config.sites[0])
+            manifest = fixture_manifest(config, config.sites[0])
 
         site = config.sites[0]
         self.assertEqual("interactive-lite", site.interactions.default_tier)
@@ -355,7 +355,7 @@ cid = "bafyexample"
             )
 
             config = load_config(config_path)
-            manifest = fixture_manifest(config.sites[0])
+            manifest = fixture_manifest(config, config.sites[0])
 
         by_protocol = {}
         for fixture in manifest["fixtures"]:

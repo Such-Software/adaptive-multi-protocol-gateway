@@ -88,10 +88,19 @@ class ProfileConfig:
 
 
 @dataclass(frozen=True)
+class GatewayPaths:
+    state_dir: Path
+    cache_dir: Path
+    run_dir: Path
+    user: str | None = None
+
+
+@dataclass(frozen=True)
 class GatewayConfig:
     config_path: Path
     sites: list[SiteConfig]
     profiles: dict[str, ProfileConfig] = field(default_factory=dict)
+    paths: GatewayPaths | None = None
 
 
 def load_config(path: Path) -> GatewayConfig:
@@ -101,7 +110,24 @@ def load_config(path: Path) -> GatewayConfig:
     if not sites:
         raise ValueError("config must declare at least one [[site]]")
     profiles = _parse_profiles(data.get("profiles", {}))
-    return GatewayConfig(config_path=config_path, sites=sites, profiles=profiles)
+    paths = _parse_gateway_paths(data.get("gateway", {}), config_path.parent)
+    return GatewayConfig(config_path=config_path, sites=sites, profiles=profiles, paths=paths)
+
+
+def _parse_gateway_paths(raw_gateway: Any, base_dir: Path) -> GatewayPaths:
+    if raw_gateway is None:
+        raw_gateway = {}
+    if not isinstance(raw_gateway, dict):
+        raise ValueError("gateway must be a table")
+    user = raw_gateway.get("user")
+    if user is not None and not isinstance(user, str):
+        raise ValueError("gateway.user must be a string")
+    return GatewayPaths(
+        state_dir=_resolve_path(base_dir, str(raw_gateway.get("state_dir", "./.ampg/state"))),
+        cache_dir=_resolve_path(base_dir, str(raw_gateway.get("cache_dir", "./.ampg/cache"))),
+        run_dir=_resolve_path(base_dir, str(raw_gateway.get("run_dir", "./.ampg/run"))),
+        user=user,
+    )
 
 
 def _parse_profiles(raw_profiles: Any) -> dict[str, ProfileConfig]:

@@ -1,6 +1,6 @@
 # Daemon Management
 
-> Status: draft | Updated 2026-07-05 | Applies to: protocol adapters
+> Status: draft | Updated 2026-07-06 | Applies to: protocol adapters
 
 AMPG can use daemons that already exist on a server or create AMPG-owned daemons when
 the selected protocol is not running. This keeps simple deployments simple while avoiding
@@ -41,6 +41,8 @@ python3 -m ampg --config gateway.toml status
 python3 -m ampg --config gateway.toml doctor
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p
 python3 -m ampg --config gateway.toml install-plan --profile mobile-i2p --write-artifacts
+python3 -m ampg --config gateway.toml addresses list --profile mobile-i2p
+python3 -m ampg --config gateway.toml addresses capture --profile mobile-i2p
 python3 -m ampg --config gateway.toml health-plan --profile mobile-i2p
 python3 -m ampg --config gateway.toml apply --dry-run
 python3 -m ampg --config gateway.toml apply --dry-run --profile mobile-i2p
@@ -65,6 +67,11 @@ blocked.
 files under the configured `plan_root`, grouped by site, protocol, and platform. For
 Tor/I2P HTTP publishing, AMPG writes both transport-daemon artifacts and loopback nginx
 artifacts.
+
+`addresses list` prints the effective public address for each enabled protocol:
+configured, captured, derived, or placeholder. `addresses capture` reads daemon-written
+address files from AMPG state or a protocol `address_file` override, then updates the
+address registry under `state_dir`.
 
 `health-plan` prints fixture-based checks to run after services start. Published checks
 target real transport URLs; preview checks target local loopback preview endpoints.
