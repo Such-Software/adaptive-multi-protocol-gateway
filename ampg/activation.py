@@ -6,7 +6,11 @@ import shlex
 
 from .addresses import AddressRecord, address_registry_path, effective_address_records
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
-from .install_plan import write_install_artifacts
+from .install_plan import (
+    InstallStateCopy,
+    InstallSupervisorAction,
+    write_install_artifacts,
+)
 from .plan import plan_artifacts, write_plan_artifacts
 from .platforms import PlatformProvider
 from .status import (
@@ -27,6 +31,30 @@ class ActivationStep:
     status: str
     message: str
     command: str = "-"
+
+
+@dataclass(frozen=True)
+class ApplyPreflightItem:
+    phase: str
+    site_id: str
+    protocol: str
+    status: str
+    action: str
+    target: str
+    command: str
+    message: str
+
+
+@dataclass(frozen=True)
+class ApplyPreflight:
+    status: str
+    items: tuple[ApplyPreflightItem, ...]
+    ready: int
+    review: int
+    planned: int
+    blocked: int
+    skipped: int
+    message: str
 
 
 def activation_steps(
@@ -91,6 +119,45 @@ def activation_steps(
 
 def blocked_steps(steps: list[ActivationStep]) -> list[ActivationStep]:
     return [step for step in steps if step.status == "blocked"]
+
+
+def apply_preflight(
+    *,
+    activation: list[ActivationStep],
+    state_copies: list[InstallStateCopy],
+    supervisor_actions: list[InstallSupervisorAction],
+) -> ApplyPreflight:
+    items = tuple(
+        [
+            *(_activation_preflight_item(step) for step in activation),
+            *(_state_copy_preflight_item(copy) for copy in state_copies),
+            *(_supervisor_preflight_item(action) for action in supervisor_actions),
+        ]
+    )
+    ready = sum(1 for item in items if item.status == "ready")
+    review = sum(1 for item in items if item.status == "review")
+    planned = sum(1 for item in items if item.status == "planned")
+    blocked = sum(1 for item in items if item.status == "blocked")
+    skipped = sum(1 for item in items if item.status == "skipped")
+    if blocked:
+        status = "blocked"
+        message = "live apply is blocked until reported items are fixed"
+    elif review:
+        status = "review"
+        message = "live apply requires operator review before mutation"
+    else:
+        status = "ready"
+        message = "live apply preflight is clean"
+    return ApplyPreflight(
+        status=status,
+        items=items,
+        ready=ready,
+        review=review,
+        planned=planned,
+        blocked=blocked,
+        skipped=skipped,
+        message=message,
+    )
 
 
 def _protocol_steps(
@@ -256,6 +323,45 @@ def _transport_activation_status(status: TransportStatus) -> str:
     if status.action == "render-only" or status.status == "warn":
         return "review"
     return "ready"
+
+
+def _activation_preflight_item(step: ActivationStep) -> ApplyPreflightItem:
+    return ApplyPreflightItem(
+        phase=f"activation:{step.stage}",
+        site_id=step.site_id,
+        protocol=step.protocol,
+        status=step.status,
+        action=step.action,
+        target=step.target,
+        command=step.command,
+        message=step.message,
+    )
+
+
+def _state_copy_preflight_item(copy: InstallStateCopy) -> ApplyPreflightItem:
+    return ApplyPreflightItem(
+        phase="state-copy",
+        site_id=copy.site_id,
+        protocol=copy.protocol,
+        status=copy.status,
+        action=copy.kind,
+        target=str(copy.target),
+        command=copy.command,
+        message=copy.message,
+    )
+
+
+def _supervisor_preflight_item(action: InstallSupervisorAction) -> ApplyPreflightItem:
+    return ApplyPreflightItem(
+        phase="supervisor",
+        site_id=action.site_id,
+        protocol=action.protocol,
+        status=action.status,
+        action=action.kind,
+        target=action.service,
+        command=action.command,
+        message=action.message,
+    )
 
 
 def write_activation_artifacts(

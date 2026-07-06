@@ -57,8 +57,9 @@ ampg apply --dry-run
 ```
 
 `plan` prints rendered output paths, daemon decisions, port bindings, config diffs, and
-operator actions. The current `apply --dry-run` prints the activation sequence without
-changing services. Live apply support will perform only approved changes.
+operator actions. The current `apply --dry-run` prints the activation sequence and a
+preflight verdict without changing services. Live apply support will perform only
+approved changes.
 
 ## Interaction tiers
 
@@ -149,10 +150,12 @@ Captured transport addresses are written under `gateway.state_dir` by
 `addresses capture` or `addresses set`. Fixture manifests and health plans use explicit
 config first, then captured addresses, then deterministic placeholders.
 
-`apply --dry-run` includes an address stage. Placeholder addresses remain review items
-until the generated transport identity is captured or configured. With `--write-artifacts`,
-apply also prints reviewed config artifacts that would be copied into managed state and
-the supervisor services that would be registered or started.
+`apply --dry-run` includes an address stage and an `AMPG_APPLY_PREFLIGHT` gate.
+Placeholder addresses remain review items until the generated transport identity is
+captured or configured. With `--write-artifacts`, apply also prints reviewed config
+artifacts that would be copied into managed state and the supervisor services that would
+be registered or started. The preflight gate reports `blocked`, `review`, or `ready`
+across activation steps, managed-state copies, and supervisor actions.
 
 Use `--protocol` to scope operational commands to one or more enabled protocols. This
 lets a full site config build or activate only Tor, only I2P, or a selected subset without
@@ -172,5 +175,5 @@ Explicit `--protocol` and `--platform` flags override the profile when present.
 - [ ] Run `ampg build`; inspect generated variants.
 - [ ] Run AMPB fixture checks against generated manifests.
 - [ ] Run `ampg health-plan`; review post-start transport checks.
-- [ ] Run `ampg apply --dry-run`; review the activation sequence.
-- [ ] Run live apply after the activation sequence is clean.
+- [ ] Run `ampg apply --dry-run`; review the activation sequence and preflight gate.
+- [ ] Run live apply after the preflight gate is ready.

@@ -3,8 +3,7 @@
 > Status: draft | Updated 2026-07-06 | Applies to: AMPG route exposure policy
 
 Interaction capabilities define what AMPG may expose for dynamic applications. They are
-public, generic rules. Project strategy, target names, and implementation notes belong in
-`docs/private/`.
+public, generic rules. Non-public project notes belong in `docs/private/`.
 
 ## Generated Policy
 

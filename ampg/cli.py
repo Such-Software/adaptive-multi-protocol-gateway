@@ -5,8 +5,11 @@ from pathlib import Path
 import sys
 
 from .activation import (
+    ApplyPreflight,
+    ApplyPreflightItem,
     ActivationStep,
     activation_steps,
+    apply_preflight,
     blocked_steps,
     write_activation_artifacts,
 )
@@ -302,19 +305,33 @@ def _cmd_apply(config, args) -> int:
         return 1
 
     platform_provider = _platform_override(config, args)
-    if _write_artifacts_enabled(config, args):
+    write_artifacts = _write_artifacts_enabled(config, args)
+    if write_artifacts:
         for path in write_activation_artifacts(config, platform_provider=platform_provider):
             print(f"AMPG_APPLY_ARTIFACT path={path} status=written")
-        for copy in install_state_copies(config, platform_provider=platform_provider):
+
+    state_copies = install_state_copies(config, platform_provider=platform_provider)
+    supervisor_actions = install_supervisor_actions(config, platform_provider=platform_provider)
+    if write_artifacts:
+        for copy in state_copies:
             _print_install_state_copy(copy)
-        for action in install_supervisor_actions(config, platform_provider=platform_provider):
+        for action in supervisor_actions:
             _print_supervisor_action(action)
 
     steps = activation_steps(config, platform_provider=platform_provider)
     for step in steps:
         _print_activation_step(step)
 
-    blocked = blocked_steps(steps)
+    preflight = apply_preflight(
+        activation=steps,
+        state_copies=state_copies,
+        supervisor_actions=supervisor_actions,
+    )
+    for item in preflight.items:
+        if item.status in {"blocked", "review"}:
+            _print_apply_preflight_item(item)
+    _print_apply_preflight(preflight)
+
     print(
         "AMPG_APPLY_SUMMARY "
         "mode=dry-run "
@@ -323,9 +340,9 @@ def _cmd_apply(config, args) -> int:
         f"ready={sum(1 for step in steps if step.status == 'ready')} "
         f"review={sum(1 for step in steps if step.status == 'review')} "
         f"planned={sum(1 for step in steps if step.status == 'planned')} "
-        f"blocked={len(blocked)}"
+        f"blocked={len(blocked_steps(steps))}"
     )
-    return 1 if blocked else 0
+    return 1 if preflight.status == "blocked" else 0
 
 
 def _cmd_install_plan(config, args) -> int:
@@ -559,6 +576,34 @@ def _print_supervisor_action(action: InstallSupervisorAction) -> None:
         f"status={action.status} "
         f"command=\"{_quote(action.command)}\" "
         f"message=\"{_quote(action.message)}\""
+    )
+
+
+def _print_apply_preflight(preflight: ApplyPreflight) -> None:
+    print(
+        "AMPG_APPLY_PREFLIGHT "
+        f"status={preflight.status} "
+        f"items={len(preflight.items)} "
+        f"ready={preflight.ready} "
+        f"review={preflight.review} "
+        f"planned={preflight.planned} "
+        f"skipped={preflight.skipped} "
+        f"blocked={preflight.blocked} "
+        f"message=\"{_quote(preflight.message)}\""
+    )
+
+
+def _print_apply_preflight_item(item: ApplyPreflightItem) -> None:
+    print(
+        "AMPG_APPLY_PREFLIGHT_ITEM "
+        f"phase={item.phase} "
+        f"site={item.site_id} "
+        f"protocol={item.protocol} "
+        f"status={item.status} "
+        f"action={item.action} "
+        f"target=\"{_quote(item.target)}\" "
+        f"command=\"{_quote(item.command)}\" "
+        f"message=\"{_quote(item.message)}\""
     )
 
 

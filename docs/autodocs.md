@@ -49,9 +49,9 @@ python3 tools/docs_check.py
 ## Public/private boundary
 
 Public docs include reusable contracts, generated references, and concise operator-facing
-guidance. Private docs are ignored under `docs/private/` and are the place for strategy,
-internal discussion, deployment inventory, working notes, tracking, timelines, and any
-real host-specific material.
+guidance. Private docs are ignored under `docs/private/` and are the place for
+non-public planning, deployment inventory, working notes, and real host-specific
+material.
 
 Public docs can include example domains, ports, and fake keys. Real daemon keys,
 production paths with secrets, private host inventory, and internal planning notes belong
