@@ -15,7 +15,7 @@ source site
   -> render profiles
   -> output roots
   -> daemon adapters
-  -> clearnet / Tor / I2P / Gemini / Reticulum
+  -> clearnet / Tor / I2P / Gemini / IPFS / Reticulum
 ```
 
 ## Source adapters
@@ -69,6 +69,10 @@ own output.
 : Gemini output. Converts headings, paragraphs, lists, code blocks, and links to `.gmi`.
   Inline links become block links near the paragraph by default.
 
+`clearnet` for IPFS
+: Static web output suitable for a local IPFS gateway or later pinning. IPFS is treated
+  as content-addressed distribution, not an anonymity layer.
+
 `micron`
 : Reticulum/Nomad output. Produces terminal-oriented Micron markup with small pages,
   plain links, and no heavy media by default.
@@ -82,6 +86,7 @@ Daemon adapters provide a common interface:
 - `render_config`: produce config snippets and complete managed configs.
 - `apply`: write approved managed config and start or reload services.
 - `health`: verify the selected transport can serve the generated output.
+- `manifest`: emit AMPB route/profile expectations for generated fixtures.
 
 Adapters must be conservative. They do not modify non-AMPG config without showing a
 plan first, and managed config lives under AMPG-owned state directories.

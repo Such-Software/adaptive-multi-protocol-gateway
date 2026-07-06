@@ -66,6 +66,13 @@ daemon_policy = "auto"
 port = 1965
 max_asset_bytes = 1048576
 
+[site.protocols.ipfs]
+enabled = false
+renderer = "clearnet"
+daemon = "ipfs"
+daemon_policy = "auto"
+cid = ""
+
 [site.protocols.reticulum]
 enabled = false
 renderer = "micron"
@@ -86,6 +93,7 @@ workflow.
 | tor | `privacy-html` | `tor` | `auto` |
 | i2p | `privacy-html` | `i2pd` | `auto` |
 | gemini | `gemtext` | `agate` | `auto` |
+| ipfs | `clearnet` | `ipfs` | `auto` |
 | reticulum | `micron` | `rnsd` | `auto` |
 
 ## Renderer defaults
@@ -178,7 +186,7 @@ omits it or renders a safe alternate page.
 ## Protocol-only deployments
 
 Enabled protocols are independent. A config can omit clearnet entirely and publish only
-to I2P, Tor, Gemini, Reticulum, or any combination of supported targets.
+to I2P, Tor, Gemini, IPFS, Reticulum, or any combination of supported targets.
 
 For an existing HTML site that should publish only to I2P:
 
@@ -208,6 +216,9 @@ script_policy = "strip"
 ```
 
 This builds only the I2P output root and only the I2P/nginx plan snippets.
+
+For IPFS, use the `clearnet` renderer to create a static output tree that can be served
+through a local gateway or pinned by a later publishing step.
 
 ## Plan artifacts
 

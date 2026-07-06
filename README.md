@@ -78,6 +78,7 @@ internal even when the public site is available on Tor or I2P.
 - [Architecture](docs/architecture.md)
 - [Configuration](docs/configuration.md)
 - [Daemon management](docs/daemon-management.md)
+- [Fixture manifests](docs/fixture-manifests.md)
 - [Interactive applications](docs/interactive-apps.md)
 - [Wownero integration](docs/wownero-integration.md)
 - [Autodocs and drift gates](docs/autodocs.md)
@@ -97,6 +98,7 @@ The current implementation is dependency-free Python:
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml plan --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml build
+python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/wownero.gateway.toml audit
 python3 -m ampg --config examples/i2p-only.gateway.toml build
 python3 -m ampg docs generate
@@ -116,4 +118,5 @@ passed. They are reviewable snippets, not installed daemon config.
 - [ ] Select protocols and daemon policy.
 - [ ] Run `ampg plan`; review output roots, ports, and config changes.
 - [ ] Run `ampg build`; inspect generated variants.
+- [ ] Run AMPB fixture checks against generated manifests.
 - [ ] Run `ampg apply`; publish through adopted or managed daemons.

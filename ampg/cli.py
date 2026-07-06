@@ -8,6 +8,7 @@ from .audit import audit_gateway
 from .build import build_gateway
 from .config import load_config
 from .docsgen import generate_docs
+from .manifest import write_fixture_manifests
 from .plan import plan_gateway, write_plan_artifacts
 
 
@@ -27,6 +28,7 @@ def main(argv: list[str] | None = None) -> int:
         help="Write generated config snippets to the configured plan root.",
     )
     subcommands.add_parser("build", help="Build enabled protocol outputs.")
+    subcommands.add_parser("manifest", help="Write AMPB fixture manifests.")
     audit_parser = subcommands.add_parser("audit", help="Audit source HTML quality.")
     audit_parser.add_argument(
         "--fail-on-warn",
@@ -52,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_plan(config, write_artifacts=args.write_artifacts)
         if args.command == "build":
             return _cmd_build(config)
+        if args.command == "manifest":
+            return _cmd_manifest(config)
         if args.command == "audit":
             return _cmd_audit(config, fail_on_warn=args.fail_on_warn)
     except Exception as exc:  # noqa: BLE001 - CLI should print concise failures.
@@ -101,6 +105,24 @@ def _cmd_build(config) -> int:
             f"files={result.files_written}"
             f" skipped={result.files_skipped}"
             f"{extra}"
+        )
+    for manifest in write_fixture_manifests(config):
+        print(
+            "AMPG_MANIFEST "
+            f"site={manifest.site_id} "
+            f"path={manifest.path} "
+            f"fixtures={manifest.fixture_count}"
+        )
+    return 0
+
+
+def _cmd_manifest(config) -> int:
+    for manifest in write_fixture_manifests(config):
+        print(
+            "AMPG_MANIFEST "
+            f"site={manifest.site_id} "
+            f"path={manifest.path} "
+            f"fixtures={manifest.fixture_count}"
         )
     return 0
 

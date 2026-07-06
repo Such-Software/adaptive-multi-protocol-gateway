@@ -188,4 +188,14 @@ DAEMON_ADAPTERS = (
             "Certificate and key paths are plan values until install/apply support exists.",
         ),
     ),
+    DaemonAdapter(
+        daemon=DEFAULT_DAEMONS["ipfs"],
+        protocols=("ipfs",),
+        default_policy=DEFAULT_POLICIES["ipfs"],
+        generated_artifacts=("fixture manifest route expectations",),
+        notes=(
+            "IPFS output is static web content for a local gateway or later pinning.",
+            "IPFS is content-addressed distribution, not an anonymity layer.",
+        ),
+    ),
 )

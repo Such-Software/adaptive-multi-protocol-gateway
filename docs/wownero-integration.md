@@ -15,6 +15,7 @@ transport-specific variants with defaults:
 - Tor: privacy-hardened static HTML.
 - I2P: privacy-hardened static HTML.
 - Gemini: text-first `.gmi` pages.
+- IPFS: static output tree for gateway or pinning workflows.
 - Reticulum: compact Micron `.mu` pages.
 
 ## Source Adapter
@@ -51,6 +52,10 @@ must not be required for AMPG adoption.
     index.gmi
     mining.gmi
     emission.gmi
+  ipfs/
+    index.html
+    css/
+    img/
   reticulum/
     index.mu
     mining.mu
@@ -84,6 +89,11 @@ Use `gemtext`:
 - convert large media to plain download links.
 - skip repeated navigation noise.
 
+### IPFS
+
+Use `clearnet` static output for content-addressed publishing. AMPG emits route
+expectations for AMPB, but pinning and CID publication remain explicit operator actions.
+
 ### Reticulum
 
 Use `micron`:
@@ -114,6 +124,11 @@ daemon_policy = "auto"
 enabled = false
 daemon_policy = "auto"
 
+[site.protocols.ipfs]
+enabled = false
+renderer = "clearnet"
+daemon_policy = "auto"
+
 [site.protocols.reticulum]
 enabled = false
 daemon_policy = "auto"
@@ -123,6 +138,7 @@ daemon_policy = "auto"
 
 - `ampg plan` identifies the Wownero source tree and selected protocols.
 - `ampg build` creates clearnet, Tor, I2P, and Gemini output without requiring Markdown.
+- `ampg build` writes a fixture manifest that AMPB can check.
 - Tor output contains no `<script>` tags or inline event handlers.
 - Generated Gemini output has readable headings, paragraphs, and links.
 - Generated Micron output fits terminal-first browsing.
@@ -133,6 +149,7 @@ daemon_policy = "auto"
 ```sh
 python3 -m ampg --config examples/wownero.gateway.toml plan
 python3 -m ampg --config examples/wownero.gateway.toml build
+python3 -m ampg --config examples/wownero.gateway.toml manifest
 python3 -m ampg --config examples/i2p-only.gateway.toml plan
 python3 -m ampg --config examples/i2p-only.gateway.toml build
 ```

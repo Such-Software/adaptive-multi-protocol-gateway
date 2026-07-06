@@ -12,6 +12,7 @@ DEFAULT_DAEMONS = {
     "i2p": "i2pd",
     "gemini": "agate",
     "reticulum": "rnsd",
+    "ipfs": "ipfs",
 }
 
 DEFAULT_POLICIES = {
@@ -20,6 +21,7 @@ DEFAULT_POLICIES = {
     "i2p": "auto",
     "gemini": "auto",
     "reticulum": "auto",
+    "ipfs": "auto",
 }
 
 

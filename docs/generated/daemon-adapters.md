@@ -44,3 +44,13 @@ Notes:
 Notes:
 - Gemini serves generated Gemtext output directly.
 - Certificate and key paths are plan values until install/apply support exists.
+
+## ipfs
+
+- Protocols: ipfs
+- Default policy: `auto`
+- Generated artifacts: fixture manifest route expectations
+
+Notes:
+- IPFS output is static web content for a local gateway or later pinning.
+- IPFS is content-addressed distribution, not an anonymity layer.
