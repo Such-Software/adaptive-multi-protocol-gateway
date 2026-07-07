@@ -147,7 +147,7 @@ flowchart TB
   pkg["pkg install<br/>tor, i2pd, nginx"]
   state["Termux state<br/>AMPG config, keys, logs"]
   services["termux-services<br/>AMPG-named daemons"]
-  transports["Tor/I2P/Gemini routes"]
+  transports["Tor/I2P/Gemini/Reticulum routes"]
   checks["health checks<br/>fixture URLs"]
 
   phone --> ampg
@@ -201,3 +201,17 @@ The first public docs site should be generated from the public Markdown docs in 
 repository. A GitHub Pages build can later reuse these Mermaid diagrams with MkDocs,
 mdBook, or another static docs generator. Private strategy notes, deployment inventory,
 and host-specific material should stay under private docs and outside any Pages build.
+
+## Example Site Roles
+
+`ampgateway.online`
+: Public system guide. It explains AMPG concepts, transport flows, topologies, domain
+  onboarding, and deploy stages. It should stay concise, visual, and operator-facing.
+
+`ampgateway.site`
+: Public demo site. It should behave like a real small site someone might deploy: static
+  catalog, plain form fallback, optional clearnet enhancement, and comments in source
+  that explain how the same content survives privacy HTML, Gemtext, and Micron outputs.
+
+Both sites are source inputs consumed by AMPG. Clearnet output can remain visually rich;
+Tor and I2P use privacy HTML; Gemini uses Gemtext; Reticulum uses Micron.

@@ -37,6 +37,7 @@ enabled = true
 renderer = "clearnet"
 daemon = "nginx"
 daemon_policy = "external"
+url = "https://ampgateway.online/"
 
 [site.protocols.tor]
 enabled = true
@@ -46,6 +47,7 @@ daemon_policy = "auto"
 local_port = 18180
 hidden_service_dir = "/var/lib/tor/ampg/ampgateway-online"
 onion_location = "auto"
+fixture_url = "http://bn5uppe4zrop2ljsmjtoxtc4bhzs42kj4c6zvme565gz6x6l32ico3id.onion/"
 max_asset_bytes = 1048576
 script_policy = "strip"
 
@@ -57,6 +59,7 @@ daemon_policy = "auto"
 local_port = 18181
 keys_file = "ampgateway-online-web.dat"
 tunnel_name = "ampgateway-online-web"
+i2p_url = "http://vfhcumcxtbysxr6wvbpdytb6jpslcqlo3j6e35w7s63el5vsorca.b32.i2p/"
 max_asset_bytes = 1048576
 script_policy = "strip"
 
@@ -66,6 +69,7 @@ renderer = "gemtext"
 daemon = "agate"
 daemon_policy = "auto"
 port = 1965
+gemini_url = "gemini://ampgateway.online/"
 max_asset_bytes = 1048576
 
 [site.protocols.reticulum]
@@ -74,6 +78,7 @@ renderer = "micron"
 daemon = "rnsd"
 daemon_policy = "auto"
 aspect = "web"
+rns_url = "rns://04c455aa45c455a7478c9e90b63f448e/"
 max_asset_bytes = 524288
 
 [[site]]
@@ -82,7 +87,7 @@ domain = "ampgateway.site"
 
 [site.source]
 kind = "static-html"
-path = "../sites/ampgateway-online"
+path = "../sites/ampgateway-site"
 canonical_url = "https://ampgateway.site"
 
 [site.outputs]
@@ -98,6 +103,7 @@ enabled = true
 renderer = "clearnet"
 daemon = "nginx"
 daemon_policy = "external"
+url = "https://ampgateway.site/"
 
 [site.protocols.tor]
 enabled = true
@@ -107,6 +113,7 @@ daemon_policy = "auto"
 local_port = 18280
 hidden_service_dir = "/var/lib/tor/ampg/ampgateway-site"
 onion_location = "auto"
+fixture_url = "http://fy2zosxp4oqqcacxcegvwshtmsiiyztnwoinbm46yoig4o3kveidotyd.onion/"
 max_asset_bytes = 1048576
 script_policy = "strip"
 
@@ -118,6 +125,7 @@ daemon_policy = "auto"
 local_port = 18281
 keys_file = "ampgateway-site-web.dat"
 tunnel_name = "ampgateway-site-web"
+i2p_url = "http://zajoo4f5dso64tvtazas27se2galkihgpfgoy636uxm7loo42cdq.b32.i2p/"
 max_asset_bytes = 1048576
 script_policy = "strip"
 
@@ -127,6 +135,7 @@ renderer = "gemtext"
 daemon = "agate"
 daemon_policy = "auto"
 port = 1966
+gemini_url = "gemini://ampgateway.site:1966/"
 max_asset_bytes = 1048576
 
 [site.protocols.reticulum]
@@ -135,4 +144,5 @@ renderer = "micron"
 daemon = "rnsd"
 daemon_policy = "auto"
 aspect = "web"
+rns_url = "rns://39bf05d72fc8bc3b34519e62112e9abf/"
 max_asset_bytes = 524288

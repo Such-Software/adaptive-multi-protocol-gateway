@@ -298,14 +298,16 @@ h3 {
 }
 
 .topology-grid,
-.domain-grid {
+.domain-grid,
+.transport-flow-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
 .topology-grid article,
-.domain-card {
+.domain-card,
+.transport-flow {
   min-height: 190px;
   padding: 20px;
   border: 1px solid var(--line);
@@ -314,19 +316,41 @@ h3 {
 }
 
 .topology-grid article:nth-child(2),
-.domain-card.featured {
+.domain-card.featured,
+.transport-flow:nth-child(2n) {
   background: var(--panel-strong);
 }
 
 .topology-grid p,
 .domain-card p,
 .docs-section p,
-.flow-list p {
+.flow-list p,
+.transport-flow li,
+.section-heading p {
   color: var(--muted);
 }
 
 .section-heading {
   margin-bottom: 28px;
+}
+
+.transport-flow-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.transport-flow {
+  min-height: 250px;
+}
+
+.transport-flow h3 {
+  font-size: 1.35rem;
+}
+
+.transport-flow ol {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding-left: 20px;
 }
 
 .domain-grid {
@@ -454,7 +478,8 @@ h3 {
   }
 
   .domain-grid,
-  .topology-grid {
+  .topology-grid,
+  .transport-flow-grid {
     grid-template-columns: 1fr;
   }
 

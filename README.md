@@ -110,7 +110,8 @@ API remains internal even when the public site is available on Tor or I2P.
 - [Interactive applications](docs/interactive-apps.md)
 - [Wownero integration](docs/wownero-integration.md)
 - [Autodocs and drift gates](docs/autodocs.md)
-- [AMPGateway visual site source](sites/ampgateway-online/index.html)
+- [AMPGateway visual guide source](sites/ampgateway-online/index.html)
+- [AMPGateway demo site source](sites/ampgateway-site/index.html)
 - [AMPGateway visual site config](examples/ampgateway-online.gateway.toml)
 
 ## Checks
@@ -128,6 +129,7 @@ The current implementation is dependency-free Python:
 python3 -m ampg --config gateway.toml init site wownero --domain wownero.org --source ../wownero.org-website --preset full
 python3 -m ampg --config examples/wownero.gateway.toml deploy plan --profile vps-full
 python3 -m ampg --config examples/wownero.gateway.toml dns plan --profile vps-full
+python3 -m ampg --config examples/wownero.gateway.toml dns records --profile vps-full --ipv4 203.0.113.10
 python3 -m ampg --config examples/wownero.gateway.toml dns plan --profile vps-full --free-domain-hints
 python3 -m ampg --config examples/wownero.gateway.toml dns plan --profile vps-full --mode dynamic --behind-router
 python3 -m ampg --config examples/wownero.gateway.toml dns check --profile vps-full

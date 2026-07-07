@@ -55,11 +55,20 @@ from .dns import (
     ConnectivityHint,
     DNSCheckResult,
     DNS_MODES,
+    DNS_MAIL_POLICIES,
+    DNS_PROVIDERS,
+    DNSApplyChange,
+    DNSApplyResult,
+    DNSBackupResult,
     DNSPlan,
+    DNSProviderRecordPlan,
     DNSRecordPlan,
     FreeDomainHint,
+    dns_apply,
+    dns_backup,
     dns_check,
     dns_plan,
+    provider_dns_record_plan,
 )
 from .docsgen import generate_docs
 from .health import HealthCheck, blocked_health_checks, health_plan
@@ -224,6 +233,84 @@ def main(argv: list[str] | None = None) -> int:
     _add_target_selection(dns_check_parser)
     dns_check_parser.add_argument("--ipv4", help="Expected public IPv4 address.")
     dns_check_parser.add_argument("--ipv6", help="Expected public IPv6 address.")
+    dns_records_parser = dns_subcommands.add_parser(
+        "records",
+        help="Show provider-ready DNS records, including optional transport discovery hints.",
+    )
+    _add_target_selection(dns_records_parser)
+    dns_records_parser.add_argument("--ipv4", help="Public IPv4 address for A records.")
+    dns_records_parser.add_argument("--ipv6", help="Public IPv6 address for AAAA records.")
+    dns_records_parser.add_argument(
+        "--mail-policy",
+        choices=DNS_MAIL_POLICIES,
+        default="preserve",
+        help="Preserve existing mail records or mark the domain as non-mail.",
+    )
+    dns_records_parser.add_argument(
+        "--no-discovery",
+        action="store_true",
+        help="Do not include Tor/I2P/Reticulum TXT discovery hints.",
+    )
+    dns_backup_parser = dns_subcommands.add_parser(
+        "backup",
+        help="Back up DNS records from a supported provider.",
+    )
+    _add_target_selection(dns_backup_parser)
+    dns_backup_parser.add_argument("--provider", choices=DNS_PROVIDERS, required=True)
+    dns_backup_parser.add_argument(
+        "--credentials",
+        type=Path,
+        required=True,
+        help="Provider credential file. Secrets are read locally and never printed.",
+    )
+    dns_backup_parser.add_argument(
+        "--backup-dir",
+        type=Path,
+        help="Backup root. Defaults to gateway state_dir/dns-backups.",
+    )
+    dns_backup_parser.add_argument(
+        "--client-ip",
+        help="Provider API caller IP when required, such as Namecheap ClientIp.",
+    )
+    dns_apply_parser = dns_subcommands.add_parser(
+        "apply",
+        help="Preview or apply provider DNS records with a pre-change backup.",
+    )
+    _add_target_selection(dns_apply_parser)
+    dns_apply_parser.add_argument("--provider", choices=DNS_PROVIDERS, required=True)
+    dns_apply_parser.add_argument(
+        "--credentials",
+        type=Path,
+        required=True,
+        help="Provider credential file. Secrets are read locally and never printed.",
+    )
+    dns_apply_parser.add_argument("--ipv4", help="Public IPv4 address for A records.")
+    dns_apply_parser.add_argument("--ipv6", help="Public IPv6 address for AAAA records.")
+    dns_apply_parser.add_argument(
+        "--mail-policy",
+        choices=DNS_MAIL_POLICIES,
+        default="preserve",
+        help="Preserve existing mail records or mark the domain as non-mail.",
+    )
+    dns_apply_parser.add_argument(
+        "--no-discovery",
+        action="store_true",
+        help="Do not include Tor/I2P/Reticulum TXT discovery hints.",
+    )
+    dns_apply_parser.add_argument(
+        "--backup-dir",
+        type=Path,
+        help="Backup root. Defaults to gateway state_dir/dns-backups.",
+    )
+    dns_apply_parser.add_argument(
+        "--client-ip",
+        help="Provider API caller IP when required, such as Namecheap ClientIp.",
+    )
+    dns_apply_parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Apply changes to the provider. Omit for dry-run preview.",
+    )
     plan_parser = subcommands.add_parser("plan", help="Print a dry-run plan.")
     _add_target_selection(plan_parser)
     plan_parser.add_argument(
@@ -745,6 +832,72 @@ def _cmd_dns(config, args) -> int:
             f"mismatch={sum(1 for result in results if result.status == 'mismatch')}"
         )
         return 1 if failed else 0
+
+    if args.dns_command == "records":
+        records = provider_dns_record_plan(
+            config,
+            ipv4=args.ipv4,
+            ipv6=args.ipv6,
+            mail_policy=args.mail_policy,
+            discovery=not args.no_discovery,
+        )
+        for record in records:
+            _print_dns_provider_record(record)
+        print(
+            "AMPG_DNS_RECORDS_SUMMARY "
+            f"records={len([record for record in records if record.status != 'skipped'])} "
+            f"mail_policy={args.mail_policy} "
+            f"discovery={_bool(not args.no_discovery)}"
+        )
+        return 0
+
+    if args.dns_command == "backup":
+        results = dns_backup(
+            config,
+            provider=args.provider,
+            credentials=args.credentials,
+            backup_dir=args.backup_dir,
+            client_ip=args.client_ip,
+        )
+        for result in results:
+            _print_dns_backup(result)
+        print(
+            "AMPG_DNS_BACKUP_SUMMARY "
+            f"provider={args.provider} "
+            f"domains={len(results)} "
+            f"ok={sum(1 for result in results if result.status == 'ok')} "
+            f"errors={sum(1 for result in results if result.status != 'ok')}"
+        )
+        return 1 if any(result.status != "ok" for result in results) else 0
+
+    if args.dns_command == "apply":
+        results = dns_apply(
+            config,
+            provider=args.provider,
+            credentials=args.credentials,
+            ipv4=args.ipv4,
+            ipv6=args.ipv6,
+            mail_policy=args.mail_policy,
+            discovery=not args.no_discovery,
+            backup_dir=args.backup_dir,
+            dry_run=not args.yes,
+            client_ip=args.client_ip,
+        )
+        for result in results:
+            for change in result.changes:
+                _print_dns_apply_change(change)
+            _print_dns_apply_result(result)
+        print(
+            "AMPG_DNS_APPLY_SUMMARY "
+            f"provider={args.provider} "
+            f"mode={'live' if args.yes else 'dry-run'} "
+            f"domains={len(results)} "
+            f"changes={sum(len(result.changes) for result in results)} "
+            f"applied={sum(1 for result in results if result.status == 'applied')} "
+            f"ready={sum(1 for result in results if result.status == 'ready')} "
+            f"todo={sum(1 for result in results if result.status == 'todo')}"
+        )
+        return 0
 
     return 1
 
@@ -1344,6 +1497,61 @@ def _print_dns_check(result: DNSCheckResult) -> None:
         f"expected=\"{_quote(result.expected)}\" "
         f"resolved=\"{_quote(resolved)}\" "
         f"status={result.status} "
+        f"message=\"{_quote(result.message)}\""
+    )
+
+
+def _print_dns_provider_record(record: DNSProviderRecordPlan) -> None:
+    print(
+        "AMPG_DNS_PROVIDER_RECORD "
+        f"site={record.site_id} "
+        f"domain={record.domain} "
+        f"name={record.name} "
+        f"type={record.type} "
+        f"value=\"{_quote(record.value)}\" "
+        f"ttl={record.ttl} "
+        f"status={record.status} "
+        f"message=\"{_quote(record.message)}\""
+    )
+
+
+def _print_dns_backup(result: DNSBackupResult) -> None:
+    path = str(result.path) if result.path else "-"
+    print(
+        "AMPG_DNS_BACKUP "
+        f"provider={result.provider} "
+        f"domain={result.domain} "
+        f"status={result.status} "
+        f"records={result.records} "
+        f"path=\"{_quote(path)}\" "
+        f"message=\"{_quote(result.message)}\""
+    )
+
+
+def _print_dns_apply_change(change: DNSApplyChange) -> None:
+    print(
+        "AMPG_DNS_APPLY_CHANGE "
+        f"domain={change.domain} "
+        f"name={change.name} "
+        f"type={change.type} "
+        f"action={change.action} "
+        f"current=\"{_quote(change.current)}\" "
+        f"desired=\"{_quote(change.desired)}\" "
+        f"status={change.status} "
+        f"message=\"{_quote(change.message)}\""
+    )
+
+
+def _print_dns_apply_result(result: DNSApplyResult) -> None:
+    backup_path = str(result.backup_path) if result.backup_path else "-"
+    print(
+        "AMPG_DNS_APPLY "
+        f"provider={result.provider} "
+        f"domain={result.domain} "
+        f"mode={result.mode} "
+        f"status={result.status} "
+        f"changes={len(result.changes)} "
+        f"backup=\"{_quote(backup_path)}\" "
         f"message=\"{_quote(result.message)}\""
     )
 

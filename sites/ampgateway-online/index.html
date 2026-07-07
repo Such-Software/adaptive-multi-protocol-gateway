@@ -19,6 +19,7 @@
         <span>AMPGateway</span>
       </a>
       <nav class="top-nav" aria-label="Primary">
+        <a href="#transport-flows">Transports</a>
         <a href="#topologies">Topologies</a>
         <a href="#domains">Domains</a>
         <a href="#flow">Flow</a>
@@ -42,7 +43,7 @@
             without losing the map.
           </p>
           <div class="hero-actions" aria-label="Primary sections">
-            <a class="button primary" href="#topologies">Explore topologies</a>
+            <a class="button primary" href="#transport-flows">Explore transports</a>
             <a class="button secondary" href="#domains">See example domains</a>
           </div>
         </div>
@@ -55,8 +56,69 @@
             <button class="mode-button" type="button" data-topology="browser">Browser</button>
           </div>
           <p id="topologyCaption" class="topology-caption" aria-live="polite">
-            A VPS can publish clearnet, Tor, I2P, and Gemini outputs from one AMPG plan.
+            A VPS can publish clearnet, Tor, I2P, Gemini, and Reticulum outputs from one AMPG plan.
           </p>
+        </div>
+      </section>
+
+      <section id="transport-flows" class="section transport-section" aria-labelledby="transport-flows-title">
+        <div class="section-heading">
+          <p class="eyebrow">Traffic flows</p>
+          <h2 id="transport-flows-title">Same source, different paths through the network.</h2>
+          <p>
+            AMPG keeps the authoring path consistent while each transport uses the shape
+            that fits its network, daemon, and client expectations.
+          </p>
+        </div>
+        <div class="transport-flow-grid">
+          <article class="transport-flow">
+            <h3>Clearnet</h3>
+            <ol>
+              <li>Visitor resolves DNS for the site domain.</li>
+              <li>HTTP or HTTPS reaches the public web server.</li>
+              <li>The server reads AMPG clearnet output.</li>
+            </ol>
+          </article>
+          <article class="transport-flow">
+            <h3>Tor onion</h3>
+            <ol>
+              <li>Tor client resolves the onion service descriptor.</li>
+              <li>Tor circuits connect to the hidden service.</li>
+              <li>The local service serves AMPG privacy HTML.</li>
+            </ol>
+          </article>
+          <article class="transport-flow">
+            <h3>I2P tunnel</h3>
+            <ol>
+              <li>I2P client resolves the b32 destination.</li>
+              <li>Inbound and outbound tunnels carry HTTP.</li>
+              <li>i2pd forwards to the local AMPG output.</li>
+            </ol>
+          </article>
+          <article class="transport-flow">
+            <h3>Gemini</h3>
+            <ol>
+              <li>Client opens a TLS connection to the capsule.</li>
+              <li>Gemini server maps the URL to Gemtext.</li>
+              <li>The rendered page keeps links and headings simple.</li>
+            </ol>
+          </article>
+          <article class="transport-flow">
+            <h3>Reticulum</h3>
+            <ol>
+              <li>Client reaches an RNS destination.</li>
+              <li>NomadNet-style pages request compact Micron content.</li>
+              <li>AMPG output keeps media and layout intentionally small.</li>
+            </ol>
+          </article>
+          <article class="transport-flow">
+            <h3>Single transport</h3>
+            <ol>
+              <li>Operator enables only the target protocol.</li>
+              <li>AMPG builds only the selected output.</li>
+              <li>Deploy stages skip unrelated daemons and DNS.</li>
+            </ol>
+          </article>
         </div>
       </section>
 
@@ -70,7 +132,7 @@
             <h3>Full VPS</h3>
             <p>
               <code>ampgateway.site</code> is the target for a full public example with
-              clearnet, Tor, I2P, and Gemini routes managed from one deploy plan.
+              clearnet, Tor, I2P, Gemini, and Reticulum routes managed from one deploy plan.
             </p>
           </article>
           <article>

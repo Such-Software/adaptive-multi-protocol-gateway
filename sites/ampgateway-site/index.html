@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Field Kit Supply</title>
+    <meta
+      name="description"
+      content="AMPGateway demo site showing a small catalog, contact form, and transport-aware static fallbacks."
+    >
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="#content" aria-label="Field Kit Supply home">
+        <span class="brand-mark" aria-hidden="true">F</span>
+        <span>Field Kit Supply</span>
+      </a>
+      <nav class="top-nav" aria-label="Primary">
+        <a href="#catalog">Catalog</a>
+        <a href="#order">Order</a>
+        <a href="#transport-notes">Transport Notes</a>
+      </nav>
+    </header>
+
+    <!--
+      AMPG demo note:
+      The page starts with ordinary h1 -> h2 -> h3 structure and useful paragraphs.
+      Clearnet can enhance this with CSS and JavaScript, while Tor/I2P privacy HTML,
+      Gemini Gemtext, and Reticulum Micron still get a readable catalog.
+    -->
+    <main id="content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div>
+          <p class="eyebrow">Demo shop</p>
+          <h1 id="hero-title">Small gear, published everywhere.</h1>
+          <p>
+            This is a fictional static storefront used to test AMPGateway outputs across
+            clearnet, Tor, I2P, Gemini, and Reticulum.
+          </p>
+          <a class="button" href="#catalog">Browse kits</a>
+        </div>
+        <aside class="status-board" aria-labelledby="status-title">
+          <h2 id="status-title">Transport behavior</h2>
+          <ul>
+            <li><strong>Clearnet:</strong> enhanced filters and order estimate.</li>
+            <li><strong>Tor/I2P:</strong> local assets, no scripts, same readable form.</li>
+            <li><strong>Gemini:</strong> catalog and links become Gemtext.</li>
+            <li><strong>Reticulum:</strong> compact Micron page for NomadNet-style reading.</li>
+          </ul>
+        </aside>
+      </section>
+
+      <section id="catalog" class="section" aria-labelledby="catalog-title">
+        <div class="section-heading">
+          <p class="eyebrow">Catalog</p>
+          <h2 id="catalog-title">Static inventory with optional enhancement.</h2>
+          <p>
+            The cards are plain HTML articles. JavaScript adds filtering on clearnet; the
+            rendered privacy and text outputs keep the same source order.
+          </p>
+        </div>
+
+        <div class="filters" aria-label="Catalog filters">
+          <button class="filter active" type="button" data-filter="all">All</button>
+          <button class="filter" type="button" data-filter="field">Field</button>
+          <button class="filter" type="button" data-filter="power">Power</button>
+          <button class="filter" type="button" data-filter="signals">Signals</button>
+        </div>
+
+        <div class="catalog-grid">
+          <article class="product" data-category="field" data-price="24">
+            <p class="tag">Field</p>
+            <h3>Pocket repair roll</h3>
+            <p>Compact thread, cord, patches, clips, and a tiny notebook for field fixes.</p>
+            <p class="price">$24</p>
+          </article>
+          <article class="product" data-category="power" data-price="38">
+            <p class="tag">Power</p>
+            <h3>Low-draw light kit</h3>
+            <p>Warm LEDs, diffuser caps, and a short cable set for off-grid worktables.</p>
+            <p class="price">$38</p>
+          </article>
+          <article class="product" data-category="signals" data-price="31">
+            <p class="tag">Signals</p>
+            <h3>Marker stack</h3>
+            <p>Weatherproof tags, reflective strips, and write-on tabs for route labeling.</p>
+            <p class="price">$31</p>
+          </article>
+          <article class="product" data-category="field" data-price="19">
+            <p class="tag">Field</p>
+            <h3>Dry pocket ledger</h3>
+            <p>Small waterproof pages for notes, receipts, map points, and handoff lists.</p>
+            <p class="price">$19</p>
+          </article>
+        </div>
+      </section>
+
+      <!--
+        AMPG demo note:
+        The form action is deliberately a normal HTTP path, not a JavaScript-only
+        checkout. Future AMPG app adapters can map this route to sessions or payments,
+        while static-only transports can still publish the request shape.
+      -->
+      <section id="order" class="section order-section" aria-labelledby="order-title">
+        <div>
+          <p class="eyebrow">Order request</p>
+          <h2 id="order-title">A boring form is a portable interface.</h2>
+          <p>
+            This demo does not submit real payments. It models the shape AMPG should
+            support later: static catalog, optional identity, optional payment, and a
+            server action only where the selected transport can safely handle it.
+          </p>
+        </div>
+        <form class="order-form" method="post" action="/orders/request">
+          <label>
+            Contact
+            <input name="contact" type="text" autocomplete="email" placeholder="name@example.test">
+          </label>
+          <label>
+            Kit
+            <select name="kit">
+              <option>Pocket repair roll</option>
+              <option>Low-draw light kit</option>
+              <option>Marker stack</option>
+              <option>Dry pocket ledger</option>
+            </select>
+          </label>
+          <label>
+            Notes
+            <textarea name="notes" rows="4" placeholder="Transport, delivery, or payment notes"></textarea>
+          </label>
+          <button type="submit">Request order</button>
+          <p id="estimate" class="estimate" aria-live="polite">Select catalog items to estimate a bundle.</p>
+        </form>
+      </section>
+
+      <section id="transport-notes" class="section notes-section" aria-labelledby="notes-title">
+        <p class="eyebrow">Cookbook</p>
+        <h2 id="notes-title">What this demo is proving.</h2>
+        <div class="notes-grid">
+          <article>
+            <h3>Keep content first</h3>
+            <p>Use headings, paragraphs, lists, and forms before decorative layout.</p>
+          </article>
+          <article>
+            <h3>Enhance gently</h3>
+            <p>JavaScript may improve clearnet, but the source page must remain useful without it.</p>
+          </article>
+          <article>
+            <h3>Declare route intent</h3>
+            <p>Static routes can publish everywhere; sessions and payments need transport policy.</p>
+          </article>
+          <article>
+            <h3>Publish fixtures</h3>
+            <p>Every transport output should have a health-checkable public URL.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>Fictional demo content for AMPGateway.</p>
+      <a href="https://ampgateway.online">System guide</a>
+    </footer>
+  </body>
+</html>

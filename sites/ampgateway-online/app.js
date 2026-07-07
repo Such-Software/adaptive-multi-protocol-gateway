@@ -25,7 +25,7 @@
 
   const topologies = {
     vps: {
-      caption: "A VPS can publish clearnet, Tor, I2P, and Gemini outputs from one AMPG plan.",
+      caption: "A VPS can publish clearnet, Tor, I2P, Gemini, and Reticulum outputs from one AMPG plan.",
       nodes: [
         ["source", "source site", 0.16, 0.42, "amber"],
         ["ampg", "AMPG", 0.34, 0.42, "teal"],
@@ -33,7 +33,8 @@
         ["web", "clearnet", 0.72, 0.22, "teal"],
         ["tor", "Tor", 0.78, 0.39, "coral"],
         ["i2p", "I2P", 0.76, 0.56, "amber"],
-        ["gemini", "Gemini", 0.68, 0.72, "green"]
+        ["gemini", "Gemini", 0.66, 0.72, "green"],
+        ["reticulum", "Reticulum", 0.84, 0.72, "coral"]
       ],
       links: [
         ["source", "ampg"],
@@ -41,11 +42,12 @@
         ["vps", "web"],
         ["vps", "tor"],
         ["vps", "i2p"],
-        ["vps", "gemini"]
+        ["vps", "gemini"],
+        ["vps", "reticulum"]
       ]
     },
     router: {
-      caption: "Behind a router, clearnet may need DNS and port choices; Tor and I2P can avoid inbound port forwarding.",
+      caption: "Behind a router, clearnet may need DNS and port choices; Tor, I2P, and Reticulum can avoid depending on inbound web ports.",
       nodes: [
         ["visitor", "visitor", 0.13, 0.33, "green"],
         ["dns", "DNS/DDNS", 0.3, 0.24, "amber"],
@@ -53,7 +55,8 @@
         ["host", "home host", 0.61, 0.38, "teal"],
         ["ampg", "AMPG", 0.76, 0.38, "teal"],
         ["tor", "Tor", 0.64, 0.66, "coral"],
-        ["i2p", "I2P", 0.82, 0.66, "amber"]
+        ["i2p", "I2P", 0.78, 0.66, "amber"],
+        ["reticulum", "Reticulum", 0.9, 0.54, "green"]
       ],
       links: [
         ["visitor", "dns"],
@@ -62,8 +65,10 @@
         ["host", "ampg"],
         ["ampg", "tor"],
         ["ampg", "i2p"],
+        ["ampg", "reticulum"],
         ["visitor", "tor"],
-        ["visitor", "i2p"]
+        ["visitor", "i2p"],
+        ["visitor", "reticulum"]
       ]
     },
     phone: {

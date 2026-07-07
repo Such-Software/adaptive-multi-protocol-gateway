@@ -1,6 +1,6 @@
 # Domain Onboarding
 
-> Status: draft | Updated 2026-07-06 | Applies to: clearnet DNS setup
+> Status: draft | Updated 2026-07-07 | Applies to: clearnet DNS setup
 
 AMPG treats clearnet naming as an operator choice. A site can use a normal owned domain,
 a community free subdomain, a Dynamic DNS name, or no clearnet name at all when only
@@ -10,10 +10,37 @@ private transports are selected.
 
 ```sh
 python3 -m ampg --config gateway.toml dns plan
+python3 -m ampg --config gateway.toml dns records --ipv4 203.0.113.10
 python3 -m ampg --config gateway.toml dns plan --free-domain-hints
 python3 -m ampg --config gateway.toml dns plan --mode dynamic --behind-router
 python3 -m ampg --config gateway.toml dns check
 ```
+
+`dns records` prints provider-ready records for enabled public transports. It can include
+`A`/`AAAA` host records, CAA, optional non-mail SPF/DMARC records, and AMPG TXT discovery
+hints for transport-aware clients.
+
+## Provider Writes
+
+Provider writes must be previewable and backed up. AMPG keeps the generic record plan
+separate from provider mutation:
+
+```sh
+python3 -m ampg --config gateway.toml dns records --ipv4 203.0.113.10 --mail-policy disabled
+python3 -m ampg --config gateway.toml dns backup --provider namecheap --credentials /etc/ampg/namecheap.ini
+python3 -m ampg --config gateway.toml dns apply --provider namecheap --credentials /etc/ampg/namecheap.ini --ipv4 203.0.113.10
+python3 -m ampg --config gateway.toml dns apply --provider namecheap --credentials /etc/ampg/namecheap.ini --ipv4 203.0.113.10 --yes
+```
+
+`dns apply` is a dry run unless `--yes` is present. Live apply reads the current zone,
+writes a backup under `gateway.state_dir/dns-backups`, merges only AMPG-managed records,
+and preserves unrelated records such as domain verification TXT entries.
+
+Namecheap's XML API uses replace-all `setHosts`, so AMPG always fetches and merges the
+whole zone before applying. The documented Namecheap API record types do not include
+`SRV`; AMPG can show SRV records in the generic plan, but the Namecheap writer skips
+unsupported record types and relies on TXT discovery hints unless another provider path
+is configured.
 
 `dns plan --free-domain-hints` prints `AMPG_FREE_DOMAIN_HINT` rows for optional
 third-party services that may provide free subdomains for personal sites, hobby apps, or
