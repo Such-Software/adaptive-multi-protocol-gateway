@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import shutil
+import shlex
+import subprocess
 
 from .config import GatewayConfig
 from .install_plan import (
@@ -42,6 +46,31 @@ class SupervisorApplyResult:
     mode: str
     command: str
     message: str
+
+
+@dataclass(frozen=True)
+class CommandRunResult:
+    return_code: int
+    stdout: str = ""
+    stderr: str = ""
+
+
+@dataclass(frozen=True)
+class StartApplyResult:
+    site_id: str
+    protocol: str
+    platform: str
+    kind: str
+    service: str
+    target: Path
+    status: str
+    mode: str
+    command: tuple[str, ...]
+    return_code: int | None
+    message: str
+
+
+CommandRunner = Callable[[tuple[str, ...]], CommandRunResult]
 
 
 def apply_state(
@@ -140,6 +169,85 @@ def apply_supervisor(
                     if dry_run
                     else "installed approved supervisor file"
                 ),
+            )
+        )
+    return results
+
+
+def apply_start(
+    config: GatewayConfig,
+    *,
+    dry_run: bool,
+    platform_provider: PlatformProvider | None = None,
+    daemon_probe: DaemonProbeFunc | None = None,
+    command_runner: CommandRunner | None = None,
+) -> list[StartApplyResult]:
+    provider = platform_provider or detect_platform()
+    actions = install_supervisor_actions(
+        config,
+        platform_provider=provider,
+        daemon_probe=daemon_probe,
+    )
+    state_copies = install_state_copies(
+        config,
+        platform_provider=provider,
+        daemon_probe=daemon_probe,
+    )
+    state_targets = {
+        (copy.site_id, copy.protocol, copy.platform, copy.kind): copy.target
+        for copy in state_copies
+    }
+    runner = command_runner or _run_command
+    results: list[StartApplyResult] = []
+    for action in actions:
+        target = supervisor_target(provider, action)
+        command = start_command(provider, action, target)
+        validation = _validate_start_action(
+            action,
+            target=target,
+            command=command,
+            state_targets=state_targets,
+            dry_run=dry_run,
+        )
+        if validation.status == "blocked":
+            results.append(validation)
+            continue
+        if dry_run:
+            results.append(
+                _start_result(
+                    action,
+                    target=target,
+                    command=command,
+                    status="planned",
+                    mode="dry-run",
+                    return_code=None,
+                    message="would start AMPG-owned service",
+                )
+            )
+            continue
+        run = runner(command)
+        if run.return_code != 0:
+            results.append(
+                _start_result(
+                    action,
+                    target=target,
+                    command=command,
+                    status="blocked",
+                    mode="live",
+                    return_code=run.return_code,
+                    message=_command_failure_message(run),
+                )
+            )
+            continue
+        results.append(
+            _start_result(
+                action,
+                target=target,
+                command=command,
+                status="started",
+                mode="live",
+                return_code=run.return_code,
+                message="started AMPG-owned service",
             )
         )
     return results
@@ -259,6 +367,91 @@ def _validate_supervisor_action(
     )
 
 
+def _validate_start_action(
+    action: InstallSupervisorAction,
+    *,
+    target: Path,
+    command: tuple[str, ...],
+    state_targets: dict[tuple[str, str, str, str], Path],
+    dry_run: bool,
+) -> StartApplyResult:
+    mode = "dry-run" if dry_run else "live"
+    if action.status != "planned":
+        return _start_result(
+            action,
+            target=target,
+            command=command,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message=action.message,
+        )
+    if not _valid_service_name(action.service):
+        return _start_result(
+            action,
+            target=target,
+            command=command,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message=f"invalid AMPG supervisor service name: {action.service}",
+        )
+    required_state_kind = _required_state_kind(action.kind)
+    if required_state_kind is not None:
+        state_target = state_targets.get(
+            (action.site_id, action.protocol, action.platform, required_state_kind)
+        )
+        if state_target is None or not state_target.exists():
+            return _start_result(
+                action,
+                target=target,
+                command=command,
+                status="blocked",
+                mode=mode,
+                return_code=None,
+                message="managed state config is missing; run deploy apply --stage state first",
+            )
+    if not target.exists():
+        return _start_result(
+            action,
+            target=target,
+            command=command,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message="supervisor file is missing; run deploy apply --stage supervisor first",
+        )
+    if target.is_dir():
+        return _start_result(
+            action,
+            target=target,
+            command=command,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message="supervisor target is a directory",
+        )
+    if not command:
+        return _start_result(
+            action,
+            target=target,
+            command=command,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message="selected platform does not have an automatic start command",
+        )
+    return _start_result(
+        action,
+        target=target,
+        command=command,
+        status="ready",
+        mode=mode,
+        return_code=None,
+        message="start command passed safety checks",
+    )
+
+
 def _result(
     copy: InstallStateCopy,
     *,
@@ -302,6 +495,31 @@ def _supervisor_result(
     )
 
 
+def _start_result(
+    action: InstallSupervisorAction,
+    *,
+    target: Path,
+    command: tuple[str, ...],
+    status: str,
+    mode: str,
+    return_code: int | None,
+    message: str,
+) -> StartApplyResult:
+    return StartApplyResult(
+        site_id=action.site_id,
+        protocol=action.protocol,
+        platform=action.platform,
+        kind=action.kind,
+        service=action.service,
+        target=target,
+        status=status,
+        mode=mode,
+        command=command,
+        return_code=return_code,
+        message=message,
+    )
+
+
 def supervisor_target(provider: PlatformProvider, action: InstallSupervisorAction) -> Path:
     if provider.name == "linux-systemd":
         return Path("/etc/systemd/system") / f"{action.service}.service"
@@ -311,6 +529,20 @@ def supervisor_target(provider: PlatformProvider, action: InstallSupervisorActio
         prefix = _termux_prefix(provider.state_root)
         return prefix / "var/service" / action.service / "run"
     return provider.state_root / "services" / action.service / action.source.name
+
+
+def start_command(
+    provider: PlatformProvider,
+    action: InstallSupervisorAction,
+    target: Path,
+) -> tuple[str, ...]:
+    if provider.name == "android-termux":
+        return ("sv-enable", action.service)
+    if provider.name == "linux-systemd":
+        return ("sudo", "systemctl", "enable", "--now", f"{action.service}.service")
+    if provider.name == "macos-launchd":
+        return ("launchctl", "bootstrap", f"gui/{os.getuid()}", str(target))
+    return ()
 
 
 def _termux_prefix(state_root: Path) -> Path:
@@ -337,6 +569,45 @@ def _chmod_supervisor_target(provider: PlatformProvider, target: Path) -> None:
     if provider.name not in {"android-termux", "linux-user"}:
         return
     target.chmod(target.stat().st_mode | 0o111)
+
+
+def _run_command(command: tuple[str, ...]) -> CommandRunResult:
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return CommandRunResult(
+            return_code=124,
+            stdout=(exc.stdout or "").strip() if isinstance(exc.stdout, str) else "",
+            stderr=(exc.stderr or "start command timed out").strip()
+            if isinstance(exc.stderr, str)
+            else "start command timed out",
+        )
+    except OSError as exc:
+        return CommandRunResult(return_code=127, stderr=str(exc))
+    return CommandRunResult(
+        return_code=completed.returncode,
+        stdout=completed.stdout.strip(),
+        stderr=completed.stderr.strip(),
+    )
+
+
+def _command_failure_message(run: CommandRunResult) -> str:
+    detail = run.stderr or run.stdout
+    if detail:
+        return f"start command failed: {detail}"
+    return "start command failed"
+
+
+def format_command(command: tuple[str, ...]) -> str:
+    if not command:
+        return "-"
+    return shlex.join(command)
 
 
 def _is_relative_to(path: Path, parent: Path) -> bool:

@@ -136,8 +136,11 @@ the same approved artifact plan, refuses missing, stale, or unapproved inputs, a
 only approved generated daemon config into AMPG-owned state.
 
 `ampg deploy apply --stage supervisor` installs approved AMPG-named supervisor files
-after the state files they reference exist. It does not start or reload services; daemon
-start, address capture, and health verification remain separate stages.
+after the state files they reference exist. It does not start or reload services.
+
+`ampg deploy apply --stage start` runs structured platform start commands for AMPG-named
+services after state and supervisor files exist. Address capture and health verification
+remain separate stages.
 
 The dry-run command is intentionally stricter than `doctor`: missing generated output is
 blocked during activation, because AMPG must not point a transport at an unbuilt output

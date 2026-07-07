@@ -5,7 +5,7 @@ from pathlib import Path
 import shlex
 
 from .activation import activation_steps, apply_preflight
-from .apply import supervisor_target
+from .apply import start_command, supervisor_target
 from .addresses import effective_address_records
 from .approvals import (
     ACTIVATION_ARTIFACT_KIND,
@@ -366,6 +366,18 @@ def _deploy_apply_step(
             f"install {len(missing_supervisors)} approved supervisor file(s)",
         )
     if state_copies or supervisor_actions:
+        runnable = [
+            action
+            for action in supervisor_actions
+            if start_command(provider, action, supervisor_target(provider, action))
+        ]
+        if runnable:
+            return DeployStep(
+                "deploy-apply",
+                "todo",
+                commands.command("deploy apply --stage start --dry-run", platform=True),
+                f"start {len(runnable)} AMPG-owned service(s)",
+            )
         return DeployStep(
             "deploy-apply",
             "ready",

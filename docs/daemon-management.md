@@ -60,6 +60,8 @@ python3 -m ampg --config gateway.toml deploy apply --stage state --dry-run --pro
 python3 -m ampg --config gateway.toml deploy apply --stage state --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml deploy apply --stage supervisor --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml deploy apply --stage supervisor --profile mobile-i2p --yes
+python3 -m ampg --config gateway.toml deploy apply --stage start --dry-run --profile mobile-i2p
+python3 -m ampg --config gateway.toml deploy apply --stage start --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
 
@@ -130,6 +132,12 @@ configs, start services, or delete identity material.
 artifacts, requires the state stage to have copied managed config first, and writes
 AMPG-named service files for the selected platform. It does not install packages, start
 services, reload service managers, or delete service files.
+
+`deploy apply --stage start` is the third live apply stage. Dry-run mode prints
+`AMPG_DEPLOY_START` rows with exact service-manager commands. Live mode requires `--yes`,
+requires both state and supervisor files to exist, and runs only structured platform
+commands for AMPG-named services. It does not install packages, rewrite config, remove
+files, capture addresses, or run health checks.
 
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet
 `adopt` failure will block a full activation run, but it will not block

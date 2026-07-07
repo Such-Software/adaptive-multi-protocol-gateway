@@ -23,9 +23,12 @@ from .addresses import (
 )
 from .apply import (
     StateApplyResult,
+    StartApplyResult,
     SupervisorApplyResult,
     apply_state,
+    apply_start,
     apply_supervisor,
+    format_command,
 )
 from .approvals import (
     ACTIVATION_ARTIFACT_KIND,
@@ -157,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_target_selection(deploy_apply_parser)
     deploy_apply_parser.add_argument(
         "--stage",
-        choices=("state", "supervisor"),
+        choices=("state", "supervisor", "start"),
         required=True,
         help="Deployment stage to apply.",
     )
@@ -615,6 +618,27 @@ def _cmd_deploy(config, args) -> int:
                 f"results={len(results)} "
                 f"planned={len(planned)} "
                 f"written={len(written)} "
+                f"blocked={len(blocked)}"
+            )
+            return 1 if blocked else 0
+        if args.stage == "start":
+            results = apply_start(
+                config,
+                dry_run=args.dry_run,
+                platform_provider=platform_provider,
+            )
+            for result in results:
+                _print_start_apply_result(result)
+            blocked = [result for result in results if result.status == "blocked"]
+            started = [result for result in results if result.status == "started"]
+            planned = [result for result in results if result.status == "planned"]
+            print(
+                "AMPG_DEPLOY_APPLY_SUMMARY "
+                f"stage=start "
+                f"mode={'dry-run' if args.dry_run else 'live'} "
+                f"results={len(results)} "
+                f"planned={len(planned)} "
+                f"started={len(started)} "
                 f"blocked={len(blocked)}"
             )
             return 1 if blocked else 0
@@ -1119,6 +1143,24 @@ def _print_supervisor_apply_result(result: SupervisorApplyResult) -> None:
         f"target=\"{_quote(str(result.target))}\" "
         f"status={result.status} "
         f"command=\"{_quote(result.command)}\" "
+        f"message=\"{_quote(result.message)}\""
+    )
+
+
+def _print_start_apply_result(result: StartApplyResult) -> None:
+    return_code = "-" if result.return_code is None else str(result.return_code)
+    print(
+        "AMPG_DEPLOY_START "
+        f"site={result.site_id} "
+        f"protocol={result.protocol} "
+        f"platform={result.platform} "
+        f"kind={result.kind} "
+        f"service={result.service} "
+        f"mode={result.mode} "
+        f"target=\"{_quote(str(result.target))}\" "
+        f"status={result.status} "
+        f"return_code={return_code} "
+        f"command=\"{_quote(format_command(result.command))}\" "
         f"message=\"{_quote(result.message)}\""
     )
 

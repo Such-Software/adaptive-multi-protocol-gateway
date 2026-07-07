@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from ampg.apply import apply_state, apply_supervisor
+from ampg.apply import CommandRunResult, apply_start, apply_state, apply_supervisor
 from ampg.cli import main
 from ampg.config import load_config
 from ampg.platforms import PlatformProvider
@@ -99,12 +99,48 @@ def _linux_user_provider(root: Path) -> PlatformProvider:
     )
 
 
+def _termux_provider(root: Path) -> PlatformProvider:
+    return PlatformProvider(
+        name="android-termux",
+        process_supervisor="termux-services",
+        can_manage_daemons=True,
+        can_write_system_config=False,
+        state_root=root / "termux/var/lib/ampg",
+    )
+
+
 def _run_state_apply(config_path: Path, root: Path) -> None:
     config = load_config(config_path)
     results = apply_state(
         config,
         dry_run=False,
         platform_provider=_linux_user_provider(root),
+        daemon_probe=_missing_probe,
+    )
+    blocked = [result for result in results if result.status == "blocked"]
+    if blocked:
+        raise AssertionError(blocked[0].message)
+
+
+def _run_termux_state_apply(config_path: Path, root: Path) -> None:
+    config = load_config(config_path)
+    results = apply_state(
+        config,
+        dry_run=False,
+        platform_provider=_termux_provider(root),
+        daemon_probe=_missing_probe,
+    )
+    blocked = [result for result in results if result.status == "blocked"]
+    if blocked:
+        raise AssertionError(blocked[0].message)
+
+
+def _run_termux_supervisor_apply(config_path: Path, root: Path) -> None:
+    config = load_config(config_path)
+    results = apply_supervisor(
+        config,
+        dry_run=False,
+        platform_provider=_termux_provider(root),
         daemon_probe=_missing_probe,
     )
     blocked = [result for result in results if result.status == "blocked"]
@@ -337,6 +373,111 @@ class DeployApplyTest(unittest.TestCase):
         self.assertTrue(daemon_run_exists)
         self.assertTrue(loopback_run_exists)
         self.assertTrue(daemon_run_executable)
+
+    def test_deploy_apply_start_cli_reports_missing_supervisor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_and_approve_artifacts(config_path)
+            status, _, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "state",
+                    "--profile",
+                    "mobile-i2p",
+                    "--yes",
+                ]
+            )
+            if status != 0:
+                raise AssertionError(error)
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "start",
+                    "--dry-run",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+
+        self.assertEqual(1, status)
+        self.assertEqual("", error)
+        self.assertIn("AMPG_DEPLOY_START", output)
+        self.assertIn("deploy apply --stage supervisor first", output)
+
+    def test_deploy_apply_start_blocks_until_supervisor_is_installed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_and_approve_artifacts(config_path)
+            _run_termux_state_apply(config_path, root)
+            config = load_config(config_path)
+
+            results = apply_start(
+                config,
+                dry_run=True,
+                platform_provider=_termux_provider(root),
+                daemon_probe=_missing_probe,
+            )
+
+        self.assertTrue(any(result.status == "blocked" for result in results))
+        self.assertTrue(
+            any("deploy apply --stage supervisor first" in result.message for result in results)
+        )
+
+    def test_deploy_apply_start_dry_run_after_supervisor_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_and_approve_artifacts(config_path)
+            _run_termux_state_apply(config_path, root)
+            _run_termux_supervisor_apply(config_path, root)
+            config = load_config(config_path)
+
+            results = apply_start(
+                config,
+                dry_run=True,
+                platform_provider=_termux_provider(root),
+                daemon_probe=_missing_probe,
+            )
+
+        self.assertTrue(all(result.status == "planned" for result in results))
+        self.assertIn(("sv-enable", "ampg-example-i2p-i2pd"), [result.command for result in results])
+
+    def test_deploy_apply_start_live_invokes_runner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_and_approve_artifacts(config_path)
+            _run_termux_state_apply(config_path, root)
+            _run_termux_supervisor_apply(config_path, root)
+            config = load_config(config_path)
+            commands: list[tuple[str, ...]] = []
+
+            def runner(command: tuple[str, ...]) -> CommandRunResult:
+                commands.append(command)
+                return CommandRunResult(return_code=0)
+
+            results = apply_start(
+                config,
+                dry_run=False,
+                platform_provider=_termux_provider(root),
+                daemon_probe=_missing_probe,
+                command_runner=runner,
+            )
+
+        self.assertTrue(all(result.status == "started" for result in results))
+        self.assertIn(("sv-enable", "ampg-example-i2p-i2pd"), commands)
+        self.assertIn(("sv-enable", "ampg-example-i2p-nginx-loopback"), commands)
 
 
 if __name__ == "__main__":

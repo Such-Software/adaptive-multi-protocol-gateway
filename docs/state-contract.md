@@ -55,5 +55,9 @@ capture, and published health checks for later stages.
 
 `deploy apply --stage supervisor` performs the approved supervisor-file installation
 portion only. It requires copied managed state config first, writes AMPG-named service
-files for the selected platform, and leaves service-manager reload/start commands for a
-later explicit stage.
+files for the selected platform, and leaves service-manager start commands for the next
+explicit stage.
+
+`deploy apply --stage start` runs the service-manager start commands for AMPG-named
+services only after required state and supervisor files exist. It does not write or
+delete state files.

@@ -61,6 +61,7 @@ python3 -m ampg --config gateway.toml approvals approve --profile vps-full --all
 python3 -m ampg --config gateway.toml apply --dry-run --profile vps-full
 python3 -m ampg --config gateway.toml deploy apply --stage state --dry-run --profile vps-full
 python3 -m ampg --config gateway.toml deploy apply --stage supervisor --dry-run --profile vps-full
+python3 -m ampg --config gateway.toml deploy apply --stage start --dry-run --profile vps-full
 ```
 
 `init site` writes a readable `gateway.toml` with selected transports enabled and common
@@ -69,8 +70,8 @@ clear next steps. `dns plan` covers static DNS, Dynamic DNS, and behind-router
 reachability hints. `apply --dry-run` prints the activation sequence and a preflight
 verdict without changing services. `deploy apply --stage state` copies approved
 managed-daemon config into AMPG-owned state. `deploy apply --stage supervisor` installs
-approved supervisor files after state exists. Service start remains a separate future
-stage.
+approved supervisor files after state exists. `deploy apply --stage start` starts
+AMPG-owned services after state and supervisor files are present.
 
 ## Interaction tiers
 
@@ -138,6 +139,8 @@ python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage stat
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage state --profile mobile-i2p --yes
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage supervisor --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage supervisor --profile mobile-i2p --yes
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage start --dry-run --profile mobile-i2p
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage start --profile mobile-i2p --yes
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml build --profile tor-i2p
 python3 -m ampg --config examples/wownero.gateway.toml build --protocol tor --protocol i2p
@@ -195,6 +198,12 @@ installed after managed state config exists. The live form requires `--yes`; it 
 only AMPG-named service files for the selected platform. It does not install packages,
 invoke `systemctl`, `launchctl`, or `sv-enable`, start daemons, or remove service files.
 
+`deploy apply --stage start --dry-run` shows the service-manager commands for
+AMPG-owned services whose state and supervisor files are already installed. The live form
+requires `--yes`; it runs only structured platform commands for AMPG-named services. It
+does not install packages, rewrite config, delete files, capture addresses, or run health
+checks.
+
 `dns plan --free-domain-hints` prints optional community subdomain services that may help
 new users get a clearnet name without buying a domain. These are third-party registries;
 operators still need to review current terms, availability, content rules, and DNS
@@ -222,4 +231,5 @@ Explicit `--protocol` and `--platform` flags override the profile when present.
 - [ ] Run `ampg apply --dry-run`; review the activation sequence and preflight gate.
 - [ ] Run `ampg deploy apply --stage state --dry-run`; confirm approved state copies.
 - [ ] Run `ampg deploy apply --stage supervisor --dry-run`; confirm approved service files.
+- [ ] Run `ampg deploy apply --stage start --dry-run`; confirm service-manager commands.
 - [ ] Run live apply after the preflight gate is ready.
