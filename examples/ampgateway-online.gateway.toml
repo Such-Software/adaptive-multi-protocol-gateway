@@ -5,8 +5,8 @@ run_dir = "./.ampg/ampgateway-online/run"
 user = "ampg"
 
 [profiles.visual-vps]
-description = "Full VPS deployment for the AMPGateway visual docs site."
-protocols = ["clearnet", "tor", "i2p", "gemini"]
+description = "Full VPS deployment for the AMPGateway visual docs and live example sites."
+protocols = ["clearnet", "tor", "i2p", "gemini", "reticulum"]
 platform = "linux-systemd"
 write_artifacts = true
 
@@ -44,7 +44,7 @@ renderer = "privacy-html"
 daemon = "tor"
 daemon_policy = "auto"
 local_port = 18180
-hidden_service_dir = "/var/lib/ampg/tor/ampgateway-online"
+hidden_service_dir = "/var/lib/tor/ampg/ampgateway-online"
 onion_location = "auto"
 max_asset_bytes = 1048576
 script_policy = "strip"
@@ -69,8 +69,70 @@ port = 1965
 max_asset_bytes = 1048576
 
 [site.protocols.reticulum]
-enabled = false
+enabled = true
 renderer = "micron"
 daemon = "rnsd"
 daemon_policy = "auto"
 aspect = "web"
+max_asset_bytes = 524288
+
+[[site]]
+id = "ampgateway-site"
+domain = "ampgateway.site"
+
+[site.source]
+kind = "static-html"
+path = "../sites/ampgateway-online"
+canonical_url = "https://ampgateway.site"
+
+[site.outputs]
+root = "../dist/ampgateway-site"
+plan_root = "../dist/ampg-plan"
+
+[site.interactions]
+default_tier = "static"
+deny_routes = ["/admin/*", "/internal/*", "/webhooks/*"]
+
+[site.protocols.clearnet]
+enabled = true
+renderer = "clearnet"
+daemon = "nginx"
+daemon_policy = "external"
+
+[site.protocols.tor]
+enabled = true
+renderer = "privacy-html"
+daemon = "tor"
+daemon_policy = "auto"
+local_port = 18280
+hidden_service_dir = "/var/lib/tor/ampg/ampgateway-site"
+onion_location = "auto"
+max_asset_bytes = 1048576
+script_policy = "strip"
+
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+local_port = 18281
+keys_file = "ampgateway-site-web.dat"
+tunnel_name = "ampgateway-site-web"
+max_asset_bytes = 1048576
+script_policy = "strip"
+
+[site.protocols.gemini]
+enabled = true
+renderer = "gemtext"
+daemon = "agate"
+daemon_policy = "auto"
+port = 1966
+max_asset_bytes = 1048576
+
+[site.protocols.reticulum]
+enabled = true
+renderer = "micron"
+daemon = "rnsd"
+daemon_policy = "auto"
+aspect = "web"
+max_asset_bytes = 524288

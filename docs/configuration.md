@@ -198,9 +198,10 @@ outside AMPG's managed state layout.
 
 `micron` defaults:
 
-- one `.mu` page per high-value page.
-- headings converted to terminal-safe emphasis.
-- images omitted unless the site config opts into small downloadable assets.
+- one `.mu` page per HTML page.
+- headings, lists, links, and image references converted to terminal-safe text.
+- local `.html` links rewritten to `.mu`.
+- JavaScript, CSS, source maps, and oversized assets skipped.
 
 ## Daemon policy values
 

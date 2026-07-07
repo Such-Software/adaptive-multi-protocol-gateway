@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 
 from .config import GatewayConfig, ProtocolConfig, SiteConfig
-from .renderers import PrivacyRenderStats, render_gemtext, render_privacy_html
+from .renderers import PrivacyRenderStats, render_gemtext, render_micron, render_privacy_html
 
 
 IGNORED_DIRS = {".git", ".hg", ".svn", ".vscode", "__pycache__"}
@@ -43,6 +43,8 @@ def build_protocol(site: SiteConfig, protocol: ProtocolConfig) -> BuildResult:
         return _render_privacy_html_tree(site, protocol, output_root)
     if protocol.renderer == "gemtext":
         return _render_gemtext_tree(site, protocol, output_root)
+    if protocol.renderer == "micron":
+        return _render_micron_tree(site, protocol, output_root)
     raise ValueError(f"{site.id}/{protocol.name}: unsupported renderer {protocol.renderer!r}")
 
 
@@ -135,6 +137,39 @@ def _render_gemtext_tree(
     )
 
 
+def _render_micron_tree(
+    site: SiteConfig, protocol: ProtocolConfig, output_root: Path
+) -> BuildResult:
+    files_written = 0
+    files_skipped = 0
+    max_asset_bytes = int(protocol.options.get("max_asset_bytes", 512 * 1024))
+    for source_path in _iter_source_files(site.source.path):
+        if source_path.suffix.lower() in {".html", ".htm"}:
+            target_path = _target_with_suffix(site.source.path, output_root, source_path, ".mu")
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            html = source_path.read_text(encoding="utf-8", errors="replace")
+            target_path.write_text(render_micron(html, rewrite_link=_rewrite_micron_link), encoding="utf-8")
+        elif source_path.suffix.lower() in {".js", ".css", ".map"}:
+            files_skipped += 1
+            continue
+        elif source_path.stat().st_size > max_asset_bytes:
+            files_skipped += 1
+            continue
+        else:
+            target_path = output_root / source_path.relative_to(site.source.path)
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, target_path)
+        files_written += 1
+    return BuildResult(
+        site_id=site.id,
+        protocol=protocol.name,
+        renderer=protocol.renderer,
+        output_root=output_root,
+        files_written=files_written,
+        files_skipped=files_skipped,
+    )
+
+
 def _iter_source_files(root: Path):
     for path in sorted(root.rglob("*")):
         if not path.is_file():
@@ -181,4 +216,15 @@ def _rewrite_gemtext_link(href: str) -> str:
     path, sep, fragment = href.partition("#")
     if path.endswith(".html") or path.endswith(".htm"):
         path = path.rsplit(".", 1)[0] + ".gmi"
+    return path + (sep + fragment if sep else "")
+
+
+def _rewrite_micron_link(href: str) -> str:
+    if href.startswith("#"):
+        return href
+    if href.startswith(("http://", "https://", "gemini://", "mailto:")):
+        return href
+    path, sep, fragment = href.partition("#")
+    if path.endswith(".html") or path.endswith(".htm"):
+        path = path.rsplit(".", 1)[0] + ".mu"
     return path + (sep + fragment if sep else "")

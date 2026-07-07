@@ -16,7 +16,7 @@ from .transports import (
 
 
 VALID_DAEMON_POLICIES = {"external", "adopt", "manage", "auto"}
-SUPPORTED_RENDERERS = {"clearnet", "privacy-html", "gemtext"}
+SUPPORTED_RENDERERS = {"clearnet", "privacy-html", "gemtext", "micron"}
 
 
 @dataclass(frozen=True)

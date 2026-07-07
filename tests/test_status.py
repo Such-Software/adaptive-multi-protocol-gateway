@@ -154,7 +154,7 @@ daemon_policy = "auto"
                 """
 [site.protocols.tor]
 enabled = true
-renderer = "micron"
+renderer = "unbuilt-renderer"
 daemon = "tor"
 daemon_policy = "adopt"
 """,

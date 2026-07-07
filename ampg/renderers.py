@@ -272,6 +272,10 @@ def render_gemtext(html: str, rewrite_link: Callable[[str], str] | None = None) 
     return GemtextRenderer(rewrite_link=rewrite_link).render(html)
 
 
+def render_micron(html: str, rewrite_link: Callable[[str], str] | None = None) -> str:
+    return GemtextRenderer(rewrite_link=rewrite_link).render(html)
+
+
 def _format_attrs(attrs: list[tuple[str, str | None]]) -> str:
     if not attrs:
         return ""
