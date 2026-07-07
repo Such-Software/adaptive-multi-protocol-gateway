@@ -6,6 +6,9 @@ AMPG is a compiler plus an ingress manager. The compiler turns one site into a
 protocol-neutral content graph, then renders protocol-specific outputs. The ingress
 manager connects those outputs to daemons selected by the operator.
 
+For diagrams of the build flow, deploy spine, and common network topologies, see the
+[Visual guide](visual-guide.md).
+
 ## System shape
 
 ```text

@@ -105,6 +105,7 @@ API remains internal even when the public site is available on Tor or I2P.
 - [Domain onboarding](docs/domain-onboarding.md)
 - [Fixture manifests](docs/fixture-manifests.md)
 - [State contract](docs/state-contract.md)
+- [Visual guide](docs/visual-guide.md)
 - [Interaction capabilities](docs/interaction-capabilities.md)
 - [Interactive applications](docs/interactive-apps.md)
 - [Wownero integration](docs/wownero-integration.md)
