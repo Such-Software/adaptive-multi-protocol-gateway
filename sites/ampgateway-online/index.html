@@ -21,7 +21,8 @@
         <span>AMPGateway</span>
       </a>
       <nav class="top-nav" aria-label="Primary">
-        <a href="#transport-flows">Transports</a>
+        <a href="#live-map">Live Map</a>
+        <a href="#protocol-maps">Protocol Maps</a>
         <a href="#topologies">Topologies</a>
         <a href="#domains">Domains</a>
         <a href="#flow">Flow</a>
@@ -45,7 +46,7 @@
             without losing the map.
           </p>
           <div class="hero-actions" aria-label="Primary sections">
-            <a class="button primary" href="#transport-flows">Explore transports</a>
+            <a class="button primary" href="#live-map">Open the map</a>
             <a class="button secondary" href="#domains">See example domains</a>
           </div>
         </div>
@@ -63,63 +64,107 @@
         </div>
       </section>
 
-      <section id="transport-flows" class="section transport-section" aria-labelledby="transport-flows-title">
+      <section id="live-map" class="section live-map-section" aria-labelledby="live-map-title">
         <div class="section-heading">
-          <p class="eyebrow">Traffic flows</p>
-          <h2 id="transport-flows-title">Same source, different paths through the network.</h2>
+          <p class="eyebrow">Topology theatre</p>
+          <h2 id="live-map-title">The animated maps, unobstructed.</h2>
           <p>
-            AMPG keeps the authoring path consistent while each transport uses the shape
-            that fits its network, daemon, and client expectations.
+            The same live topology views from the hero are given a full clean stage here,
+            so the moving routes, nodes, and deployment shapes can be read directly.
           </p>
         </div>
-        <div class="transport-flow-grid">
-          <article class="transport-flow">
+        <div class="map-theatre" aria-label="Interactive topology map">
+          <canvas id="cleanTopologyCanvas" aria-hidden="true"></canvas>
+          <div class="map-theatre-controls">
+            <div class="mode-label">View</div>
+            <div class="segmented" role="group" aria-label="Clean topology selection">
+              <button class="mode-button active" type="button" data-clean-topology="vps">VPS</button>
+              <button class="mode-button" type="button" data-clean-topology="router">Router</button>
+              <button class="mode-button" type="button" data-clean-topology="phone">Phone</button>
+              <button class="mode-button" type="button" data-clean-topology="browser">Browser</button>
+            </div>
+            <p id="cleanTopologyCaption" class="topology-caption" aria-live="polite">
+              A VPS can publish clearnet, Tor, I2P, Gemini, and Reticulum outputs from one AMPG plan.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="protocol-maps" class="section protocol-map-section" aria-labelledby="protocol-maps-title">
+        <div class="section-heading">
+          <p class="eyebrow">Protocol maps</p>
+          <h2 id="protocol-maps-title">How traffic moves on each transport.</h2>
+          <p>
+            These are the big maps: what the client talks to, where AMPG output sits,
+            and which network pieces carry the request.
+          </p>
+        </div>
+        <div class="protocol-map-stack">
+          <article class="protocol-map">
             <h3>Clearnet</h3>
-            <ol>
-              <li>Visitor resolves DNS for the site domain.</li>
-              <li>HTTP or HTTPS reaches the public web server.</li>
-              <li>The server reads AMPG clearnet output.</li>
-            </ol>
+            <div class="path-map" aria-label="Clearnet request path">
+              <span>Visitor browser</span>
+              <span>DNS</span>
+              <span>HTTPS ingress</span>
+              <span>Web server</span>
+              <span>AMPG clearnet output</span>
+            </div>
+            <p>Best when a public domain and inbound web reachability are available.</p>
           </article>
-          <article class="transport-flow">
+          <article class="protocol-map">
             <h3>Tor onion</h3>
-            <ol>
-              <li>Tor client resolves the onion service descriptor.</li>
-              <li>Tor circuits connect to the hidden service.</li>
-              <li>The local service serves AMPG privacy HTML.</li>
-            </ol>
+            <div class="path-map" aria-label="Tor onion request path">
+              <span>Tor Browser</span>
+              <span>Tor circuits</span>
+              <span>Onion service</span>
+              <span>Local HTTP</span>
+              <span>AMPG privacy HTML</span>
+            </div>
+            <p>The public address is the onion name; the origin can stay behind local loopback.</p>
           </article>
-          <article class="transport-flow">
+          <article class="protocol-map">
             <h3>I2P tunnel</h3>
-            <ol>
-              <li>I2P client resolves the b32 destination.</li>
-              <li>Inbound and outbound tunnels carry HTTP.</li>
-              <li>i2pd forwards to the local AMPG output.</li>
-            </ol>
+            <div class="path-map" aria-label="I2P tunnel request path">
+              <span>I2P browser</span>
+              <span>b32 destination</span>
+              <span>I2P tunnels</span>
+              <span>i2pd server tunnel</span>
+              <span>AMPG privacy HTML</span>
+            </div>
+            <p>The b32 address points at the I2P destination, not a normal DNS hostname.</p>
           </article>
-          <article class="transport-flow">
+          <article class="protocol-map">
             <h3>Gemini</h3>
-            <ol>
-              <li>Client opens a TLS connection to the capsule.</li>
-              <li>Gemini server maps the URL to Gemtext.</li>
-              <li>The rendered page keeps links and headings simple.</li>
-            </ol>
+            <div class="path-map" aria-label="Gemini request path">
+              <span>Gemini client</span>
+              <span>TLS capsule</span>
+              <span>Gemini daemon</span>
+              <span>Gemtext tree</span>
+              <span>AMPG text render</span>
+            </div>
+            <p>Small pages, simple links, and text-first structure make the capsule readable.</p>
           </article>
-          <article class="transport-flow">
+          <article class="protocol-map">
             <h3>Reticulum</h3>
-            <ol>
-              <li>Client reaches an RNS destination.</li>
-              <li>NomadNet-style pages request compact Micron content.</li>
-              <li>AMPG output keeps media and layout intentionally small.</li>
-            </ol>
+            <div class="path-map" aria-label="Reticulum request path">
+              <span>RNS client</span>
+              <span>Reticulum mesh</span>
+              <span>Destination hash</span>
+              <span>NomadNet node</span>
+              <span>AMPG Micron output</span>
+            </div>
+            <p>Identity is destination-based, and content should stay compact by default.</p>
           </article>
-          <article class="transport-flow">
+          <article class="protocol-map">
             <h3>Single transport</h3>
-            <ol>
-              <li>Operator enables only the target protocol.</li>
-              <li>AMPG builds only the selected output.</li>
-              <li>Deploy stages skip unrelated daemons and DNS.</li>
-            </ol>
+            <div class="path-map" aria-label="Single transport deployment path">
+              <span>Source site</span>
+              <span>AMPG selection</span>
+              <span>One renderer</span>
+              <span>One daemon</span>
+              <span>One published route</span>
+            </div>
+            <p>Useful for Tor-only, I2P-only, Gemini-only, or Reticulum-focused sites.</p>
           </article>
         </div>
       </section>
