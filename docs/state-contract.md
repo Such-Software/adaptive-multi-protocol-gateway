@@ -50,5 +50,10 @@ state or supervisor inputs still need review.
 
 `deploy apply --stage state` performs the approved copy portion only. It requires
 `--yes` for live writes, refuses unapproved or stale artifacts, writes only under
-`gateway.state_dir`, and leaves daemon start, address capture, and published health
-checks for later stages.
+`gateway.state_dir`, and leaves supervisor file installation, daemon start, address
+capture, and published health checks for later stages.
+
+`deploy apply --stage supervisor` performs the approved supervisor-file installation
+portion only. It requires copied managed state config first, writes AMPG-named service
+files for the selected platform, and leaves service-manager reload/start commands for a
+later explicit stage.

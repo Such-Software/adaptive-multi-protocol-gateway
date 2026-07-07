@@ -137,6 +137,95 @@ class DeployPlanTest(unittest.TestCase):
         self.assertIn("AMPG_DEPLOY_STEP stage=build status=ready", output)
         self.assertIn("AMPG_DEPLOY_STEP stage=artifacts status=todo", output)
 
+    def test_deploy_plan_guides_staged_apply_after_approval(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = root / "gateway.toml"
+            init_status, _, init_error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "init",
+                    "site",
+                    "example",
+                    "--domain",
+                    "example.test",
+                    "--source",
+                    str(_source(root)),
+                    "--protocol",
+                    "i2p",
+                ]
+            )
+            self.assertEqual(0, init_status, init_error)
+            build_status, _, build_error = _run_cli(["--config", str(config_path), "build"])
+            self.assertEqual(0, build_status, build_error)
+            apply_status, _, apply_error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "apply",
+                    "--dry-run",
+                    "--write-artifacts",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+            self.assertEqual(0, apply_status, apply_error)
+            approve_status, _, approve_error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "approvals",
+                    "approve",
+                    "--profile",
+                    "mobile-i2p",
+                    "--all",
+                ]
+            )
+            self.assertEqual(0, approve_status, approve_error)
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "plan",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+            self.assertEqual(0, status, error)
+
+            state_status, _, state_error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "state",
+                    "--profile",
+                    "mobile-i2p",
+                    "--yes",
+                ]
+            )
+            self.assertEqual(0, state_status, state_error)
+            status_after_state, output_after_state, error_after_state = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "plan",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+
+        self.assertIn("AMPG_DEPLOY_STEP stage=deploy-apply status=todo", output)
+        self.assertIn("deploy apply --stage state --dry-run", output)
+        self.assertEqual(0, status_after_state, error_after_state)
+        self.assertIn("deploy apply --stage supervisor --dry-run", output_after_state)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -5,6 +5,7 @@ from pathlib import Path
 import shlex
 
 from .activation import activation_steps, apply_preflight
+from .apply import supervisor_target
 from .addresses import effective_address_records
 from .approvals import (
     ACTIVATION_ARTIFACT_KIND,
@@ -22,7 +23,7 @@ from .install_plan import (
     install_supervisor_actions,
 )
 from .plan import plan_artifacts
-from .platforms import PlatformProvider
+from .platforms import PlatformProvider, detect_platform
 from .status import DaemonProbeFunc, doctor_gateway
 
 
@@ -83,6 +84,12 @@ def deploy_plan(
         _artifact_step(config, command_context, platform_provider=platform_provider),
         _address_step(config, command_context),
         _apply_preflight_step(
+            config,
+            command_context,
+            platform_provider=platform_provider,
+            daemon_probe=daemon_probe,
+        ),
+        _deploy_apply_step(
             config,
             command_context,
             platform_provider=platform_provider,
@@ -305,6 +312,71 @@ def _apply_preflight_step(
         status,
         commands.command("apply --dry-run", platform=True),
         preflight.message,
+    )
+
+
+def _deploy_apply_step(
+    config: GatewayConfig,
+    commands: _CommandContext,
+    *,
+    platform_provider: PlatformProvider | None,
+    daemon_probe: DaemonProbeFunc | None,
+) -> DeployStep:
+    provider = platform_provider or detect_platform()
+    state_copies = install_state_copies(
+        config,
+        platform_provider=provider,
+        daemon_probe=daemon_probe,
+    )
+    supervisor_actions = install_supervisor_actions(
+        config,
+        platform_provider=provider,
+        daemon_probe=daemon_probe,
+    )
+    review = [
+        item
+        for item in (*state_copies, *supervisor_actions)
+        if item.status != "planned"
+    ]
+    if review:
+        return DeployStep(
+            "deploy-apply",
+            "review",
+            commands.command("apply --dry-run", platform=True),
+            f"review {len(review)} staged apply input(s)",
+        )
+    missing_state = [copy for copy in state_copies if not copy.target.exists()]
+    if missing_state:
+        return DeployStep(
+            "deploy-apply",
+            "todo",
+            commands.command("deploy apply --stage state --dry-run", platform=True),
+            f"copy {len(missing_state)} approved state artifact(s)",
+        )
+    missing_supervisors = [
+        action
+        for action in supervisor_actions
+        if not supervisor_target(provider, action).exists()
+    ]
+    if missing_supervisors:
+        return DeployStep(
+            "deploy-apply",
+            "todo",
+            commands.command("deploy apply --stage supervisor --dry-run", platform=True),
+            f"install {len(missing_supervisors)} approved supervisor file(s)",
+        )
+    if state_copies or supervisor_actions:
+        return DeployStep(
+            "deploy-apply",
+            "ready",
+            commands.command("deploy apply --stage supervisor --dry-run", platform=True),
+            "staged deploy files are applied",
+        )
+    return DeployStep(
+        "deploy-apply",
+        "ready",
+        "-",
+        "no managed deploy apply stages are needed",
     )
 
 

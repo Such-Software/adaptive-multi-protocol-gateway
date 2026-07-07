@@ -21,7 +21,12 @@ from .addresses import (
     effective_address_records,
     set_address,
 )
-from .apply import StateApplyResult, apply_state
+from .apply import (
+    StateApplyResult,
+    SupervisorApplyResult,
+    apply_state,
+    apply_supervisor,
+)
 from .approvals import (
     ACTIVATION_ARTIFACT_KIND,
     GENERIC_PLATFORM,
@@ -152,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_target_selection(deploy_apply_parser)
     deploy_apply_parser.add_argument(
         "--stage",
-        choices=("state",),
+        choices=("state", "supervisor"),
         required=True,
         help="Deployment stage to apply.",
     )
@@ -585,6 +590,27 @@ def _cmd_deploy(config, args) -> int:
             print(
                 "AMPG_DEPLOY_APPLY_SUMMARY "
                 f"stage=state "
+                f"mode={'dry-run' if args.dry_run else 'live'} "
+                f"results={len(results)} "
+                f"planned={len(planned)} "
+                f"written={len(written)} "
+                f"blocked={len(blocked)}"
+            )
+            return 1 if blocked else 0
+        if args.stage == "supervisor":
+            results = apply_supervisor(
+                config,
+                dry_run=args.dry_run,
+                platform_provider=platform_provider,
+            )
+            for result in results:
+                _print_supervisor_apply_result(result)
+            blocked = [result for result in results if result.status == "blocked"]
+            written = [result for result in results if result.status == "written"]
+            planned = [result for result in results if result.status == "planned"]
+            print(
+                "AMPG_DEPLOY_APPLY_SUMMARY "
+                f"stage=supervisor "
                 f"mode={'dry-run' if args.dry_run else 'live'} "
                 f"results={len(results)} "
                 f"planned={len(planned)} "
@@ -1076,6 +1102,23 @@ def _print_state_apply_result(result: StateApplyResult) -> None:
         f"source=\"{_quote(str(result.source))}\" "
         f"target=\"{_quote(str(result.target))}\" "
         f"status={result.status} "
+        f"message=\"{_quote(result.message)}\""
+    )
+
+
+def _print_supervisor_apply_result(result: SupervisorApplyResult) -> None:
+    print(
+        "AMPG_DEPLOY_SUPERVISOR "
+        f"site={result.site_id} "
+        f"protocol={result.protocol} "
+        f"platform={result.platform} "
+        f"kind={result.kind} "
+        f"service={result.service} "
+        f"mode={result.mode} "
+        f"source=\"{_quote(str(result.source))}\" "
+        f"target=\"{_quote(str(result.target))}\" "
+        f"status={result.status} "
+        f"command=\"{_quote(result.command)}\" "
         f"message=\"{_quote(result.message)}\""
     )
 

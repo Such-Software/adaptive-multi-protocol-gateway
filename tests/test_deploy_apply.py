@@ -4,7 +4,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ampg.apply import apply_state, apply_supervisor
 from ampg.cli import main
+from ampg.config import load_config
+from ampg.platforms import PlatformProvider
+from ampg.status import DaemonProbe
 
 
 def _source(root: Path) -> Path:
@@ -47,33 +51,65 @@ def _init_i2p_config(root: Path) -> Path:
     return config_path
 
 
-def _write_and_approve_artifacts(config_path: Path) -> None:
-    status, _, error = _run_cli(
-        [
-            "--config",
-            str(config_path),
-            "apply",
-            "--dry-run",
-            "--write-artifacts",
-            "--profile",
-            "mobile-i2p",
-        ]
-    )
+def _write_and_approve_artifacts(config_path: Path, *, platform: str | None = None) -> None:
+    apply_args = [
+        "--config",
+        str(config_path),
+        "apply",
+        "--dry-run",
+        "--write-artifacts",
+        "--profile",
+        "mobile-i2p",
+    ]
+    approve_args = [
+        "--config",
+        str(config_path),
+        "approvals",
+        "approve",
+        "--profile",
+        "mobile-i2p",
+        "--all",
+    ]
+    if platform is not None:
+        apply_args.extend(("--platform", platform))
+        approve_args.extend(("--platform", platform))
+    status, _, error = _run_cli(apply_args)
     if status != 0:
         raise AssertionError(error)
-    status, _, error = _run_cli(
-        [
-            "--config",
-            str(config_path),
-            "approvals",
-            "approve",
-            "--profile",
-            "mobile-i2p",
-            "--all",
-        ]
-    )
+    status, _, error = _run_cli(approve_args)
     if status != 0:
         raise AssertionError(error)
+
+
+def _missing_probe(adapter):
+    return DaemonProbe(
+        installed=False,
+        running=False,
+        executable_path=None,
+    )
+
+
+def _linux_user_provider(root: Path) -> PlatformProvider:
+    return PlatformProvider(
+        name="linux-user",
+        process_supervisor="user-process",
+        can_manage_daemons=True,
+        can_write_system_config=False,
+        state_root=root / "supervisor-root",
+    )
+
+
+def _run_state_apply(config_path: Path, root: Path) -> None:
+    config = load_config(config_path)
+    results = apply_state(
+        config,
+        dry_run=False,
+        platform_provider=_linux_user_provider(root),
+        daemon_probe=_missing_probe,
+    )
+    blocked = [result for result in results if result.status == "blocked"]
+    if blocked:
+        raise AssertionError(blocked[0].message)
 
 
 class DeployApplyTest(unittest.TestCase):
@@ -211,6 +247,96 @@ class DeployApplyTest(unittest.TestCase):
         self.assertIn("status=written", output)
         self.assertTrue(daemon_config_exists)
         self.assertTrue(loopback_config_exists)
+
+    def test_deploy_apply_supervisor_blocks_until_state_is_copied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_and_approve_artifacts(config_path, platform="linux-user")
+            config = load_config(config_path)
+
+            results = apply_supervisor(
+                config,
+                dry_run=True,
+                platform_provider=_linux_user_provider(root),
+                daemon_probe=_missing_probe,
+            )
+
+        self.assertTrue(any(result.status == "blocked" for result in results))
+        self.assertTrue(
+            any("deploy apply --stage state first" in result.message for result in results)
+        )
+
+    def test_deploy_apply_supervisor_dry_run_after_state_apply(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_and_approve_artifacts(config_path)
+
+            status, _, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "state",
+                    "--profile",
+                    "mobile-i2p",
+                    "--yes",
+                ]
+            )
+            if status != 0:
+                raise AssertionError(error)
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "supervisor",
+                    "--dry-run",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+
+        self.assertEqual(0, status, error)
+        self.assertIn("AMPG_DEPLOY_SUPERVISOR", output)
+        self.assertIn("status=planned", output)
+        self.assertIn("AMPG_DEPLOY_APPLY_SUMMARY stage=supervisor mode=dry-run", output)
+
+    def test_deploy_apply_supervisor_live_writes_user_service_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_and_approve_artifacts(config_path, platform="linux-user")
+            _run_state_apply(config_path, root)
+            config = load_config(config_path)
+
+            results = apply_supervisor(
+                config,
+                dry_run=False,
+                platform_provider=_linux_user_provider(root),
+                daemon_probe=_missing_probe,
+            )
+            daemon_run = (
+                root / "supervisor-root/services/ampg-example-i2p-i2pd/i2pd.run"
+            )
+            loopback_run = (
+                root
+                / "supervisor-root/services/ampg-example-i2p-nginx-loopback/nginx-loopback.run"
+            )
+            daemon_run_exists = daemon_run.exists()
+            loopback_run_exists = loopback_run.exists()
+            daemon_run_executable = bool(daemon_run.stat().st_mode & 0o111)
+
+        self.assertTrue(all(result.status == "written" for result in results))
+        self.assertTrue(daemon_run_exists)
+        self.assertTrue(loopback_run_exists)
+        self.assertTrue(daemon_run_executable)
 
 
 if __name__ == "__main__":
