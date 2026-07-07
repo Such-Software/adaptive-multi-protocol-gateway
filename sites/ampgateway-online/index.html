@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AMPGateway</title>
+    <meta
+      name="description"
+      content="Visual guide for Adaptive Multi-Protocol Gateway deployments, transports, and example network topologies."
+    >
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site-header" aria-label="AMPGateway header">
+      <a class="brand" href="#top" aria-label="AMPGateway home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>AMPGateway</span>
+      </a>
+      <nav class="top-nav" aria-label="Primary">
+        <a href="#topologies">Topologies</a>
+        <a href="#domains">Domains</a>
+        <a href="#flow">Flow</a>
+        <a href="#docs">Spec</a>
+      </nav>
+    </header>
+
+    <main id="content">
+      <section id="top" class="hero" aria-labelledby="hero-title">
+        <canvas id="topologyCanvas" aria-hidden="true"></canvas>
+        <div class="hero-inner">
+          <p class="eyebrow">Adaptive Multi-Protocol Gateway</p>
+          <h1 id="hero-title">AMPGateway</h1>
+          <p class="hero-copy">
+            One site source, many transport outputs, one staged deploy spine from package
+            install to published health checks.
+          </p>
+          <p class="signal-line">
+            publish over
+            <span id="signalWord" class="signal-word">clearnet</span>
+            without losing the map.
+          </p>
+          <div class="hero-actions" aria-label="Primary sections">
+            <a class="button primary" href="#topologies">Explore topologies</a>
+            <a class="button secondary" href="#domains">See example domains</a>
+          </div>
+        </div>
+        <div class="topology-panel" aria-label="Topology modes">
+          <div class="mode-label">Topology</div>
+          <div class="segmented" role="group" aria-label="Topology selection">
+            <button class="mode-button active" type="button" data-topology="vps">VPS</button>
+            <button class="mode-button" type="button" data-topology="router">Router</button>
+            <button class="mode-button" type="button" data-topology="phone">Phone</button>
+            <button class="mode-button" type="button" data-topology="browser">Browser</button>
+          </div>
+          <p id="topologyCaption" class="topology-caption" aria-live="polite">
+            A VPS can publish clearnet, Tor, I2P, and Gemini outputs from one AMPG plan.
+          </p>
+        </div>
+      </section>
+
+      <section id="topologies" class="section split" aria-labelledby="topologies-title">
+        <div>
+          <p class="eyebrow">Network topologies</p>
+          <h2 id="topologies-title">Deploy from a clean VPS, a laptop behind a router, or an old phone.</h2>
+        </div>
+        <div class="topology-grid">
+          <article>
+            <h3>Full VPS</h3>
+            <p>
+              <code>ampgateway.site</code> is the target for a full public example with
+              clearnet, Tor, I2P, and Gemini routes managed from one deploy plan.
+            </p>
+          </article>
+          <article>
+            <h3>Behind router</h3>
+            <p>
+              <code>ampgateway.website</code> is the target for a home or lab deployment
+              that shows Dynamic DNS, router constraints, and transports that avoid
+              inbound ports.
+            </p>
+          </article>
+          <article>
+            <h3>Mobile server</h3>
+            <p>
+              Android and Termux can run user-space daemons for small static sites,
+              demos, and transport experiments on hardware that would otherwise sit idle.
+            </p>
+          </article>
+          <article>
+            <h3>Single transport</h3>
+            <p>
+              AMPG can deploy only Tor, only I2P, only Gemini, or a selected subset when
+              the operator wants a narrow surface.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="domains" class="section domain-section" aria-labelledby="domains-title">
+        <div class="section-heading">
+          <p class="eyebrow">Example domains</p>
+          <h2 id="domains-title">Three public names, three jobs.</h2>
+        </div>
+        <div class="domain-grid">
+          <article class="domain-card featured">
+            <p class="domain-label">Visual hub</p>
+            <h3>ampgateway.online</h3>
+            <p>
+              Public explanation site with interactive topology views, deployment flow,
+              and links into the clean docs.
+            </p>
+            <a href="https://ampgateway.online">ampgateway.online</a>
+          </article>
+          <article class="domain-card">
+            <p class="domain-label">VPS example</p>
+            <h3>ampgateway.site</h3>
+            <p>
+              Planned all-transport reference deployment on a normal server, useful for
+              showing the complete package, state, supervisor, start, address, and health path.
+            </p>
+            <a href="https://ampgateway.site">ampgateway.site</a>
+          </article>
+          <article class="domain-card">
+            <p class="domain-label">Behind-router example</p>
+            <h3>ampgateway.website</h3>
+            <p>
+              Planned home-network reference deployment for Dynamic DNS, port-forwarding
+              choices, and transports that do not need clearnet inbound reachability.
+            </p>
+            <a href="https://ampgateway.website">ampgateway.website</a>
+          </article>
+        </div>
+      </section>
+
+      <section id="flow" class="section flow-section" aria-labelledby="flow-title">
+        <div class="section-heading">
+          <p class="eyebrow">Deploy spine</p>
+          <h2 id="flow-title">Narrow stages, visible state, reversible thinking.</h2>
+        </div>
+        <ol class="flow-list">
+          <li><span>Build</span><p>Generate clearnet, privacy HTML, Gemtext, and other selected outputs.</p></li>
+          <li><span>Packages</span><p>Install selected daemon packages with allowlisted platform commands.</p></li>
+          <li><span>State</span><p>Copy approved generated config into AMPG-owned state.</p></li>
+          <li><span>Supervisor</span><p>Install AMPG-named service files after config exists.</p></li>
+          <li><span>Start</span><p>Start AMPG-owned services with structured platform commands.</p></li>
+          <li><span>Addresses</span><p>Capture daemon-written onion, I2P, or other public identities.</p></li>
+          <li><span>Health</span><p>Verify published fixture URLs through the selected transport profiles.</p></li>
+        </ol>
+      </section>
+
+      <section id="docs" class="section docs-section" aria-labelledby="docs-title">
+        <div>
+          <p class="eyebrow">Public docs</p>
+          <h2 id="docs-title">The visual site stays tied to the public spec.</h2>
+          <p>
+            The source for this page lives in the AMPG repository and can be rendered by
+            AMPG like any other static site. The Markdown docs stay concise; this site
+            turns the same concepts into topology-first views.
+          </p>
+        </div>
+        <div class="doc-links">
+          <a href="#topologies">Topology guide</a>
+          <a href="#flow">Deploy stages</a>
+          <a href="#domains">Domain examples</a>
+          <a href="#top">Transport map</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>AMPGateway is the public visual companion for Adaptive Multi-Protocol Gateway.</p>
+      <p>Static-first. Transport-aware. Operator-reviewable.</p>
+    </footer>
+  </body>
+</html>

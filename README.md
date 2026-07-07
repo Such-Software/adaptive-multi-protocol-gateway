@@ -110,6 +110,8 @@ API remains internal even when the public site is available on Tor or I2P.
 - [Interactive applications](docs/interactive-apps.md)
 - [Wownero integration](docs/wownero-integration.md)
 - [Autodocs and drift gates](docs/autodocs.md)
+- [AMPGateway visual site source](sites/ampgateway-online/index.html)
+- [AMPGateway visual site config](examples/ampgateway-online.gateway.toml)
 
 ## Checks
 

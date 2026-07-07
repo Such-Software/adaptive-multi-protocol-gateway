@@ -1,0 +1,76 @@
+[gateway]
+state_dir = "./.ampg/ampgateway-online/state"
+cache_dir = "./.ampg/ampgateway-online/cache"
+run_dir = "./.ampg/ampgateway-online/run"
+user = "ampg"
+
+[profiles.visual-vps]
+description = "Full VPS deployment for the AMPGateway visual docs site."
+protocols = ["clearnet", "tor", "i2p", "gemini"]
+platform = "linux-systemd"
+write_artifacts = true
+
+[profiles.visual-lan]
+description = "Clearnet-only LAN deployment for the AMPGateway visual docs site."
+protocols = ["clearnet"]
+platform = "linux-user"
+
+[[site]]
+id = "ampgateway-online"
+domain = "ampgateway.online"
+
+[site.source]
+kind = "static-html"
+path = "../sites/ampgateway-online"
+canonical_url = "https://ampgateway.online"
+
+[site.outputs]
+root = "../dist/ampgateway-online"
+plan_root = "../dist/ampg-plan"
+
+[site.interactions]
+default_tier = "static"
+deny_routes = ["/admin/*", "/internal/*", "/webhooks/*"]
+
+[site.protocols.clearnet]
+enabled = true
+renderer = "clearnet"
+daemon = "nginx"
+daemon_policy = "external"
+
+[site.protocols.tor]
+enabled = true
+renderer = "privacy-html"
+daemon = "tor"
+daemon_policy = "auto"
+local_port = 18180
+hidden_service_dir = "/var/lib/ampg/tor/ampgateway-online"
+onion_location = "auto"
+max_asset_bytes = 1048576
+script_policy = "strip"
+
+[site.protocols.i2p]
+enabled = true
+renderer = "privacy-html"
+daemon = "i2pd"
+daemon_policy = "auto"
+local_port = 18181
+keys_file = "ampgateway-online-web.dat"
+tunnel_name = "ampgateway-online-web"
+max_asset_bytes = 1048576
+script_policy = "strip"
+
+[site.protocols.gemini]
+enabled = true
+renderer = "gemtext"
+daemon = "agate"
+daemon_policy = "auto"
+port = 1965
+max_asset_bytes = 1048576
+
+[site.protocols.reticulum]
+enabled = false
+renderer = "micron"
+daemon = "rnsd"
+daemon_policy = "auto"
+aspect = "web"
