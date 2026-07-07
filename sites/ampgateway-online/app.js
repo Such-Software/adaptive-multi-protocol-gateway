@@ -24,7 +24,8 @@
         ["tor", "Tor\nonion", 0.76, 0.42, "coral"],
         ["i2p", "I2P\ntunnel", 0.73, 0.61, "amber"],
         ["gemini", "Gemini\ncapsule", 0.6, 0.78, "green"],
-        ["reticulum", "RNS\nnode", 0.88, 0.73, "coral"]
+        ["reticulum", "RNS\nnode", 0.86, 0.76, "coral"],
+        ["visitor", "visitor", 0.93, 0.48, "green"]
       ],
       links: [
         ["source", "build"],
@@ -36,7 +37,12 @@
         ["vps", "tor"],
         ["vps", "i2p", 0.04],
         ["vps", "gemini", 0.1],
-        ["vps", "reticulum", 0.12]
+        ["vps", "reticulum", 0.12],
+        ["web", "visitor", 0.08],
+        ["tor", "visitor"],
+        ["i2p", "visitor", -0.05],
+        ["gemini", "visitor", -0.12],
+        ["reticulum", "visitor", -0.08]
       ]
     },
     router: {
@@ -77,7 +83,8 @@
         ["daemons", "user-space\ndaemons", 0.65, 0.46, "green"],
         ["network", "Wi-Fi /\ncell", 0.79, 0.28, "amber"],
         ["routes", "published\nroutes", 0.86, 0.58, "teal"],
-        ["power", "power /\nstorage", 0.5, 0.78, "coral"]
+        ["power", "power /\nstorage", 0.5, 0.78, "coral"],
+        ["visitor", "visitor", 0.94, 0.4, "green"]
       ],
       links: [
         ["phone", "termux", -0.05],
@@ -88,7 +95,9 @@
         ["ampg", "daemons"],
         ["daemons", "network", -0.05],
         ["daemons", "routes", 0.05],
-        ["power", "routes", -0.1]
+        ["power", "routes", -0.1],
+        ["network", "visitor", -0.04],
+        ["routes", "visitor", 0.08]
       ]
     },
     browser: {
@@ -101,7 +110,8 @@
         ["existing", "existing\ndaemon", 0.67, 0.32, "green"],
         ["managed", "managed\ndaemon", 0.67, 0.64, "amber"],
         ["context", "browser\ncontext", 0.82, 0.47, "teal"],
-        ["result", "health\nresult", 0.93, 0.47, "green"]
+        ["result", "health\nresult", 0.93, 0.47, "green"],
+        ["visitor", "visitor", 0.93, 0.7, "green"]
       ],
       links: [
         ["manifest", "ampb"],
@@ -113,6 +123,8 @@
         ["existing", "context"],
         ["managed", "context"],
         ["context", "result"],
+        ["context", "visitor", 0.08],
+        ["visitor", "result"],
         ["result", "ampb", 0.16]
       ]
     }
@@ -120,6 +132,7 @@
 
   const protocolTopologies = {
     clearnet: {
+      motif: "clearnet",
       caption: "Clearnet splits into a DNS discovery path and an HTTPS request path before the web server reads AMPG output.",
       nodes: [
         ["client", "visitor\nbrowser", 0.11, 0.48, "green"],
@@ -130,7 +143,7 @@
         ["ingress", "HTTPS\ningress", 0.57, 0.62, "teal"],
         ["proxy", "nginx /\nproxy", 0.72, 0.42, "coral"],
         ["output", "AMPG\nclearnet\nfiles", 0.86, 0.56, "teal"],
-        ["health", "public\nhealth\ncheck", 0.82, 0.23, "green"]
+        ["health", "transport\nhealth\ncheck", 0.82, 0.23, "green"]
       ],
       links: [
         ["client", "resolver", -0.1],
@@ -146,6 +159,7 @@
       ]
     },
     tor: {
+      motif: "onion",
       caption: "Tor onion traffic builds client and service circuits through relays; the rendezvous point joins them without revealing the origin.",
       nodes: [
         ["browser", "Tor\nBrowser", 0.09, 0.5, "green"],
@@ -157,7 +171,8 @@
         ["intro", "intro\npoints", 0.68, 0.24, "green"],
         ["service", "onion\nservice", 0.78, 0.52, "coral"],
         ["local", "local\nHTTP", 0.88, 0.36, "teal"],
-        ["output", "AMPG\nprivacy\nHTML", 0.88, 0.69, "teal"]
+        ["output", "AMPG\nprivacy\nHTML", 0.88, 0.69, "teal"],
+        ["health", "onion\nhealth\ncheck", 0.62, 0.78, "green"]
       ],
       links: [
         ["browser", "hsdir", -0.1],
@@ -169,10 +184,14 @@
         ["intro", "service", 0.08],
         ["service", "rendezvous", -0.1],
         ["service", "local"],
-        ["service", "output"]
+        ["service", "output"],
+        ["health", "guard", 0.08],
+        ["health", "rendezvous", -0.08],
+        ["health", "output", 0.04]
       ]
     },
     i2p: {
+      motif: "garlic",
       caption: "I2P uses netDb LeaseSets and one-way tunnels; client outbound tunnels meet server inbound tunnels inside the I2P network.",
       nodes: [
         ["browser", "I2P\nbrowser", 0.09, 0.52, "green"],
@@ -183,7 +202,9 @@
         ["routers", "I2P\ntransit\nrouters", 0.5, 0.66, "coral"],
         ["inbound", "server\ninbound\ntunnel", 0.7, 0.6, "teal"],
         ["server", "i2pd\nserver\ntunnel", 0.84, 0.42, "coral"],
-        ["output", "AMPG\nprivacy\nHTML", 0.9, 0.67, "teal"]
+        ["garlic", "garlic\nmessage\nbundle", 0.5, 0.43, "green"],
+        ["output", "AMPG\nprivacy\nHTML", 0.9, 0.67, "teal"],
+        ["health", "I2P\nhealth\ncheck", 0.76, 0.78, "green"]
       ],
       links: [
         ["browser", "address", -0.08],
@@ -191,13 +212,18 @@
         ["floodfill", "leaseset"],
         ["leaseset", "server", -0.06],
         ["browser", "outbound", 0.05],
+        ["outbound", "garlic", -0.06],
+        ["garlic", "routers", 0.04],
         ["outbound", "routers", 0.04],
         ["routers", "inbound", 0.04],
         ["inbound", "server"],
-        ["server", "output", 0.05]
+        ["server", "output", 0.05],
+        ["health", "outbound", 0.08],
+        ["health", "output", -0.06]
       ]
     },
     gemini: {
+      motif: "gemini",
       caption: "Gemini is intentionally simple: resolve the capsule, open TLS on 1965, and serve text-first AMPG Gemtext.",
       nodes: [
         ["client", "Gemini\nclient", 0.12, 0.5, "green"],
@@ -207,7 +233,8 @@
         ["daemon", "Gemini\ndaemon", 0.62, 0.5, "coral"],
         ["gemtext", "Gemtext\ntree", 0.78, 0.3, "teal"],
         ["output", "AMPG\nGemtext", 0.86, 0.58, "green"],
-        ["links", "capsule\nlinks", 0.62, 0.73, "amber"]
+        ["links", "capsule\nlinks", 0.62, 0.73, "amber"],
+        ["health", "Gemini\nhealth\ncheck", 0.84, 0.78, "green"]
       ],
       links: [
         ["client", "name", -0.07],
@@ -218,10 +245,13 @@
         ["daemon", "gemtext", -0.08],
         ["daemon", "output"],
         ["output", "links", 0.07],
-        ["links", "client", 0.16]
+        ["links", "client", 0.16],
+        ["health", "tcp", 0.1],
+        ["health", "output", -0.06]
       ]
     },
     reticulum: {
+      motif: "reticulum",
       caption: "Reticulum routes to destination identities across known paths and peers; it is transport-flexible, not automatically anonymous.",
       nodes: [
         ["client", "RNS\nclient", 0.1, 0.5, "green"],
@@ -231,7 +261,8 @@
         ["transport", "transport\nnode", 0.62, 0.2, "green"],
         ["identity", "destination\nidentity", 0.72, 0.44, "amber"],
         ["nomad", "NomadNet\nnode", 0.84, 0.33, "teal"],
-        ["output", "AMPG\nMicron", 0.88, 0.62, "green"]
+        ["output", "AMPG\nMicron", 0.88, 0.62, "green"],
+        ["health", "RNS\nhealth\ncheck", 0.72, 0.76, "green"]
       ],
       links: [
         ["client", "cache", -0.08],
@@ -243,10 +274,13 @@
         ["transport", "identity", 0.06],
         ["identity", "nomad"],
         ["nomad", "output"],
-        ["output", "client", 0.16]
+        ["output", "client", 0.16],
+        ["health", "mesh", 0.1],
+        ["health", "output", -0.06]
       ]
     },
     ipfs: {
+      motif: "ipfs",
       caption: "IPFS-style publishing addresses AMPG output by content hash, then discovers providers and fetches blocks from peers or gateways.",
       nodes: [
         ["browser", "browser\nor gateway", 0.1, 0.5, "green"],
@@ -257,7 +291,8 @@
         ["bitswap", "Bitswap /\nGraphsync", 0.66, 0.58, "teal"],
         ["peers", "IPFS\npeer\ncluster", 0.8, 0.4, "coral"],
         ["blocks", "content\nblocks", 0.89, 0.23, "teal"],
-        ["output", "AMPG\nstatic\ntree", 0.9, 0.65, "green"]
+        ["output", "AMPG\nstatic\ntree", 0.9, 0.65, "green"],
+        ["health", "CID\nhealth\ncheck", 0.72, 0.78, "green"]
       ],
       links: [
         ["browser", "name", -0.08],
@@ -270,7 +305,9 @@
         ["bitswap", "peers"],
         ["peers", "blocks", -0.05],
         ["peers", "output", 0.05],
-        ["output", "browser", 0.16]
+        ["output", "browser", 0.16],
+        ["health", "dht", 0.1],
+        ["health", "output", -0.05]
       ]
     }
   };
@@ -326,6 +363,7 @@
       const tick = (now - start) / 1000;
       ctx.clearRect(0, 0, width, height);
       drawField(tick);
+      drawMotif(topology, tick);
       topology.links.forEach((link, index) => {
         drawLink(nodes.get(link[0]), nodes.get(link[1]), tick, index, link[2] || 0);
       });
@@ -345,6 +383,82 @@
         ctx.arc(x, y, i % 2 === 0 ? 1.6 : 1, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.restore();
+    }
+
+    function drawMotif(topology, tick) {
+      if (topology.motif === "onion") {
+        drawOnionMotif(tick);
+      }
+      if (topology.motif === "garlic") {
+        drawGarlicMotif(tick);
+      }
+    }
+
+    function drawOnionMotif(tick) {
+      const centerX = width * 0.58;
+      const centerY = height * 0.5;
+      const maxRadius = Math.min(width, height) * 0.28;
+      ctx.save();
+      ctx.globalAlpha = 0.34;
+      for (let ring = 0; ring < 5; ring += 1) {
+        const radius = maxRadius * (0.34 + ring * 0.15);
+        ctx.strokeStyle = ring % 2 === 0 ? "rgba(240, 111, 95, 0.32)" : "rgba(57, 212, 197, 0.26)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(centerX, centerY, radius * 1.3, radius * 0.82, -0.1, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      for (let dot = 0; dot < 14; dot += 1) {
+        const angle = tick * 0.42 + dot * 0.72;
+        const radius = maxRadius * (0.42 + (dot % 4) * 0.12);
+        const x = centerX + Math.cos(angle) * radius * 1.25;
+        const y = centerY + Math.sin(angle) * radius * 0.78;
+        ctx.fillStyle = dot % 2 === 0 ? palette.coral : palette.teal;
+        ctx.beginPath();
+        ctx.arc(x, y, 2.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawGarlicMotif(tick) {
+      const centerX = width * 0.5;
+      const centerY = height * 0.52;
+      const radius = Math.min(width, height) * 0.13;
+      const cloves = [
+        [-1.05, -0.12, 0.98],
+        [-0.38, -0.42, 1.12],
+        [0.34, -0.4, 1.1],
+        [1.02, -0.1, 0.98],
+        [-0.52, 0.34, 0.94],
+        [0.48, 0.35, 0.94]
+      ];
+      ctx.save();
+      ctx.globalAlpha = 0.32;
+      cloves.forEach(([offsetX, offsetY, scale], index) => {
+        const pulse = Math.sin(tick * 1.4 + index) * 4;
+        ctx.fillStyle = index % 2 === 0 ? "rgba(240, 184, 74, 0.2)" : "rgba(143, 227, 136, 0.16)";
+        ctx.strokeStyle = index % 2 === 0 ? "rgba(240, 184, 74, 0.46)" : "rgba(143, 227, 136, 0.38)";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.ellipse(
+          centerX + offsetX * radius,
+          centerY + offsetY * radius,
+          radius * 0.62 * scale + pulse,
+          radius * 0.86 * scale,
+          offsetX * 0.22,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+        ctx.stroke();
+      });
+      ctx.strokeStyle = "rgba(57, 212, 197, 0.34)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius * 1.82, tick * 0.6, tick * 0.6 + Math.PI * 1.35);
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -516,8 +630,7 @@
 
   createTopologyMap({
     canvasId: "topologyCanvas",
-    initial: "vps",
-    autoCycleMs: 4600
+    initial: "vps"
   });
 
   createTopologyMap({

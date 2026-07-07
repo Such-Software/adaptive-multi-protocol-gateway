@@ -597,11 +597,10 @@ h3 {
   }
 
   h1 {
-    font-size: clamp(3rem, 18vw, 5rem);
+    font-size: clamp(2.75rem, 14vw, 3.45rem);
   }
 
-  .hero-actions,
-  .signal-line {
+  .hero-actions {
     display: grid;
   }
 
