@@ -14,6 +14,19 @@
   const topologies = {
     vps: {
       caption: "A VPS shape starts with one source tree, renders transport outputs, then hands them to service-specific daemons on the host.",
+      mobile: {
+        source: [0.12, 0.46],
+        build: [0.31, 0.46],
+        outputs: [0.38, 0.25],
+        state: [0.38, 0.68],
+        vps: [0.55, 0.46],
+        web: [0.72, 0.22],
+        tor: [0.74, 0.4],
+        i2p: [0.72, 0.6],
+        gemini: [0.56, 0.8],
+        reticulum: [0.84, 0.78],
+        visitor: [0.9, 0.5]
+      },
       nodes: [
         ["source", "source\nsite", 0.11, 0.48, "amber"],
         ["build", "AMPG\nbuild", 0.27, 0.48, "teal"],
@@ -47,6 +60,17 @@
     },
     router: {
       caption: "Behind a router, clearnet depends on DNS and a chosen inbound path; onion, I2P, and Reticulum routes can publish without exposing normal web ports.",
+      mobile: {
+        visitor: [0.1, 0.44],
+        dns: [0.26, 0.24],
+        router: [0.42, 0.43],
+        host: [0.58, 0.43],
+        ampg: [0.72, 0.43],
+        clearnet: [0.56, 0.23],
+        onion: [0.55, 0.67],
+        i2p: [0.77, 0.67],
+        rns: [0.86, 0.28]
+      },
       nodes: [
         ["visitor", "visitor", 0.1, 0.42, "green"],
         ["dns", "DNS /\nDDNS", 0.25, 0.24, "amber"],
@@ -75,6 +99,17 @@
     },
     phone: {
       caption: "A spare Android phone can run Termux packages, local AMPG state, and user-space daemons for small always-on sites.",
+      mobile: {
+        phone: [0.13, 0.47],
+        termux: [0.31, 0.26],
+        state: [0.31, 0.67],
+        ampg: [0.48, 0.47],
+        daemons: [0.64, 0.47],
+        network: [0.8, 0.27],
+        routes: [0.82, 0.62],
+        power: [0.5, 0.82],
+        visitor: [0.92, 0.45]
+      },
       nodes: [
         ["phone", "Android\nphone", 0.14, 0.46, "green"],
         ["termux", "Termux\npackages", 0.31, 0.28, "amber"],
@@ -102,6 +137,17 @@
     },
     browser: {
       caption: "Browser validation consumes AMPG fixture manifests, chooses an adapter, then verifies each route through the intended transport profile.",
+      mobile: {
+        manifest: [0.12, 0.48],
+        ampb: [0.3, 0.48],
+        policy: [0.45, 0.25],
+        adapters: [0.48, 0.57],
+        existing: [0.66, 0.34],
+        managed: [0.66, 0.7],
+        context: [0.81, 0.5],
+        result: [0.92, 0.5],
+        visitor: [0.91, 0.74]
+      },
       nodes: [
         ["manifest", "fixture\nmanifest", 0.12, 0.43, "amber"],
         ["ampb", "AMPB", 0.29, 0.43, "teal"],
@@ -134,6 +180,17 @@
     clearnet: {
       motif: "clearnet",
       caption: "Clearnet splits into a DNS discovery path and an HTTPS request path before the web server reads AMPG output.",
+      mobile: {
+        client: [0.13, 0.54],
+        resolver: [0.28, 0.34],
+        auth: [0.47, 0.25],
+        ip: [0.49, 0.46],
+        tls: [0.32, 0.74],
+        ingress: [0.55, 0.7],
+        proxy: [0.7, 0.52],
+        output: [0.84, 0.65],
+        health: [0.82, 0.32]
+      },
       nodes: [
         ["client", "visitor\nbrowser", 0.11, 0.48, "green"],
         ["resolver", "recursive\nDNS", 0.29, 0.25, "amber"],
@@ -161,6 +218,19 @@
     tor: {
       motif: "onion",
       caption: "Tor onion traffic builds client and service circuits through relays; the rendezvous point joins them without revealing the origin.",
+      mobile: {
+        browser: [0.1, 0.52],
+        hsdir: [0.28, 0.24],
+        descriptor: [0.47, 0.21],
+        guard: [0.28, 0.5],
+        middle: [0.45, 0.66],
+        rendezvous: [0.61, 0.5],
+        intro: [0.68, 0.28],
+        service: [0.78, 0.52],
+        local: [0.88, 0.36],
+        output: [0.88, 0.7],
+        health: [0.62, 0.78]
+      },
       nodes: [
         ["browser", "Tor\nBrowser", 0.09, 0.5, "green"],
         ["hsdir", "HSDir\nrelays", 0.28, 0.2, "amber"],
@@ -193,6 +263,19 @@
     i2p: {
       motif: "garlic",
       caption: "I2P uses netDb LeaseSets and one-way tunnels; client outbound tunnels meet server inbound tunnels inside the I2P network.",
+      mobile: {
+        browser: [0.1, 0.52],
+        address: [0.25, 0.25],
+        floodfill: [0.46, 0.23],
+        leaseset: [0.64, 0.25],
+        outbound: [0.28, 0.62],
+        routers: [0.5, 0.7],
+        inbound: [0.7, 0.62],
+        server: [0.84, 0.42],
+        garlic: [0.5, 0.45],
+        output: [0.88, 0.7],
+        health: [0.72, 0.82]
+      },
       nodes: [
         ["browser", "I2P\nbrowser", 0.09, 0.52, "green"],
         ["address", "b32 /\naddressbook", 0.25, 0.26, "amber"],
@@ -225,6 +308,17 @@
     gemini: {
       motif: "gemini",
       caption: "Gemini is intentionally simple: resolve the capsule, open TLS on 1965, and serve text-first AMPG Gemtext.",
+      mobile: {
+        client: [0.12, 0.54],
+        name: [0.28, 0.3],
+        cert: [0.5, 0.24],
+        tcp: [0.42, 0.52],
+        daemon: [0.62, 0.52],
+        gemtext: [0.78, 0.31],
+        output: [0.86, 0.58],
+        links: [0.62, 0.76],
+        health: [0.84, 0.8]
+      },
       nodes: [
         ["client", "Gemini\nclient", 0.12, 0.5, "green"],
         ["name", "capsule\nname", 0.28, 0.24, "amber"],
@@ -253,6 +347,17 @@
     reticulum: {
       motif: "reticulum",
       caption: "Reticulum routes to destination identities across known paths and peers; it is transport-flexible, not automatically anonymous.",
+      mobile: {
+        client: [0.11, 0.52],
+        cache: [0.28, 0.27],
+        request: [0.28, 0.66],
+        mesh: [0.49, 0.46],
+        transport: [0.62, 0.24],
+        identity: [0.72, 0.46],
+        nomad: [0.84, 0.34],
+        output: [0.88, 0.64],
+        health: [0.72, 0.8]
+      },
       nodes: [
         ["client", "RNS\nclient", 0.1, 0.5, "green"],
         ["cache", "path\ncache", 0.28, 0.24, "amber"],
@@ -282,6 +387,18 @@
     ipfs: {
       motif: "ipfs",
       caption: "IPFS-style publishing addresses AMPG output by content hash, then discovers providers and fetches blocks from peers or gateways.",
+      mobile: {
+        browser: [0.1, 0.54],
+        name: [0.28, 0.27],
+        dnslink: [0.27, 0.68],
+        dht: [0.49, 0.46],
+        routing: [0.63, 0.25],
+        bitswap: [0.66, 0.62],
+        peers: [0.8, 0.43],
+        blocks: [0.89, 0.25],
+        output: [0.9, 0.66],
+        health: [0.72, 0.8]
+      },
       nodes: [
         ["browser", "browser\nor gateway", 0.1, 0.5, "green"],
         ["name", "CID /\nIPNS", 0.28, 0.24, "amber"],
@@ -495,7 +612,7 @@
         : ay + (by - ay) * progress;
       ctx.fillStyle = index % 2 === 0 ? palette.teal : palette.amber;
       ctx.beginPath();
-      ctx.arc(px, py, options.packetRadius || 3.5, 0, Math.PI * 2);
+      ctx.arc(px, py, responsivePacketRadius(options.packetRadius || 3.5), 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -507,13 +624,14 @@
       const y = position.y;
       const lines = String(label).split("\n");
       const boxWidth = responsiveNodeWidth(options.nodeWidth || 116);
-      const lineHeight = options.lineHeight || 15;
-      const boxHeight = Math.max(options.nodeHeight || 46, lines.length * lineHeight + 22);
+      const fontSize = responsiveFontSize(options.fontSize || 13);
+      const lineHeight = responsiveLineHeight(options.lineHeight || 15);
+      const boxHeight = Math.max(responsiveNodeHeight(options.nodeHeight || 46), lines.length * lineHeight + 18);
       const pulse = Math.sin(tick * 2.2 + index) * 2;
       const color = palette[colorKey] || palette.teal;
       ctx.save();
       ctx.shadowColor = color;
-      ctx.shadowBlur = options.shadowBlur || 20;
+      ctx.shadowBlur = responsiveShadowBlur(options.shadowBlur || 20);
       ctx.fillStyle = "rgba(16, 16, 15, 0.86)";
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
@@ -523,7 +641,7 @@
       ctx.stroke();
       ctx.shadowBlur = 0;
       ctx.fillStyle = palette.text;
-      ctx.font = `${options.fontWeight || 700} ${options.fontSize || 13}px system-ui, sans-serif`;
+      ctx.font = `${options.fontWeight || 700} ${fontSize}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const firstLineY = y - ((lines.length - 1) * lineHeight) / 2;
@@ -534,10 +652,40 @@
     }
 
     function responsiveNodeWidth(baseWidth) {
-      if (width < 520) return Math.max(104, Math.min(baseWidth, width * 0.38));
-      if (width < 720) return Math.max(104, Math.min(baseWidth, width * 0.28));
+      if (width < 520) return Math.max(70, Math.min(baseWidth, width * 0.215));
+      if (width < 720) return Math.max(92, Math.min(baseWidth, width * 0.18));
       if (width < 980) return Math.max(112, Math.min(baseWidth, width * 0.18));
       return baseWidth;
+    }
+
+    function responsiveNodeHeight(baseHeight) {
+      if (width < 520) return Math.min(baseHeight, 42);
+      if (width < 720) return Math.min(baseHeight, 48);
+      return baseHeight;
+    }
+
+    function responsiveFontSize(baseSize) {
+      if (width < 520) return Math.min(baseSize, 11.5);
+      if (width < 720) return Math.min(baseSize, 12.5);
+      return baseSize;
+    }
+
+    function responsiveLineHeight(baseLineHeight) {
+      if (width < 520) return Math.min(baseLineHeight, 12);
+      if (width < 720) return Math.min(baseLineHeight, 13);
+      return baseLineHeight;
+    }
+
+    function responsiveShadowBlur(baseBlur) {
+      if (width < 520) return Math.min(baseBlur, 14);
+      if (width < 720) return Math.min(baseBlur, 18);
+      return baseBlur;
+    }
+
+    function responsivePacketRadius(baseRadius) {
+      if (width < 520) return Math.min(baseRadius, 3.2);
+      if (width < 720) return Math.min(baseRadius, 3.8);
+      return baseRadius;
     }
 
     function nodePosition(node) {
@@ -545,13 +693,14 @@
         return { x: node[2] * width, y: node[3] * height };
       }
       const topology = graphSet[active];
-      const index = topology.nodes.findIndex((candidate) => candidate[0] === node[0]);
-      const columns = width < 520 ? 2 : 3;
-      const rows = Math.max(1, Math.ceil(topology.nodes.length / columns));
-      const col = index % columns;
-      const row = Math.floor(index / columns);
-      const x = (col + 0.5) / columns;
-      const y = rows === 1 ? 0.34 : 0.15 + (row / (rows - 1)) * 0.48;
+      const mobilePosition = topology.mobile && topology.mobile[node[0]];
+      if (mobilePosition) {
+        const x = Math.min(0.88, Math.max(0.12, mobilePosition[0]));
+        const y = Math.min(0.84, Math.max(0.26, mobilePosition[1]));
+        return { x: x * width, y: y * height };
+      }
+      const x = 0.12 + node[2] * 0.76;
+      const y = 0.1 + node[3] * 0.68;
       return { x: x * width, y: y * height };
     }
 

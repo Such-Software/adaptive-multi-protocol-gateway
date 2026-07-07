@@ -596,6 +596,18 @@ h3 {
     padding: 14px 18px;
   }
 
+  .section {
+    padding: 48px 0;
+  }
+
+  .section-heading {
+    margin-bottom: 20px;
+  }
+
+  .map-stage {
+    gap: 14px;
+  }
+
   h1 {
     font-size: clamp(2.75rem, 14vw, 3.45rem);
   }
@@ -616,23 +628,45 @@ h3 {
   }
 
   .map-theater {
-    min-height: 820px;
+    min-height: 0;
+    padding-top: 420px;
+    overflow: visible;
+  }
+
+  #cleanTopologyCanvas,
+  #protocolTopologyCanvas,
+  .map-canvas {
+    bottom: auto;
+    height: 420px;
+  }
+
+  .map-theater::after {
+    bottom: auto;
+    height: 420px;
   }
 
   .map-tabs {
     left: 12px;
     right: 12px;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .map-theater-controls {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: 12px;
+    padding: 12px;
   }
 
+  .map-control-panel .segmented,
   .protocol-segmented {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .map-control-panel .topology-caption {
+    min-height: 0;
   }
 
   .flow-list li {
