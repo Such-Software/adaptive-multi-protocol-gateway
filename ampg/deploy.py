@@ -19,6 +19,7 @@ from .dns import dns_plan
 from .health import health_plan
 from .install_plan import (
     install_artifacts,
+    install_package_actions,
     install_plan,
     install_state_copies,
     install_supervisor_actions,
@@ -77,6 +78,12 @@ def deploy_plan(
             daemon_probe=daemon_probe,
         ),
         _daemon_step(
+            config,
+            command_context,
+            platform_provider=platform_provider,
+            daemon_probe=daemon_probe,
+        ),
+        _package_step(
             config,
             command_context,
             platform_provider=platform_provider,
@@ -227,6 +234,52 @@ def _daemon_step(
         "ready",
         commands.command("install-plan", platform=True),
         "daemon setup is ready or adopted",
+    )
+
+
+def _package_step(
+    config: GatewayConfig,
+    commands: _CommandContext,
+    *,
+    platform_provider: PlatformProvider | None,
+    daemon_probe: DaemonProbeFunc | None,
+) -> DeployStep:
+    actions = install_package_actions(
+        config,
+        platform_provider=platform_provider,
+        daemon_probe=daemon_probe,
+    )
+    if not actions:
+        return DeployStep("packages", "ready", "-", "no managed package installs are needed")
+    blocked = [action for action in actions if action.status == "blocked"]
+    planned = [action for action in actions if action.status == "planned"]
+    manual = [action for action in planned if not action.command]
+    if blocked:
+        return DeployStep(
+            "packages",
+            "blocked",
+            commands.command("install-plan", platform=True),
+            f"fix {len(blocked)} package planning blocker(s)",
+        )
+    if manual:
+        return DeployStep(
+            "packages",
+            "review",
+            commands.command("install-plan", platform=True),
+            f"install {len(manual)} package(s) with the local package manager",
+        )
+    if planned:
+        return DeployStep(
+            "packages",
+            "todo",
+            commands.command("deploy apply --stage packages --dry-run", platform=True),
+            f"install {len(planned)} managed daemon package(s)",
+        )
+    return DeployStep(
+        "packages",
+        "ready",
+        commands.command("deploy apply --stage packages --dry-run", platform=True),
+        "managed daemon packages are installed",
     )
 
 

@@ -8,6 +8,7 @@ from ampg.addresses import address_registry_path
 from ampg.apply import (
     CommandRunResult,
     apply_health,
+    apply_packages,
     apply_start,
     apply_state,
     apply_supervisor,
@@ -163,6 +164,94 @@ def _write_i2p_address_file(root: Path, value: str = "captureexample.b32.i2p") -
 
 
 class DeployApplyTest(unittest.TestCase):
+    def test_deploy_apply_packages_dry_run_plans_termux_installs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            config = load_config(config_path)
+
+            results = apply_packages(
+                config,
+                dry_run=True,
+                platform_provider=_termux_provider(root),
+                daemon_probe=_missing_probe,
+            )
+
+        self.assertTrue(all(result.status == "planned" for result in results))
+        self.assertIn(("pkg", "install", "i2pd"), [result.command for result in results])
+        self.assertIn(("pkg", "install", "nginx"), [result.command for result in results])
+
+    def test_deploy_apply_packages_live_invokes_runner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            config = load_config(config_path)
+            commands: list[tuple[str, ...]] = []
+
+            def runner(command: tuple[str, ...]) -> CommandRunResult:
+                commands.append(command)
+                return CommandRunResult(return_code=0)
+
+            results = apply_packages(
+                config,
+                dry_run=False,
+                platform_provider=_termux_provider(root),
+                daemon_probe=_missing_probe,
+                command_runner=runner,
+            )
+
+        self.assertTrue(all(result.status == "installed" for result in results))
+        self.assertIn(("pkg", "install", "i2pd"), commands)
+        self.assertIn(("pkg", "install", "nginx"), commands)
+
+    def test_deploy_apply_packages_blocks_manual_linux_user_install(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            config = load_config(config_path)
+
+            results = apply_packages(
+                config,
+                dry_run=True,
+                platform_provider=_linux_user_provider(root),
+                daemon_probe=_missing_probe,
+            )
+
+        self.assertTrue(any(result.status == "blocked" for result in results))
+        self.assertTrue(
+            any("automatic package install command" in result.message for result in results)
+        )
+
+    def test_deploy_apply_packages_cli_prints_summary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            config_path.write_text(
+                config_path.read_text(encoding="utf-8").replace(
+                    'daemon_policy = "auto"',
+                    'daemon_policy = "manage"',
+                ),
+                encoding="utf-8",
+            )
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "packages",
+                    "--dry-run",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+
+        self.assertEqual(0, status, error)
+        self.assertIn("AMPG_DEPLOY_PACKAGE", output)
+        self.assertIn("AMPG_DEPLOY_APPLY_SUMMARY stage=packages mode=dry-run", output)
+
     def test_deploy_apply_state_blocks_unapproved_artifacts(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()

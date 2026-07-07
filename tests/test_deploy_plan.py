@@ -5,6 +5,10 @@ import unittest
 from pathlib import Path
 
 from ampg.cli import main
+from ampg.config import load_config
+from ampg.deploy import deploy_plan
+from ampg.platforms import platform_by_name
+from ampg.status import DaemonProbe
 
 
 def _source(root: Path) -> Path:
@@ -20,6 +24,10 @@ def _run_cli(args: list[str]) -> tuple[int, str, str]:
     with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
         status = main(args)
     return status, stdout.getvalue(), stderr.getvalue()
+
+
+def _missing_probe(adapter):
+    return DaemonProbe(installed=False, running=False, executable_path=None)
 
 
 class DeployPlanTest(unittest.TestCase):
@@ -65,6 +73,39 @@ class DeployPlanTest(unittest.TestCase):
         self.assertIn("AMPG_DEPLOY_NEXT step=1 stage=build", output)
         self.assertIn("build --profile mobile-i2p", output)
         self.assertIn("deploy apply --stage addresses --dry-run --profile mobile-i2p", output)
+
+    def test_deploy_plan_guides_package_apply_for_missing_managed_daemons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = root / "gateway.toml"
+            init_status, _, init_error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "init",
+                    "site",
+                    "example",
+                    "--domain",
+                    "example.test",
+                    "--source",
+                    str(_source(root)),
+                    "--protocol",
+                    "i2p",
+                ]
+            )
+            self.assertEqual(0, init_status, init_error)
+
+            plan = deploy_plan(
+                load_config(config_path),
+                profile="mobile-i2p",
+                platform_provider=platform_by_name("android-termux"),
+                daemon_probe=_missing_probe,
+            )
+
+        packages = next(step for step in plan.steps if step.stage == "packages")
+        self.assertEqual("todo", packages.status)
+        self.assertIn("deploy apply --stage packages --dry-run", packages.command)
+        self.assertIn("managed daemon package", packages.message)
 
     def test_deploy_plan_shows_dns_review_for_clearnet_site(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -16,8 +16,10 @@ from .addresses import (
 from .config import GatewayConfig
 from .health import HealthCheck, health_plan
 from .install_plan import (
+    InstallPackageAction,
     InstallStateCopy,
     InstallSupervisorAction,
+    install_package_actions,
     install_state_copies,
     install_supervisor_actions,
 )
@@ -59,6 +61,19 @@ class CommandRunResult:
     return_code: int
     stdout: str = ""
     stderr: str = ""
+
+
+@dataclass(frozen=True)
+class PackageApplyResult:
+    site_id: str
+    protocol: str
+    platform: str
+    package: str
+    status: str
+    mode: str
+    command: tuple[str, ...]
+    return_code: int | None
+    message: str
 
 
 @dataclass(frozen=True)
@@ -104,6 +119,62 @@ class HealthApplyResult:
 
 
 CommandRunner = Callable[[tuple[str, ...]], CommandRunResult]
+
+
+def apply_packages(
+    config: GatewayConfig,
+    *,
+    dry_run: bool,
+    platform_provider: PlatformProvider | None = None,
+    daemon_probe: DaemonProbeFunc | None = None,
+    command_runner: CommandRunner | None = None,
+) -> list[PackageApplyResult]:
+    provider = platform_provider or detect_platform()
+    actions = install_package_actions(
+        config,
+        platform_provider=provider,
+        daemon_probe=daemon_probe,
+    )
+    runner = command_runner or _run_command
+    results: list[PackageApplyResult] = []
+    for action in actions:
+        validation = _validate_package_action(action, dry_run=dry_run)
+        if validation.status in {"blocked", "skipped"}:
+            results.append(validation)
+            continue
+        if dry_run:
+            results.append(
+                _package_result(
+                    action,
+                    status="planned",
+                    mode="dry-run",
+                    return_code=None,
+                    message="would install managed daemon package",
+                )
+            )
+            continue
+        run = runner(action.command)
+        if run.return_code != 0:
+            results.append(
+                _package_result(
+                    action,
+                    status="blocked",
+                    mode="live",
+                    return_code=run.return_code,
+                    message=_command_failure_message(run, label="package install command"),
+                )
+            )
+            continue
+        results.append(
+            _package_result(
+                action,
+                status="installed",
+                mode="live",
+                return_code=run.return_code,
+                message="installed managed daemon package",
+            )
+        )
+    return results
 
 
 def apply_state(
@@ -268,7 +339,7 @@ def apply_start(
                     status="blocked",
                     mode="live",
                     return_code=run.return_code,
-                    message=_command_failure_message(run),
+                    message=_command_failure_message(run, label="start command"),
                 )
             )
             continue
@@ -333,7 +404,7 @@ def apply_health(
                     status="blocked",
                     mode="live",
                     return_code=run.return_code,
-                    message=_command_failure_message(run),
+                    message=_command_failure_message(run, label="health check command"),
                 )
             )
             continue
@@ -348,6 +419,61 @@ def apply_health(
             )
         )
     return results
+
+
+def _validate_package_action(
+    action: InstallPackageAction,
+    *,
+    dry_run: bool,
+) -> PackageApplyResult:
+    mode = "dry-run" if dry_run else "live"
+    if action.status == "ready":
+        return _package_result(
+            action,
+            status="skipped",
+            mode=mode,
+            return_code=None,
+            message=action.message,
+        )
+    if action.status != "planned":
+        return _package_result(
+            action,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message=action.message,
+        )
+    if not _valid_package_name(action.package):
+        return _package_result(
+            action,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message=f"invalid package name: {action.package}",
+        )
+    if not action.command:
+        return _package_result(
+            action,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message="selected platform does not have an automatic package install command",
+        )
+    if not _allowed_package_command(action):
+        return _package_result(
+            action,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message="package install command is not allowlisted",
+        )
+    return _package_result(
+        action,
+        status="ready",
+        mode=mode,
+        return_code=None,
+        message="package install command passed safety checks",
+    )
 
 
 def _validate_state_copy(
@@ -614,6 +740,27 @@ def _address_result(
     )
 
 
+def _package_result(
+    action: InstallPackageAction,
+    *,
+    status: str,
+    mode: str,
+    return_code: int | None,
+    message: str,
+) -> PackageApplyResult:
+    return PackageApplyResult(
+        site_id=action.site_id,
+        protocol=action.protocol,
+        platform=action.platform,
+        package=action.package,
+        status=status,
+        mode=mode,
+        command=action.command,
+        return_code=return_code,
+        message=message,
+    )
+
+
 def _health_result(
     check: HealthCheck,
     *,
@@ -758,6 +905,23 @@ def _valid_service_name(service: str) -> bool:
     return all(char.isalnum() or char in {"-", "_", "."} for char in service)
 
 
+def _valid_package_name(package: str) -> bool:
+    if not package or package == "-":
+        return False
+    return all(char.isalnum() or char in {"-", "_", ".", "+"} for char in package)
+
+
+def _allowed_package_command(action: InstallPackageAction) -> bool:
+    package = action.package
+    if action.platform == "android-termux":
+        return action.command == ("pkg", "install", package)
+    if action.platform == "linux-systemd":
+        return action.command == ("sudo", "apt", "install", package)
+    if action.platform == "macos-launchd":
+        return action.command == ("brew", "install", package)
+    return False
+
+
 def _chmod_supervisor_target(provider: PlatformProvider, target: Path) -> None:
     if provider.name not in {"android-termux", "linux-user"}:
         return
@@ -790,11 +954,11 @@ def _run_command(command: tuple[str, ...]) -> CommandRunResult:
     )
 
 
-def _command_failure_message(run: CommandRunResult) -> str:
+def _command_failure_message(run: CommandRunResult, *, label: str = "command") -> str:
     detail = run.stderr or run.stdout
     if detail:
-        return f"start command failed: {detail}"
-    return "start command failed"
+        return f"{label} failed: {detail}"
+    return f"{label} failed"
 
 
 def format_command(command: tuple[str, ...]) -> str:

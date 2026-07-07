@@ -141,9 +141,9 @@ daemon_policy = "auto"
 - `ampg build` writes a fixture manifest that AMPB can check.
 - `ampg preview manifest` writes loopback fixture URLs that AMPB can check before live
   transport daemons are installed or adopted.
-- `ampg deploy apply --stage state`, `--stage supervisor`, `--stage start`,
-  `--stage addresses`, and `--stage health` stage Wownero transport publication without
-  mixing concerns.
+- `ampg deploy apply --stage packages`, `--stage state`, `--stage supervisor`,
+  `--stage start`, `--stage addresses`, and `--stage health` stage Wownero transport
+  publication without mixing concerns.
 - Tor output contains no `<script>` tags or inline event handlers.
 - Generated Gemini output has readable headings, paragraphs, and links.
 - Generated Micron output fits terminal-first browsing.
@@ -165,6 +165,7 @@ python3 -m ampg --config examples/wownero.gateway.toml preview manifest
 python3 -m ampg --config examples/wownero.gateway.toml install-plan --profile mobile-i2p --write-artifacts
 python3 -m ampg --config examples/wownero.gateway.toml approvals list --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml approvals approve --profile mobile-i2p --all
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage packages --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage state --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage supervisor --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage start --dry-run --profile mobile-i2p
@@ -182,6 +183,7 @@ python3 -m ampg --config examples/i2p-only.gateway.toml build
 - [ ] Add Gemini conversion fixtures.
 - [ ] Add Reticulum/Micron conversion fixtures.
 - [ ] Enable I2P and Reticulum daemon management only after static outputs are stable.
+- [ ] Review package install commands for selected managed Wownero transports.
 - [ ] Start only AMPG-owned Wownero transport services after reviewed files are applied.
 - [ ] Capture Wownero transport addresses before published health checks.
 - [ ] Run published health checks through each selected transport.

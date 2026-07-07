@@ -131,6 +131,10 @@ managed state and planned supervisor start/reload actions. The command emits an
 Blocked or unapproved preflight items stop mutation before any live apply path can touch
 services.
 
+`ampg deploy apply --stage packages` is the narrow live stage for package installation.
+It runs only structured package-manager commands for selected managed daemons. Adopted
+or external daemons do not require package apply.
+
 `ampg deploy apply --stage state` is the narrow live stage for managed state. It reads
 the same approved artifact plan, refuses missing, stale, or unapproved inputs, and copies
 only approved generated daemon config into AMPG-owned state.
@@ -159,7 +163,7 @@ root.
 `ampg install-plan` translates managed daemon decisions into package, state, config,
 supervisor, and health-check steps. It does not install packages, create directories, or
 start services. The output is a reviewable bridge between daemon ownership decisions and
-future live apply support.
+the staged live apply commands.
 
 With `--write-artifacts`, install-plan writes managed config and supervisor files under
 the configured `plan_root`; those files are review artifacts, not installed service

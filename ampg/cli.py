@@ -24,11 +24,13 @@ from .addresses import (
 from .apply import (
     AddressApplyResult,
     HealthApplyResult,
+    PackageApplyResult,
     StateApplyResult,
     StartApplyResult,
     SupervisorApplyResult,
     apply_addresses,
     apply_health,
+    apply_packages,
     apply_state,
     apply_start,
     apply_supervisor,
@@ -164,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_target_selection(deploy_apply_parser)
     deploy_apply_parser.add_argument(
         "--stage",
-        choices=("state", "supervisor", "start", "addresses", "health"),
+        choices=("packages", "state", "supervisor", "start", "addresses", "health"),
         required=True,
         help="Deployment stage to apply.",
     )
@@ -583,6 +585,29 @@ def _cmd_deploy(config, args) -> int:
             )
             return 1
         platform_provider = _platform_override(config, args)
+        if args.stage == "packages":
+            results = apply_packages(
+                config,
+                dry_run=args.dry_run,
+                platform_provider=platform_provider,
+            )
+            for result in results:
+                _print_package_apply_result(result)
+            blocked = [result for result in results if result.status == "blocked"]
+            installed = [result for result in results if result.status == "installed"]
+            planned = [result for result in results if result.status == "planned"]
+            skipped = [result for result in results if result.status == "skipped"]
+            print(
+                "AMPG_DEPLOY_APPLY_SUMMARY "
+                f"stage=packages "
+                f"mode={'dry-run' if args.dry_run else 'live'} "
+                f"results={len(results)} "
+                f"planned={len(planned)} "
+                f"installed={len(installed)} "
+                f"skipped={len(skipped)} "
+                f"blocked={len(blocked)}"
+            )
+            return 1 if blocked else 0
         if args.stage == "state":
             results = apply_state(
                 config,
@@ -1167,6 +1192,22 @@ def _print_state_apply_result(result: StateApplyResult) -> None:
         f"source=\"{_quote(str(result.source))}\" "
         f"target=\"{_quote(str(result.target))}\" "
         f"status={result.status} "
+        f"message=\"{_quote(result.message)}\""
+    )
+
+
+def _print_package_apply_result(result: PackageApplyResult) -> None:
+    return_code = "-" if result.return_code is None else str(result.return_code)
+    print(
+        "AMPG_DEPLOY_PACKAGE "
+        f"site={result.site_id} "
+        f"protocol={result.protocol} "
+        f"platform={result.platform} "
+        f"package=\"{_quote(result.package)}\" "
+        f"mode={result.mode} "
+        f"status={result.status} "
+        f"return_code={return_code} "
+        f"command=\"{_quote(format_command(result.command))}\" "
         f"message=\"{_quote(result.message)}\""
     )
 

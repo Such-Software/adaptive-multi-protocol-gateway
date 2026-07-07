@@ -1,6 +1,6 @@
 # State Contract
 
-> Status: draft | Updated 2026-07-06 | Applies to: managed daemon state
+> Status: draft | Updated 2026-07-07 | Applies to: managed daemon state
 
 AMPG keeps managed daemon state under `gateway.state_dir`. The state contract describes
 which files AMPG owns, which files daemons or adapters write, which paths may contain
@@ -47,6 +47,10 @@ approved artifacts would be copied into managed state and `AMPG_APPLY_SUPERVISOR
 for the services that would be registered or started. The accompanying
 `AMPG_APPLY_PREFLIGHT` verdict includes those rows so live apply can refuse mutation when
 state or supervisor inputs still need review.
+
+`deploy apply --stage packages` performs package installation only. It uses structured
+platform package-manager commands for selected managed daemons and does not write AMPG
+state, service files, generated config, or address registries.
 
 `deploy apply --stage state` performs the approved copy portion only. It requires
 `--yes` for live writes, refuses unapproved or stale artifacts, writes only under

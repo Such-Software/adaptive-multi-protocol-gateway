@@ -66,6 +66,17 @@ class InstallSupervisorAction:
     message: str
 
 
+@dataclass(frozen=True)
+class InstallPackageAction:
+    site_id: str
+    protocol: str
+    platform: str
+    package: str
+    status: str
+    command: tuple[str, ...]
+    message: str
+
+
 def install_plan(
     config: GatewayConfig,
     *,
@@ -118,6 +129,47 @@ def install_artifacts(
             status = status_by_protocol[(site.id, protocol.name)]
             artifacts.extend(_protocol_install_artifacts(config, site, protocol, provider, status))
     return artifacts
+
+
+def install_package_actions(
+    config: GatewayConfig,
+    *,
+    platform_provider: PlatformProvider | None = None,
+    daemon_probe: DaemonProbeFunc | None = None,
+) -> list[InstallPackageAction]:
+    provider = platform_provider or detect_platform()
+    steps = install_plan(
+        config,
+        platform_provider=provider,
+        daemon_probe=daemon_probe,
+    )
+    actions: list[InstallPackageAction] = []
+    for step in steps:
+        if step.stage == "package":
+            actions.append(
+                InstallPackageAction(
+                    site_id=step.site_id,
+                    protocol=step.protocol,
+                    platform=step.platform,
+                    package=step.target,
+                    status=step.status,
+                    command=package_install_command(provider, step.target),
+                    message=step.message,
+                )
+            )
+        elif step.status == "blocked":
+            actions.append(
+                InstallPackageAction(
+                    site_id=step.site_id,
+                    protocol=step.protocol,
+                    platform=step.platform,
+                    package=step.target,
+                    status="blocked",
+                    command=(),
+                    message=step.message,
+                )
+            )
+    return actions
 
 
 def write_install_artifacts(
@@ -513,13 +565,20 @@ def _package_name(provider: PlatformProvider, daemon: str) -> str:
     return daemon
 
 
-def _package_command(provider: PlatformProvider, package: str) -> str:
+def package_install_command(provider: PlatformProvider, package: str) -> tuple[str, ...]:
     if provider.name == "android-termux":
-        return f"pkg install {package}"
+        return ("pkg", "install", package)
     if provider.name == "linux-systemd":
-        return f"sudo apt install {package}"
+        return ("sudo", "apt", "install", package)
     if provider.name == "macos-launchd":
-        return f"brew install {package}"
+        return ("brew", "install", package)
+    return ()
+
+
+def _package_command(provider: PlatformProvider, package: str) -> str:
+    command = package_install_command(provider, package)
+    if command:
+        return shlex.join(command)
     if provider.name == "linux-user":
         return f"install {package} with the user package manager"
     return "-"

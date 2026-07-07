@@ -56,6 +56,8 @@ python3 -m ampg --config gateway.toml apply --dry-run --protocol i2p
 python3 -m ampg --config gateway.toml apply --dry-run --write-artifacts
 python3 -m ampg --config gateway.toml approvals list --profile mobile-i2p
 python3 -m ampg --config gateway.toml approvals approve --profile mobile-i2p --all
+python3 -m ampg --config gateway.toml deploy apply --stage packages --dry-run --profile mobile-i2p
+python3 -m ampg --config gateway.toml deploy apply --stage packages --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml deploy apply --stage state --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml deploy apply --stage state --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml deploy apply --stage supervisor --dry-run --profile mobile-i2p
@@ -70,8 +72,8 @@ python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
 
 `deploy plan` summarizes the current deployment in plain stages: source, build, DNS,
-doctor, daemons, artifacts, addresses, and apply preflight. It prints the next commands
-to run and does not change files or services.
+doctor, daemons, packages, artifacts, addresses, and apply preflight. It prints the next
+commands to run and does not change files or services.
 
 `dns plan` prints clearnet DNS records and reachability hints. Static mode plans A/AAAA
 and `www` records. Dynamic mode supports a Dynamic DNS hostname and warns when apex
@@ -98,6 +100,10 @@ files under the configured `plan_root`, grouped by site, protocol, and platform.
 Tor/I2P HTTP publishing, AMPG writes both transport-daemon artifacts and loopback nginx
 artifacts. The generated daemon configs store runtime state, identity keys, logs, and
 daemon-written addresses under `gateway.state_dir`.
+
+`deploy apply --stage packages` installs selected managed-daemon packages with
+structured, allowlisted platform commands. Adopted and external daemons are skipped.
+Platforms without an automatic package backend remain manual review items.
 
 `state-contract` prints the resolved managed-state paths for enabled protocols, including
 which paths are AMPG-owned, daemon-written, required, or sensitive.
@@ -127,30 +133,36 @@ reviewable config snippets to the configured plan root, then prints the copies f
 approved artifacts into `gateway.state_dir` and the supervisor services that would be
 registered or started. It still does not install or reload services.
 
-`deploy apply --stage state` is the first live apply stage. Dry-run mode prints
+`deploy apply --stage packages` is the first live apply stage. Dry-run mode prints
+`AMPG_DEPLOY_PACKAGE` rows. Live mode requires `--yes`, runs only structured
+package-manager commands for selected managed daemons, and reports installed, skipped, or
+blocked results. It does not write config, register services, start daemons, capture
+addresses, or run health checks.
+
+`deploy apply --stage state` is the second live apply stage. Dry-run mode prints
 `AMPG_DEPLOY_STATE` rows. Live mode requires `--yes`, refuses unapproved or stale
 artifacts, creates AMPG-owned state directories, and copies approved managed-daemon
 config into `gateway.state_dir`. It does not install packages, edit adopted daemon
 configs, start services, or delete identity material.
 
-`deploy apply --stage supervisor` is the second live apply stage. Dry-run mode prints
+`deploy apply --stage supervisor` is the third live apply stage. Dry-run mode prints
 `AMPG_DEPLOY_SUPERVISOR` rows. Live mode requires `--yes`, refuses unapproved or stale
 artifacts, requires the state stage to have copied managed config first, and writes
 AMPG-named service files for the selected platform. It does not install packages, start
 services, reload service managers, or delete service files.
 
-`deploy apply --stage start` is the third live apply stage. Dry-run mode prints
+`deploy apply --stage start` is the fourth live apply stage. Dry-run mode prints
 `AMPG_DEPLOY_START` rows with exact service-manager commands. Live mode requires `--yes`,
 requires both state and supervisor files to exist, and runs only structured platform
 commands for AMPG-named services. It does not install packages, rewrite config, remove
 files, capture addresses, or run health checks.
 
-`deploy apply --stage addresses` is the fourth live apply stage. Dry-run mode prints
+`deploy apply --stage addresses` is the fifth live apply stage. Dry-run mode prints
 `AMPG_DEPLOY_ADDRESS` rows for configured, skipped, missing, and capturable addresses.
 Live mode requires `--yes` and writes captured transport addresses under
 `gateway.state_dir`. It does not rewrite daemon config or run health checks.
 
-`deploy apply --stage health` is the fifth live apply stage. Dry-run mode prints
+`deploy apply --stage health` is the sixth live apply stage. Dry-run mode prints
 `AMPG_DEPLOY_HEALTH` rows with published fixture URLs and transport commands. Live mode
 requires `--yes`, runs those commands, and reports pass/fail. It does not change daemon
 config, service state, or address registries.
@@ -171,9 +183,11 @@ Platform providers describe how AMPG may supervise managed daemons:
 - `android-termux`: Termux-style user-space daemons for mobile/server experiments.
 - `unknown`: render and plan only; daemon management is disabled.
 
-Package commands in `install-plan` are review hints, not executed actions. Systemd hosts
-currently emit `apt`-style package hints, Termux emits `pkg`, macOS emits `brew`, and
-user-space Linux asks the operator to use the local user package manager.
+Package commands in `install-plan` are review hints. `deploy apply --stage packages` is
+the executable package stage for supported automatic backends: Systemd hosts use
+`sudo apt install`, Termux uses `pkg install`, and macOS uses `brew install`. User-space
+Linux asks the operator to use the local package manager until AMPG has a concrete
+backend for that environment.
 
 ## Adapter notes
 
