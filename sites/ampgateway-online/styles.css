@@ -114,11 +114,25 @@ a {
 
 #topologyCanvas,
 #cleanTopologyCanvas,
-#protocolTopologyCanvas {
+#protocolTopologyCanvas,
+.map-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+#topologyCanvas {
+  opacity: 0.64;
+}
+
+.map-canvas {
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.map-canvas.active {
+  opacity: 1;
 }
 
 .hero::after {
@@ -134,7 +148,7 @@ a {
   z-index: 1;
   max-width: var(--max);
   margin: 0 auto;
-  padding: clamp(118px, 16vh, 168px) clamp(18px, 4vw, 48px) 160px;
+  padding: clamp(118px, 16vh, 168px) clamp(18px, 4vw, 48px) 130px;
 }
 
 .eyebrow,
@@ -241,19 +255,6 @@ h3 {
   background: rgba(246, 241, 228, 0.06);
 }
 
-.topology-panel {
-  position: absolute;
-  right: clamp(18px, 4vw, 48px);
-  bottom: 30px;
-  z-index: 2;
-  width: min(440px, calc(100% - 36px));
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(27, 28, 26, 0.82);
-  backdrop-filter: blur(18px);
-}
-
 .segmented {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -290,6 +291,7 @@ h3 {
   width: min(var(--max), calc(100% - 36px));
   margin: 0 auto;
   padding: clamp(64px, 10vw, 112px) 0;
+  scroll-margin-top: 82px;
 }
 
 .split {
@@ -333,12 +335,7 @@ h3 {
 }
 
 .live-map-section {
-  width: min(1440px, calc(100% - 36px));
-}
-
-.map-stack {
-  display: grid;
-  gap: clamp(28px, 5vw, 58px);
+  width: min(1520px, calc(100% - 36px));
 }
 
 .map-stage {
@@ -366,7 +363,7 @@ h3 {
 
 .map-theater {
   position: relative;
-  min-height: clamp(540px, 72vw, 820px);
+  min-height: clamp(640px, 74vw, 880px);
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -383,16 +380,47 @@ h3 {
     radial-gradient(circle at 50% 50%, transparent 0 56%, rgba(16, 16, 15, 0.42) 100%);
 }
 
+.map-tabs {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 2;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(16, 16, 15, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+.map-tab {
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.map-tab.active,
+.map-tab:focus-visible {
+  border-color: var(--teal);
+  background: rgba(57, 212, 197, 0.12);
+  color: var(--text);
+}
+
 .map-theater-controls {
   position: absolute;
   left: 18px;
   right: 18px;
   bottom: 18px;
   z-index: 2;
-  display: grid;
-  grid-template-columns: 84px minmax(0, 520px) minmax(260px, 1fr);
-  gap: 12px;
-  align-items: center;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -400,8 +428,19 @@ h3 {
   backdrop-filter: blur(18px);
 }
 
-.map-theater-controls .mode-label,
-.map-theater-controls .topology-caption {
+.map-control-panel {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 650px) minmax(280px, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.map-control-panel[hidden] {
+  display: none;
+}
+
+.map-control-panel .mode-label,
+.map-control-panel .topology-caption {
   margin: 0;
 }
 
@@ -517,7 +556,7 @@ h3 {
   }
 
   .hero {
-    min-height: 860px;
+    min-height: 780px;
   }
 
   .hero::after {
@@ -525,7 +564,7 @@ h3 {
   }
 
   .hero-inner {
-    padding-bottom: 280px;
+    padding-bottom: 150px;
   }
 
   .split,
@@ -539,12 +578,12 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .map-theater-controls {
+  .map-control-panel {
     grid-template-columns: 1fr;
   }
 
   .map-theater {
-    min-height: 680px;
+    min-height: 740px;
   }
 
   .flow-list {
@@ -572,17 +611,19 @@ h3 {
     justify-content: center;
   }
 
-  .topology-panel {
-    bottom: 18px;
-  }
-
   .segmented,
   .flow-list {
     grid-template-columns: 1fr;
   }
 
   .map-theater {
-    min-height: 760px;
+    min-height: 820px;
+  }
+
+  .map-tabs {
+    left: 12px;
+    right: 12px;
+    grid-template-columns: 1fr;
   }
 
   .map-theater-controls {

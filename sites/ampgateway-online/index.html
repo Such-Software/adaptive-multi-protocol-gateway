@@ -49,18 +49,6 @@
             <a class="button secondary" href="#domains">See example domains</a>
           </div>
         </div>
-        <div class="topology-panel" aria-label="Topology modes">
-          <div class="mode-label">Topology</div>
-          <div class="segmented" role="group" aria-label="Topology selection">
-            <button class="mode-button active" type="button" data-topology="vps">VPS</button>
-            <button class="mode-button" type="button" data-topology="router">Router</button>
-            <button class="mode-button" type="button" data-topology="phone">Phone</button>
-            <button class="mode-button" type="button" data-topology="browser">Browser</button>
-          </div>
-          <p id="topologyCaption" class="topology-caption" aria-live="polite">
-            A VPS can publish clearnet, Tor, I2P, Gemini, and Reticulum outputs from one AMPG plan.
-          </p>
-        </div>
       </section>
 
       <section id="live-map" class="section live-map-section" aria-labelledby="live-map-title">
@@ -72,18 +60,57 @@
             clear nodes, and transport-specific paths.
           </p>
         </div>
-        <div class="map-stack">
-          <article class="map-stage" aria-labelledby="deployment-map-title">
-            <div class="map-stage-heading">
-              <div>
-                <p class="eyebrow">View</p>
-                <h3 id="deployment-map-title">Deployment shape</h3>
-              </div>
-              <p>VPS, router, phone, and browser validation views show where AMPG sits in the stack.</p>
+        <article class="map-stage" aria-labelledby="map-stage-title">
+          <div class="map-stage-heading">
+            <div>
+              <p id="map-stage-eyebrow" class="eyebrow">View</p>
+              <h3 id="map-stage-title">Deployment shape</h3>
             </div>
-            <div class="map-theater" aria-label="Interactive deployment topology map">
-              <canvas id="cleanTopologyCanvas" aria-hidden="true"></canvas>
-              <div class="map-theater-controls">
+            <p id="map-stage-description">
+              VPS, router, phone, and browser validation views show where AMPG sits in the stack.
+            </p>
+          </div>
+          <div class="map-theater" aria-label="Interactive topology and protocol map">
+            <canvas id="cleanTopologyCanvas" class="map-canvas active" aria-hidden="true"></canvas>
+            <canvas id="protocolTopologyCanvas" class="map-canvas" aria-hidden="true"></canvas>
+            <div class="map-tabs" role="tablist" aria-label="Map mode">
+              <button
+                id="deployment-map-tab"
+                class="map-tab active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="deployment-map-controls"
+                data-map-mode="deployment"
+                data-map-title="Deployment shape"
+                data-map-eyebrow="View"
+                data-map-description="VPS, router, phone, and browser validation views show where AMPG sits in the stack."
+              >
+                Deployment shape
+              </button>
+              <button
+                id="protocol-map-tab"
+                class="map-tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="protocol-map-controls"
+                data-map-mode="protocol"
+                data-map-title="Protocol flow"
+                data-map-eyebrow="Transport"
+                data-map-description="Transport maps show the real network shape: discovery, routing, service endpoints, and AMPG output."
+              >
+                Protocol flow
+              </button>
+            </div>
+            <div class="map-theater-controls">
+              <div
+                id="deployment-map-controls"
+                class="map-control-panel active"
+                role="tabpanel"
+                aria-labelledby="deployment-map-tab"
+                data-map-controls="deployment"
+              >
                 <div class="mode-label">View</div>
                 <div class="segmented" role="group" aria-label="Deployment topology selection">
                   <button class="mode-button active" type="button" data-clean-topology="vps">VPS</button>
@@ -92,22 +119,18 @@
                   <button class="mode-button" type="button" data-clean-topology="browser">Browser</button>
                 </div>
                 <p id="cleanTopologyCaption" class="topology-caption" aria-live="polite">
-                  A VPS can publish clearnet, Tor, I2P, Gemini, and Reticulum outputs from one AMPG plan.
+                  A VPS shape starts with one source tree, renders transport outputs, then hands them
+                  to service-specific daemons on the host.
                 </p>
               </div>
-            </div>
-          </article>
-          <article class="map-stage" aria-labelledby="protocol-map-title">
-            <div class="map-stage-heading">
-              <div>
-                <p class="eyebrow">Transport</p>
-                <h3 id="protocol-map-title">Protocol flow</h3>
-              </div>
-              <p>Each transport gets its own animated path instead of a static comparison table.</p>
-            </div>
-            <div class="map-theater" aria-label="Interactive protocol flow map">
-              <canvas id="protocolTopologyCanvas" aria-hidden="true"></canvas>
-              <div class="map-theater-controls protocol-controls">
+              <div
+                id="protocol-map-controls"
+                class="map-control-panel"
+                role="tabpanel"
+                aria-labelledby="protocol-map-tab"
+                data-map-controls="protocol"
+                hidden
+              >
                 <div class="mode-label">Transport</div>
                 <div class="segmented protocol-segmented" role="group" aria-label="Protocol flow selection">
                   <button class="mode-button active" type="button" data-protocol-topology="clearnet">Clearnet</button>
@@ -118,12 +141,13 @@
                   <button class="mode-button" type="button" data-protocol-topology="ipfs">IPFS</button>
                 </div>
                 <p id="protocolTopologyCaption" class="topology-caption" aria-live="polite">
-                  Clearnet requests resolve DNS, reach HTTPS ingress, and read AMPG clearnet output.
+                  Clearnet splits into a DNS discovery path and an HTTPS request path before the web
+                  server reads AMPG output.
                 </p>
               </div>
             </div>
-          </article>
-        </div>
+          </div>
+        </article>
       </section>
 
       <section id="topologies" class="section split" aria-labelledby="topologies-title">
