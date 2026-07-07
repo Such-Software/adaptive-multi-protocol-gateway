@@ -21,8 +21,7 @@
         <span>AMPGateway</span>
       </a>
       <nav class="top-nav" aria-label="Primary">
-        <a href="#live-map">Live Map</a>
-        <a href="#protocol-maps">Protocol Maps</a>
+        <a href="#live-map">Maps</a>
         <a href="#topologies">Topologies</a>
         <a href="#domains">Domains</a>
         <a href="#flow">Flow</a>
@@ -66,105 +65,63 @@
 
       <section id="live-map" class="section live-map-section" aria-labelledby="live-map-title">
         <div class="section-heading">
-          <p class="eyebrow">Topology theatre</p>
-          <h2 id="live-map-title">The animated maps, unobstructed.</h2>
+          <p class="eyebrow">Topology Theater</p>
+          <h2 id="live-map-title">Animated maps.</h2>
           <p>
-            The same live topology views from the hero are given a full clean stage here,
-            so the moving routes, nodes, and deployment shapes can be read directly.
+            Deployment maps and protocol maps share one visual language: moving routes,
+            clear nodes, and transport-specific paths.
           </p>
         </div>
-        <div class="map-theatre" aria-label="Interactive topology map">
-          <canvas id="cleanTopologyCanvas" aria-hidden="true"></canvas>
-          <div class="map-theatre-controls">
-            <div class="mode-label">View</div>
-            <div class="segmented" role="group" aria-label="Clean topology selection">
-              <button class="mode-button active" type="button" data-clean-topology="vps">VPS</button>
-              <button class="mode-button" type="button" data-clean-topology="router">Router</button>
-              <button class="mode-button" type="button" data-clean-topology="phone">Phone</button>
-              <button class="mode-button" type="button" data-clean-topology="browser">Browser</button>
+        <div class="map-stack">
+          <article class="map-stage" aria-labelledby="deployment-map-title">
+            <div class="map-stage-heading">
+              <div>
+                <p class="eyebrow">View</p>
+                <h3 id="deployment-map-title">Deployment shape</h3>
+              </div>
+              <p>VPS, router, phone, and browser validation views show where AMPG sits in the stack.</p>
             </div>
-            <p id="cleanTopologyCaption" class="topology-caption" aria-live="polite">
-              A VPS can publish clearnet, Tor, I2P, Gemini, and Reticulum outputs from one AMPG plan.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section id="protocol-maps" class="section protocol-map-section" aria-labelledby="protocol-maps-title">
-        <div class="section-heading">
-          <p class="eyebrow">Protocol maps</p>
-          <h2 id="protocol-maps-title">How traffic moves on each transport.</h2>
-          <p>
-            These are the big maps: what the client talks to, where AMPG output sits,
-            and which network pieces carry the request.
-          </p>
-        </div>
-        <div class="protocol-map-stack">
-          <article class="protocol-map">
-            <h3>Clearnet</h3>
-            <div class="path-map" aria-label="Clearnet request path">
-              <span>Visitor browser</span>
-              <span>DNS</span>
-              <span>HTTPS ingress</span>
-              <span>Web server</span>
-              <span>AMPG clearnet output</span>
+            <div class="map-theater" aria-label="Interactive deployment topology map">
+              <canvas id="cleanTopologyCanvas" aria-hidden="true"></canvas>
+              <div class="map-theater-controls">
+                <div class="mode-label">View</div>
+                <div class="segmented" role="group" aria-label="Deployment topology selection">
+                  <button class="mode-button active" type="button" data-clean-topology="vps">VPS</button>
+                  <button class="mode-button" type="button" data-clean-topology="router">Router</button>
+                  <button class="mode-button" type="button" data-clean-topology="phone">Phone</button>
+                  <button class="mode-button" type="button" data-clean-topology="browser">Browser</button>
+                </div>
+                <p id="cleanTopologyCaption" class="topology-caption" aria-live="polite">
+                  A VPS can publish clearnet, Tor, I2P, Gemini, and Reticulum outputs from one AMPG plan.
+                </p>
+              </div>
             </div>
-            <p>Best when a public domain and inbound web reachability are available.</p>
           </article>
-          <article class="protocol-map">
-            <h3>Tor onion</h3>
-            <div class="path-map" aria-label="Tor onion request path">
-              <span>Tor Browser</span>
-              <span>Tor circuits</span>
-              <span>Onion service</span>
-              <span>Local HTTP</span>
-              <span>AMPG privacy HTML</span>
+          <article class="map-stage" aria-labelledby="protocol-map-title">
+            <div class="map-stage-heading">
+              <div>
+                <p class="eyebrow">Transport</p>
+                <h3 id="protocol-map-title">Protocol flow</h3>
+              </div>
+              <p>Each transport gets its own animated path instead of a static comparison table.</p>
             </div>
-            <p>The public address is the onion name; the origin can stay behind local loopback.</p>
-          </article>
-          <article class="protocol-map">
-            <h3>I2P tunnel</h3>
-            <div class="path-map" aria-label="I2P tunnel request path">
-              <span>I2P browser</span>
-              <span>b32 destination</span>
-              <span>I2P tunnels</span>
-              <span>i2pd server tunnel</span>
-              <span>AMPG privacy HTML</span>
+            <div class="map-theater" aria-label="Interactive protocol flow map">
+              <canvas id="protocolTopologyCanvas" aria-hidden="true"></canvas>
+              <div class="map-theater-controls protocol-controls">
+                <div class="mode-label">Transport</div>
+                <div class="segmented protocol-segmented" role="group" aria-label="Protocol flow selection">
+                  <button class="mode-button active" type="button" data-protocol-topology="clearnet">Clearnet</button>
+                  <button class="mode-button" type="button" data-protocol-topology="tor">Tor</button>
+                  <button class="mode-button" type="button" data-protocol-topology="i2p">I2P</button>
+                  <button class="mode-button" type="button" data-protocol-topology="gemini">Gemini</button>
+                  <button class="mode-button" type="button" data-protocol-topology="reticulum">Reticulum</button>
+                  <button class="mode-button" type="button" data-protocol-topology="ipfs">IPFS</button>
+                </div>
+                <p id="protocolTopologyCaption" class="topology-caption" aria-live="polite">
+                  Clearnet requests resolve DNS, reach HTTPS ingress, and read AMPG clearnet output.
+                </p>
+              </div>
             </div>
-            <p>The b32 address points at the I2P destination, not a normal DNS hostname.</p>
-          </article>
-          <article class="protocol-map">
-            <h3>Gemini</h3>
-            <div class="path-map" aria-label="Gemini request path">
-              <span>Gemini client</span>
-              <span>TLS capsule</span>
-              <span>Gemini daemon</span>
-              <span>Gemtext tree</span>
-              <span>AMPG text render</span>
-            </div>
-            <p>Small pages, simple links, and text-first structure make the capsule readable.</p>
-          </article>
-          <article class="protocol-map">
-            <h3>Reticulum</h3>
-            <div class="path-map" aria-label="Reticulum request path">
-              <span>RNS client</span>
-              <span>Reticulum mesh</span>
-              <span>Destination hash</span>
-              <span>NomadNet node</span>
-              <span>AMPG Micron output</span>
-            </div>
-            <p>Identity is destination-based, and content should stay compact by default.</p>
-          </article>
-          <article class="protocol-map">
-            <h3>Single transport</h3>
-            <div class="path-map" aria-label="Single transport deployment path">
-              <span>Source site</span>
-              <span>AMPG selection</span>
-              <span>One renderer</span>
-              <span>One daemon</span>
-              <span>One published route</span>
-            </div>
-            <p>Useful for Tor-only, I2P-only, Gemini-only, or Reticulum-focused sites.</p>
           </article>
         </div>
       </section>
@@ -262,18 +219,17 @@
       <section id="docs" class="section docs-section" aria-labelledby="docs-title">
         <div>
           <p class="eyebrow">Public docs</p>
-          <h2 id="docs-title">The visual site stays tied to the public spec.</h2>
+          <h2 id="docs-title">Source, docs, and websites stay public and reproducible.</h2>
           <p>
-            The source for this page lives in the AMPG repository and can be rendered by
-            AMPG like any other static site. The Markdown docs stay concise; this site
-            turns the same concepts into topology-first views.
+            AMPG publishes clean public docs, generated references, and website sources
+            in GitHub repositories. Private planning and deployment notes stay outside
+            the public docs tree.
           </p>
         </div>
         <div class="doc-links">
-          <a href="#topologies">Topology guide</a>
-          <a href="#flow">Deploy stages</a>
-          <a href="#domains">Domain examples</a>
-          <a href="#top">Transport map</a>
+          <a href="https://github.com/Such-Software/adaptive-multi-protocol-gateway">Gateway, docs, and sites</a>
+          <a href="https://github.com/Such-Software/adaptive-multi-protocol-browser">Adaptive browser</a>
+          <a href="https://github.com/Such-Software">Such Software GitHub</a>
         </div>
       </section>
     </main>

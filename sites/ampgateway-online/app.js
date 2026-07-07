@@ -98,6 +98,105 @@
     }
   };
 
+  const protocolTopologies = {
+    clearnet: {
+      caption: "Clearnet requests resolve DNS, reach HTTPS ingress, and read AMPG clearnet output.",
+      nodes: [
+        ["browser", "Visitor\nbrowser", 0.12, 0.44, "green"],
+        ["dns", "DNS", 0.31, 0.32, "amber"],
+        ["ingress", "HTTPS\ningress", 0.5, 0.44, "teal"],
+        ["server", "web\nserver", 0.69, 0.32, "coral"],
+        ["output", "AMPG\nclearnet", 0.88, 0.44, "teal"]
+      ],
+      links: [
+        ["browser", "dns"],
+        ["dns", "ingress"],
+        ["ingress", "server"],
+        ["server", "output"]
+      ]
+    },
+    tor: {
+      caption: "Tor clients use onion-service descriptors and circuits before the local hidden service reaches AMPG privacy HTML.",
+      nodes: [
+        ["browser", "Tor\nBrowser", 0.12, 0.44, "green"],
+        ["descriptor", "onion\nservice\ndescriptor", 0.31, 0.32, "amber"],
+        ["circuits", "Tor\ncircuits", 0.5, 0.44, "coral"],
+        ["service", "onion\nservice", 0.69, 0.32, "teal"],
+        ["output", "AMPG\nprivacy\nHTML", 0.88, 0.44, "teal"]
+      ],
+      links: [
+        ["browser", "descriptor"],
+        ["descriptor", "circuits"],
+        ["circuits", "service"],
+        ["service", "output"]
+      ]
+    },
+    i2p: {
+      caption: "I2P clients resolve a b32 destination, fetch routing data, and traverse tunnels to the server tunnel.",
+      nodes: [
+        ["browser", "I2P\nbrowser", 0.12, 0.44, "green"],
+        ["b32", "b32\ndestination", 0.31, 0.32, "amber"],
+        ["leaseset", "LeaseSet\nlookup", 0.5, 0.44, "coral"],
+        ["tunnel", "I2P\nserver\ntunnel", 0.69, 0.32, "teal"],
+        ["output", "AMPG\nprivacy\nHTML", 0.88, 0.44, "teal"]
+      ],
+      links: [
+        ["browser", "b32"],
+        ["b32", "leaseset"],
+        ["leaseset", "tunnel"],
+        ["tunnel", "output"]
+      ]
+    },
+    gemini: {
+      caption: "Gemini clients open a TLS capsule request and receive AMPG-rendered Gemtext.",
+      nodes: [
+        ["client", "Gemini\nclient", 0.12, 0.44, "green"],
+        ["address", "capsule\naddress", 0.31, 0.32, "amber"],
+        ["tls", "TLS\nrequest", 0.5, 0.44, "teal"],
+        ["daemon", "Gemini\ndaemon", 0.69, 0.32, "coral"],
+        ["output", "AMPG\nGemtext", 0.88, 0.44, "teal"]
+      ],
+      links: [
+        ["client", "address"],
+        ["address", "tls"],
+        ["tls", "daemon"],
+        ["daemon", "output"]
+      ]
+    },
+    reticulum: {
+      caption: "Reticulum clients route to a destination hash; NomadNet-style nodes can serve compact AMPG Micron output.",
+      nodes: [
+        ["client", "RNS\nclient", 0.12, 0.44, "green"],
+        ["path", "path\ndiscovery", 0.31, 0.32, "amber"],
+        ["mesh", "Reticulum\nmesh", 0.5, 0.44, "coral"],
+        ["node", "NomadNet\nnode", 0.69, 0.32, "teal"],
+        ["output", "AMPG\nMicron", 0.88, 0.44, "teal"]
+      ],
+      links: [
+        ["client", "path"],
+        ["path", "mesh"],
+        ["mesh", "node"],
+        ["node", "output"]
+      ]
+    },
+    ipfs: {
+      caption: "IPFS-style publishing addresses content by CID or IPNS and distributes AMPG static output through peers or gateways.",
+      nodes: [
+        ["browser", "browser\nor gateway", 0.12, 0.44, "green"],
+        ["name", "CID\nor IPNS", 0.31, 0.32, "amber"],
+        ["routing", "DHT\nproviders", 0.5, 0.44, "coral"],
+        ["peers", "IPFS\npeers", 0.69, 0.32, "teal"],
+        ["output", "AMPG\nstatic\ntree", 0.88, 0.44, "teal"]
+      ],
+      links: [
+        ["browser", "name"],
+        ["name", "routing"],
+        ["routing", "peers"],
+        ["peers", "output"]
+      ]
+    }
+  };
+
   if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
       this.beginPath();
@@ -115,6 +214,7 @@
   }
 
   function createTopologyMap(options) {
+    const graphSet = options.graphSet || topologies;
     const canvas = document.getElementById(options.canvasId);
     const caption = document.getElementById(options.captionId);
     const buttons = Array.from(document.querySelectorAll(options.buttonSelector));
@@ -143,7 +243,7 @@
     }
 
     function draw(now) {
-      const topology = topologies[active];
+      const topology = graphSet[active];
       const nodes = nodeMap(topology);
       const tick = (now - start) / 1000;
       ctx.clearRect(0, 0, width, height);
@@ -172,10 +272,12 @@
 
     function drawLink(from, to, tick, index) {
       if (!from || !to) return;
-      const ax = from[2] * width;
-      const ay = from[3] * height;
-      const bx = to[2] * width;
-      const by = to[3] * height;
+      const fromPosition = nodePosition(from);
+      const toPosition = nodePosition(to);
+      const ax = fromPosition.x;
+      const ay = fromPosition.y;
+      const bx = toPosition.x;
+      const by = toPosition.y;
       ctx.save();
       ctx.strokeStyle = palette.line;
       ctx.lineWidth = options.lineWidth || 1;
@@ -196,10 +298,13 @@
 
     function drawNode(node, tick, index) {
       const [, label, nx, ny, colorKey] = node;
-      const x = nx * width;
-      const y = ny * height;
-      const boxWidth = options.nodeWidth || 116;
-      const boxHeight = options.nodeHeight || 46;
+      const position = nodePosition(node);
+      const x = position.x;
+      const y = position.y;
+      const lines = String(label).split("\n");
+      const boxWidth = responsiveNodeWidth(options.nodeWidth || 116);
+      const lineHeight = options.lineHeight || 15;
+      const boxHeight = Math.max(options.nodeHeight || 46, lines.length * lineHeight + 22);
       const pulse = Math.sin(tick * 2.2 + index) * 2;
       const color = palette[colorKey] || palette.teal;
       ctx.save();
@@ -217,14 +322,40 @@
       ctx.font = `${options.fontWeight || 700} ${options.fontSize || 13}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(label, x, y + pulse * 0.25);
+      const firstLineY = y - ((lines.length - 1) * lineHeight) / 2;
+      lines.forEach((line, lineIndex) => {
+        ctx.fillText(line, x, firstLineY + lineIndex * lineHeight + pulse * 0.25);
+      });
       ctx.restore();
     }
 
+    function responsiveNodeWidth(baseWidth) {
+      if (width < 720) return Math.max(86, Math.min(baseWidth, width * 0.24));
+      if (width < 980) return Math.max(112, Math.min(baseWidth, width * 0.17));
+      return baseWidth;
+    }
+
+    function nodePosition(node) {
+      if (!options.wrapNodes || width >= 760) {
+        return { x: node[2] * width, y: node[3] * height };
+      }
+      const topology = graphSet[active];
+      const index = topology.nodes.findIndex((candidate) => candidate[0] === node[0]);
+      const wrapped = [
+        [0.18, 0.28],
+        [0.5, 0.28],
+        [0.82, 0.28],
+        [0.34, 0.55],
+        [0.66, 0.55],
+        [0.5, 0.76]
+      ][index] || [node[2], node[3]];
+      return { x: wrapped[0] * width, y: wrapped[1] * height };
+    }
+
     function setTopology(name) {
-      if (!topologies[name]) return;
+      if (!graphSet[name]) return;
       active = name;
-      caption.textContent = topologies[name].caption;
+      caption.textContent = graphSet[name].caption;
       buttons.forEach((button) => {
         const selected = button.dataset[options.dataKey] === name;
         button.classList.toggle("active", selected);
@@ -265,6 +396,26 @@
     fontSize: 15,
     fontWeight: 800,
     shadowBlur: 26
+  });
+
+  createTopologyMap({
+    canvasId: "protocolTopologyCanvas",
+    captionId: "protocolTopologyCaption",
+    buttonSelector: "[data-protocol-topology]",
+    dataKey: "protocolTopology",
+    initial: "clearnet",
+    graphSet: protocolTopologies,
+    dotCount: 65,
+    fieldAlpha: 0.48,
+    lineWidth: 1.5,
+    packetRadius: 4.5,
+    nodeWidth: 138,
+    nodeHeight: 58,
+    fontSize: 14,
+    lineHeight: 14,
+    fontWeight: 800,
+    shadowBlur: 24,
+    wrapNodes: true
   });
 
   if (signalWord) {

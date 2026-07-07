@@ -113,7 +113,8 @@ a {
 }
 
 #topologyCanvas,
-#cleanTopologyCanvas {
+#cleanTopologyCanvas,
+#protocolTopologyCanvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -299,16 +300,14 @@ h3 {
 }
 
 .topology-grid,
-.domain-grid,
-.protocol-map-stack {
+.domain-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
 .topology-grid article,
-.domain-card,
-.protocol-map {
+.domain-card {
   min-height: 190px;
   padding: 20px;
   border: 1px solid var(--line);
@@ -317,8 +316,7 @@ h3 {
 }
 
 .topology-grid article:nth-child(2),
-.domain-card.featured,
-.protocol-map:nth-child(2n) {
+.domain-card.featured {
   background: var(--panel-strong);
 }
 
@@ -326,7 +324,6 @@ h3 {
 .domain-card p,
 .docs-section p,
 .flow-list p,
-.protocol-map p,
 .section-heading p {
   color: var(--muted);
 }
@@ -339,7 +336,35 @@ h3 {
   width: min(1440px, calc(100% - 36px));
 }
 
-.map-theatre {
+.map-stack {
+  display: grid;
+  gap: clamp(28px, 5vw, 58px);
+}
+
+.map-stage {
+  display: grid;
+  gap: 18px;
+}
+
+.map-stage-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 0.58fr) minmax(260px, 0.42fr);
+  gap: clamp(18px, 4vw, 46px);
+  align-items: end;
+}
+
+.map-stage-heading h3 {
+  margin-bottom: 0;
+  font-size: clamp(1.65rem, 3vw, 3.25rem);
+  line-height: 1.02;
+}
+
+.map-stage-heading p {
+  margin-bottom: 4px;
+  color: var(--muted);
+}
+
+.map-theater {
   position: relative;
   min-height: clamp(540px, 72vw, 820px);
   overflow: hidden;
@@ -348,7 +373,7 @@ h3 {
   background: #10100f;
 }
 
-.map-theatre::after {
+.map-theater::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -358,7 +383,7 @@ h3 {
     radial-gradient(circle at 50% 50%, transparent 0 56%, rgba(16, 16, 15, 0.42) 100%);
 }
 
-.map-theatre-controls {
+.map-theater-controls {
   position: absolute;
   left: 18px;
   right: 18px;
@@ -375,81 +400,13 @@ h3 {
   backdrop-filter: blur(18px);
 }
 
-.map-theatre-controls .mode-label,
-.map-theatre-controls .topology-caption {
+.map-theater-controls .mode-label,
+.map-theater-controls .topology-caption {
   margin: 0;
 }
 
-.protocol-map-section {
-  width: min(1360px, calc(100% - 36px));
-}
-
-.protocol-map-stack {
-  grid-template-columns: 1fr;
-  gap: 18px;
-}
-
-.protocol-map {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr) 280px;
-  gap: clamp(18px, 3vw, 34px);
-  align-items: center;
-  min-height: 210px;
-}
-
-.protocol-map h3 {
-  margin-bottom: 0;
-  font-size: clamp(1.45rem, 2.4vw, 2.4rem);
-}
-
-.path-map {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
-  gap: 12px;
-  align-items: center;
-}
-
-.path-map span {
-  position: relative;
-  display: grid;
-  min-height: 78px;
-  place-items: center;
-  padding: 12px;
-  border: 1px solid rgba(246, 241, 228, 0.26);
-  border-radius: 8px;
-  background: rgba(246, 241, 228, 0.055);
-  color: var(--text);
-  font-size: 0.92rem;
-  font-weight: 900;
-  text-align: center;
-}
-
-.path-map span:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: -13px;
-  width: 13px;
-  height: 2px;
-  background: var(--amber);
-  transform: translateY(-50%);
-}
-
-.path-map span:nth-child(1) {
-  border-color: var(--green);
-}
-
-.path-map span:nth-child(2),
-.path-map span:nth-child(3) {
-  border-color: var(--amber);
-}
-
-.path-map span:nth-child(4) {
-  border-color: var(--coral);
-}
-
-.path-map span:nth-child(5) {
-  border-color: var(--teal);
+.protocol-segmented {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .domain-grid {
@@ -572,7 +529,8 @@ h3 {
   }
 
   .split,
-  .docs-section {
+  .docs-section,
+  .map-stage-heading {
     grid-template-columns: 1fr;
   }
 
@@ -581,27 +539,12 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .map-theatre-controls,
-  .protocol-map {
+  .map-theater-controls {
     grid-template-columns: 1fr;
   }
 
-  .map-theatre {
+  .map-theater {
     min-height: 680px;
-  }
-
-  .path-map {
-    grid-template-columns: 1fr;
-  }
-
-  .path-map span:not(:last-child)::after {
-    top: auto;
-    right: auto;
-    bottom: -13px;
-    left: 50%;
-    width: 2px;
-    height: 13px;
-    transform: translateX(-50%);
   }
 
   .flow-list {
@@ -638,14 +581,18 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .map-theatre {
+  .map-theater {
     min-height: 760px;
   }
 
-  .map-theatre-controls {
+  .map-theater-controls {
     left: 12px;
     right: 12px;
     bottom: 12px;
+  }
+
+  .protocol-segmented {
+    grid-template-columns: 1fr;
   }
 
   .flow-list li {
