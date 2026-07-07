@@ -1,6 +1,6 @@
 # Daemon Management
 
-> Status: draft | Updated 2026-07-06 | Applies to: protocol adapters
+> Status: draft | Updated 2026-07-07 | Applies to: protocol adapters
 
 AMPG can use daemons that already exist on a server or create AMPG-owned daemons when
 the selected protocol is not running. This keeps simple deployments simple while avoiding
@@ -64,6 +64,8 @@ python3 -m ampg --config gateway.toml deploy apply --stage start --dry-run --pro
 python3 -m ampg --config gateway.toml deploy apply --stage start --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml deploy apply --stage addresses --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml deploy apply --stage addresses --profile mobile-i2p --yes
+python3 -m ampg --config gateway.toml deploy apply --stage health --dry-run --profile mobile-i2p
+python3 -m ampg --config gateway.toml deploy apply --stage health --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
 
@@ -108,6 +110,8 @@ configured, captured, derived, or placeholder. `deploy apply --stage addresses` 
 `health-plan` prints fixture-based checks to run after services start. Published checks
 target real transport URLs; preview checks target local loopback preview endpoints.
 Missing output blocks the plan, while placeholder transport addresses are review items.
+`deploy apply --stage health` runs the published checks after addresses are configured or
+captured.
 
 `approvals list` prints generated artifact candidates and their digest status. `approve`
 requires `--all` or a `--kind` filter, then records approvals only for artifacts that
@@ -145,6 +149,11 @@ files, capture addresses, or run health checks.
 `AMPG_DEPLOY_ADDRESS` rows for configured, skipped, missing, and capturable addresses.
 Live mode requires `--yes` and writes captured transport addresses under
 `gateway.state_dir`. It does not rewrite daemon config or run health checks.
+
+`deploy apply --stage health` is the fifth live apply stage. Dry-run mode prints
+`AMPG_DEPLOY_HEALTH` rows with published fixture URLs and transport commands. Live mode
+requires `--yes`, runs those commands, and reports pass/fail. It does not change daemon
+config, service state, or address registries.
 
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet
 `adopt` failure will block a full activation run, but it will not block

@@ -23,10 +23,12 @@ from .addresses import (
 )
 from .apply import (
     AddressApplyResult,
+    HealthApplyResult,
     StateApplyResult,
     StartApplyResult,
     SupervisorApplyResult,
     apply_addresses,
+    apply_health,
     apply_state,
     apply_start,
     apply_supervisor,
@@ -162,7 +164,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_target_selection(deploy_apply_parser)
     deploy_apply_parser.add_argument(
         "--stage",
-        choices=("state", "supervisor", "start", "addresses"),
+        choices=("state", "supervisor", "start", "addresses", "health"),
         required=True,
         help="Deployment stage to apply.",
     )
@@ -662,6 +664,23 @@ def _cmd_deploy(config, args) -> int:
                 f"skipped={len(skipped)} "
                 f"blocked={len(blocked)} "
                 f"registry=\"{_quote(str(address_registry_path(config)))}\""
+            )
+            return 1 if blocked else 0
+        if args.stage == "health":
+            results = apply_health(config, dry_run=args.dry_run)
+            for result in results:
+                _print_health_apply_result(result)
+            blocked = [result for result in results if result.status == "blocked"]
+            passed = [result for result in results if result.status == "passed"]
+            planned = [result for result in results if result.status == "planned"]
+            print(
+                "AMPG_DEPLOY_APPLY_SUMMARY "
+                f"stage=health "
+                f"mode={'dry-run' if args.dry_run else 'live'} "
+                f"results={len(results)} "
+                f"planned={len(planned)} "
+                f"passed={len(passed)} "
+                f"blocked={len(blocked)}"
             )
             return 1 if blocked else 0
     return 1
@@ -1198,6 +1217,24 @@ def _print_address_apply_result(result: AddressApplyResult) -> None:
         f"url=\"{_quote(result.url)}\" "
         f"source=\"{_quote(result.source)}\" "
         f"path=\"{_quote(path)}\" "
+        f"message=\"{_quote(result.message)}\""
+    )
+
+
+def _print_health_apply_result(result: HealthApplyResult) -> None:
+    return_code = "-" if result.return_code is None else str(result.return_code)
+    print(
+        "AMPG_DEPLOY_HEALTH "
+        f"site={result.site_id} "
+        f"protocol={result.protocol} "
+        f"route=\"{_quote(result.route)}\" "
+        f"transport={result.transport} "
+        f"profile={result.profile} "
+        f"mode={result.mode} "
+        f"url=\"{_quote(result.url)}\" "
+        f"status={result.status} "
+        f"return_code={return_code} "
+        f"command=\"{_quote(format_command(result.command))}\" "
         f"message=\"{_quote(result.message)}\""
     )
 

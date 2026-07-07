@@ -14,6 +14,7 @@ from .addresses import (
     write_captured_address_results,
 )
 from .config import GatewayConfig
+from .health import HealthCheck, health_plan
 from .install_plan import (
     InstallStateCopy,
     InstallSupervisorAction,
@@ -84,6 +85,21 @@ class AddressApplyResult:
     url: str
     source: str
     path: Path | None
+    message: str
+
+
+@dataclass(frozen=True)
+class HealthApplyResult:
+    site_id: str
+    protocol: str
+    route: str
+    transport: str
+    profile: str
+    url: str
+    status: str
+    mode: str
+    command: tuple[str, ...]
+    return_code: int | None
     message: str
 
 
@@ -279,6 +295,59 @@ def apply_addresses(
     if not dry_run:
         write_captured_address_results(config, captures)
     return [_address_result(result, dry_run=dry_run) for result in captures]
+
+
+def apply_health(
+    config: GatewayConfig,
+    *,
+    dry_run: bool,
+    command_runner: CommandRunner | None = None,
+) -> list[HealthApplyResult]:
+    checks = health_plan(config)
+    runner = command_runner or _run_command
+    results: list[HealthApplyResult] = []
+    for check in checks:
+        command = _health_command(check)
+        validation = _validate_health_check(check, command=command, dry_run=dry_run)
+        if validation.status == "blocked":
+            results.append(validation)
+            continue
+        if dry_run:
+            results.append(
+                _health_result(
+                    check,
+                    command=command,
+                    status="planned",
+                    mode="dry-run",
+                    return_code=None,
+                    message="would run published health check",
+                )
+            )
+            continue
+        run = runner(command)
+        if run.return_code != 0:
+            results.append(
+                _health_result(
+                    check,
+                    command=command,
+                    status="blocked",
+                    mode="live",
+                    return_code=run.return_code,
+                    message=_command_failure_message(run),
+                )
+            )
+            continue
+        results.append(
+            _health_result(
+                check,
+                command=command,
+                status="passed",
+                mode="live",
+                return_code=run.return_code,
+                message="published health check passed",
+            )
+        )
+    return results
 
 
 def _validate_state_copy(
@@ -480,6 +549,41 @@ def _validate_start_action(
     )
 
 
+def _validate_health_check(
+    check: HealthCheck,
+    *,
+    command: tuple[str, ...],
+    dry_run: bool,
+) -> HealthApplyResult:
+    mode = "dry-run" if dry_run else "live"
+    if check.status != "planned":
+        return _health_result(
+            check,
+            command=command,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message=check.message,
+        )
+    if not command:
+        return _health_result(
+            check,
+            command=command,
+            status="blocked",
+            mode=mode,
+            return_code=None,
+            message="health check command is unavailable",
+        )
+    return _health_result(
+        check,
+        command=command,
+        status="ready",
+        mode=mode,
+        return_code=None,
+        message="health check passed safety checks",
+    )
+
+
 def _address_result(
     result: AddressCaptureResult,
     *,
@@ -506,6 +610,30 @@ def _address_result(
         url=result.url,
         source=result.source,
         path=result.path,
+        message=message,
+    )
+
+
+def _health_result(
+    check: HealthCheck,
+    *,
+    command: tuple[str, ...],
+    status: str,
+    mode: str,
+    return_code: int | None,
+    message: str,
+) -> HealthApplyResult:
+    return HealthApplyResult(
+        site_id=check.site_id,
+        protocol=check.protocol,
+        route=check.route,
+        transport=check.transport,
+        profile=check.profile,
+        url=check.url,
+        status=status,
+        mode=mode,
+        command=command,
+        return_code=return_code,
         message=message,
     )
 
@@ -601,6 +729,13 @@ def start_command(
     if provider.name == "macos-launchd":
         return ("launchctl", "bootstrap", f"gui/{os.getuid()}", str(target))
     return ()
+
+
+def _health_command(check: HealthCheck) -> tuple[str, ...]:
+    try:
+        return tuple(shlex.split(check.command))
+    except ValueError:
+        return ()
 
 
 def _termux_prefix(state_root: Path) -> Path:

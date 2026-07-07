@@ -1,6 +1,6 @@
 # Fixture Manifests
 
-> Status: draft | Updated 2026-07-06 | Applies to: AMPG and AMPB compatibility checks
+> Status: draft | Updated 2026-07-07 | Applies to: AMPG and AMPB compatibility checks
 
 AMPG writes deterministic fixture manifests so AMPB can verify that generated site
 variants route to the expected browser transport and profile.
@@ -38,6 +38,7 @@ python3 -m ampg --config examples/wownero.gateway.toml addresses capture --profi
 python3 -m ampg --config examples/wownero.gateway.toml preview manifest
 python3 -m ampg --config examples/wownero.gateway.toml health-plan
 python3 -m ampg --config examples/wownero.gateway.toml health-plan --mode preview
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage health --dry-run --profile mobile-i2p
 ```
 
 `build` emits the manifest after writing protocol outputs. `manifest` rewrites only the
@@ -56,6 +57,8 @@ real Tor, I2P, Gemini, or other transport daemons are installed or adopted.
 
 `health-plan` consumes the same fixture contract. Published mode prints checks for real
 transport URLs. Preview mode prints loopback checks against generated preview URLs.
+`deploy apply --stage health` runs the published checks after transport addresses are
+configured or captured.
 
 ## Address Status
 
@@ -66,8 +69,9 @@ verify transport selection without contacting the network.
 When a managed or adopted daemon writes an actual address, run
 `deploy apply --stage addresses --dry-run` before recording it. Captured addresses are
 stored under `gateway.state_dir` and replace placeholders in fixture manifests and
-published health plans. Operators can also use `addresses capture` for a direct write or
-`addresses set` to store an address manually.
+published health plans. Operators can then run `deploy apply --stage health --dry-run`
+to review the exact transport checks before live verification. Operators can also use
+`addresses capture` for a direct write or `addresses set` to store an address manually.
 
 ## Interaction Policy
 

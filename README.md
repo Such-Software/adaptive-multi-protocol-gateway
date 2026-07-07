@@ -1,6 +1,6 @@
 # Adaptive Multi-Protocol Gateway
 
-> Status: draft | Updated 2026-07-06 | Applies to: AMPG contributors and operators
+> Status: draft | Updated 2026-07-07 | Applies to: AMPG contributors and operators
 
 Adaptive Multi-Protocol Gateway, or AMPG, turns one canonical site into transport-appropriate
 published versions for clearnet web, Tor onion services, I2P, Gemini, IPFS, and
@@ -63,6 +63,7 @@ python3 -m ampg --config gateway.toml deploy apply --stage state --dry-run --pro
 python3 -m ampg --config gateway.toml deploy apply --stage supervisor --dry-run --profile vps-full
 python3 -m ampg --config gateway.toml deploy apply --stage start --dry-run --profile vps-full
 python3 -m ampg --config gateway.toml deploy apply --stage addresses --dry-run --profile vps-full
+python3 -m ampg --config gateway.toml deploy apply --stage health --dry-run --profile vps-full
 ```
 
 `init site` writes a readable `gateway.toml` with selected transports enabled and common
@@ -74,6 +75,8 @@ managed-daemon config into AMPG-owned state. `deploy apply --stage supervisor` i
 approved supervisor files after state exists. `deploy apply --stage start` starts
 AMPG-owned services after state and supervisor files are present. `deploy apply --stage
 addresses` captures daemon-written public addresses into the address registry.
+`deploy apply --stage health` verifies published fixture URLs through the selected
+transport.
 
 ## Interaction tiers
 
@@ -145,6 +148,8 @@ python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage star
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage start --profile mobile-i2p --yes
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage addresses --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage addresses --profile mobile-i2p --yes
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage health --dry-run --profile mobile-i2p
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage health --profile mobile-i2p --yes
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml build --profile tor-i2p
 python3 -m ampg --config examples/wownero.gateway.toml build --protocol tor --protocol i2p
@@ -213,6 +218,10 @@ checks.
 be recorded. The live form requires `--yes`; it writes captured addresses to
 `gateway.state_dir` and leaves health verification for the next stage.
 
+`deploy apply --stage health --dry-run` shows published fixture checks after addresses
+are configured or captured. The live form requires `--yes`; it runs the transport check
+commands and reports pass/fail without changing config or state.
+
 `dns plan --free-domain-hints` prints optional community subdomain services that may help
 new users get a clearnet name without buying a domain. These are third-party registries;
 operators still need to review current terms, availability, content rules, and DNS
@@ -242,4 +251,5 @@ Explicit `--protocol` and `--platform` flags override the profile when present.
 - [ ] Run `ampg deploy apply --stage supervisor --dry-run`; confirm approved service files.
 - [ ] Run `ampg deploy apply --stage start --dry-run`; confirm service-manager commands.
 - [ ] Run `ampg deploy apply --stage addresses --dry-run`; confirm captured transport addresses.
+- [ ] Run `ampg deploy apply --stage health --dry-run`; confirm published health checks.
 - [ ] Run live apply after the preflight gate is ready.

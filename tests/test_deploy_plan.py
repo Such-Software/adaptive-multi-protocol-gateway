@@ -61,6 +61,7 @@ class DeployPlanTest(unittest.TestCase):
         self.assertIn("AMPG_DEPLOY_STEP stage=build status=todo", output)
         self.assertIn("AMPG_DEPLOY_STEP stage=dns status=skipped", output)
         self.assertIn("AMPG_DEPLOY_STEP stage=artifacts status=todo", output)
+        self.assertIn("AMPG_DEPLOY_STEP stage=health status=todo", output)
         self.assertIn("AMPG_DEPLOY_NEXT step=1 stage=build", output)
         self.assertIn("build --profile mobile-i2p", output)
         self.assertIn("deploy apply --stage addresses --dry-run --profile mobile-i2p", output)
@@ -137,6 +138,7 @@ class DeployPlanTest(unittest.TestCase):
         self.assertEqual(0, status, error)
         self.assertIn("AMPG_DEPLOY_STEP stage=build status=ready", output)
         self.assertIn("AMPG_DEPLOY_STEP stage=artifacts status=todo", output)
+        self.assertIn("AMPG_DEPLOY_STEP stage=health status=review", output)
 
     def test_deploy_plan_guides_staged_apply_after_approval(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -1,6 +1,6 @@
 # Architecture
 
-> Status: draft | Updated 2026-07-05 | Applies to: AMPG core
+> Status: draft | Updated 2026-07-07 | Applies to: AMPG core
 
 AMPG is a compiler plus an ingress manager. The compiler turns one site into a
 protocol-neutral content graph, then renders protocol-specific outputs. The ingress
@@ -145,6 +145,10 @@ remain separate stages.
 `ampg deploy apply --stage addresses` records daemon-written public addresses after the
 transport has produced them. It writes only the AMPG address registry; health
 verification remains a separate stage.
+
+`ampg deploy apply --stage health` runs published fixture checks through the selected
+transport after addresses are configured or captured. It reports pass/fail and does not
+mutate deployment state.
 
 The dry-run command is intentionally stricter than `doctor`: missing generated output is
 blocked during activation, because AMPG must not point a transport at an unbuilt output

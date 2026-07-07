@@ -5,7 +5,13 @@ import unittest
 from pathlib import Path
 
 from ampg.addresses import address_registry_path
-from ampg.apply import CommandRunResult, apply_start, apply_state, apply_supervisor
+from ampg.apply import (
+    CommandRunResult,
+    apply_health,
+    apply_start,
+    apply_state,
+    apply_supervisor,
+)
 from ampg.cli import main
 from ampg.config import load_config
 from ampg.platforms import PlatformProvider
@@ -565,6 +571,117 @@ class DeployApplyTest(unittest.TestCase):
         self.assertEqual(0, status, error)
         self.assertIn("status=written", output)
         self.assertIn("http://captureexample.b32.i2p/", registry_text)
+
+    def test_deploy_apply_health_blocks_placeholder_addresses(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "health",
+                    "--dry-run",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+
+        self.assertEqual(1, status)
+        self.assertEqual("", error)
+        self.assertIn("AMPG_DEPLOY_HEALTH", output)
+        self.assertIn("status=blocked", output)
+        self.assertIn("placeholder address", output)
+
+    def test_deploy_apply_health_dry_run_after_address_capture(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_i2p_address_file(root)
+            status, _, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "addresses",
+                    "--profile",
+                    "mobile-i2p",
+                    "--yes",
+                ]
+            )
+            if status != 0:
+                raise AssertionError(error)
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "health",
+                    "--dry-run",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+
+        self.assertEqual(0, status, error)
+        self.assertIn("AMPG_DEPLOY_HEALTH", output)
+        self.assertIn("status=planned", output)
+        self.assertIn("curl --proxy http://127.0.0.1:4444 -fsSL", output)
+        self.assertIn("http://captureexample.b32.i2p/", output)
+
+    def test_deploy_apply_health_live_invokes_runner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_i2p_address_file(root)
+            status, _, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "addresses",
+                    "--profile",
+                    "mobile-i2p",
+                    "--yes",
+                ]
+            )
+            if status != 0:
+                raise AssertionError(error)
+            config = load_config(config_path)
+            commands: list[tuple[str, ...]] = []
+
+            def runner(command: tuple[str, ...]) -> CommandRunResult:
+                commands.append(command)
+                return CommandRunResult(return_code=0)
+
+            results = apply_health(
+                config,
+                dry_run=False,
+                command_runner=runner,
+            )
+
+        self.assertTrue(all(result.status == "passed" for result in results))
+        self.assertIn(
+            (
+                "curl",
+                "--proxy",
+                "http://127.0.0.1:4444",
+                "-fsSL",
+                "http://captureexample.b32.i2p/",
+            ),
+            commands,
+        )
 
 
 if __name__ == "__main__":

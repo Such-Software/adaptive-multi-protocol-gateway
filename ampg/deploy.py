@@ -16,6 +16,7 @@ from .approvals import (
 )
 from .config import GatewayConfig
 from .dns import dns_plan
+from .health import health_plan
 from .install_plan import (
     install_artifacts,
     install_plan,
@@ -95,6 +96,7 @@ def deploy_plan(
             daemon_probe=daemon_probe,
         ),
         _address_step(config, command_context),
+        _health_step(config, command_context),
     )
     status = _overall_status(steps)
     return DeployPlan(
@@ -277,6 +279,38 @@ def _address_step(config: GatewayConfig, commands: _CommandContext) -> DeploySte
             f"capture or set generated transport address(es): {names}",
         )
     return DeployStep("addresses", "ready", commands.command("addresses list"), "addresses are known")
+
+
+def _health_step(config: GatewayConfig, commands: _CommandContext) -> DeployStep:
+    checks = health_plan(config)
+    if not checks:
+        return DeployStep("health", "ready", "-", "no published health checks are needed")
+    blocked = [check for check in checks if check.status == "blocked"]
+    review = [check for check in checks if check.status == "review"]
+    planned = [check for check in checks if check.status == "planned"]
+    if blocked:
+        status = "todo" if _missing_outputs(config) else "blocked"
+        return DeployStep(
+            "health",
+            status,
+            commands.command("health-plan"),
+            f"fix {len(blocked)} health check blocker(s)",
+        )
+    if review:
+        return DeployStep(
+            "health",
+            "review",
+            commands.command("deploy apply --stage addresses --dry-run"),
+            f"resolve {len(review)} health check address review item(s)",
+        )
+    if planned:
+        return DeployStep(
+            "health",
+            "todo",
+            commands.command("deploy apply --stage health --dry-run"),
+            f"run {len(planned)} published health check(s)",
+        )
+    return DeployStep("health", "ready", commands.command("health-plan"), "health checks are ready")
 
 
 def _apply_preflight_step(
