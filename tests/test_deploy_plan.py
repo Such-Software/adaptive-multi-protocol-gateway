@@ -63,6 +63,7 @@ class DeployPlanTest(unittest.TestCase):
         self.assertIn("AMPG_DEPLOY_STEP stage=artifacts status=todo", output)
         self.assertIn("AMPG_DEPLOY_NEXT step=1 stage=build", output)
         self.assertIn("build --profile mobile-i2p", output)
+        self.assertIn("deploy apply --stage addresses --dry-run --profile mobile-i2p", output)
 
     def test_deploy_plan_shows_dns_review_for_clearnet_site(self):
         with tempfile.TemporaryDirectory() as tmp:

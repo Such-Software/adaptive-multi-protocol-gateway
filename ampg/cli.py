@@ -22,9 +22,11 @@ from .addresses import (
     set_address,
 )
 from .apply import (
+    AddressApplyResult,
     StateApplyResult,
     StartApplyResult,
     SupervisorApplyResult,
+    apply_addresses,
     apply_state,
     apply_start,
     apply_supervisor,
@@ -160,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_target_selection(deploy_apply_parser)
     deploy_apply_parser.add_argument(
         "--stage",
-        choices=("state", "supervisor", "start"),
+        choices=("state", "supervisor", "start", "addresses"),
         required=True,
         help="Deployment stage to apply.",
     )
@@ -640,6 +642,26 @@ def _cmd_deploy(config, args) -> int:
                 f"planned={len(planned)} "
                 f"started={len(started)} "
                 f"blocked={len(blocked)}"
+            )
+            return 1 if blocked else 0
+        if args.stage == "addresses":
+            results = apply_addresses(config, dry_run=args.dry_run)
+            for result in results:
+                _print_address_apply_result(result)
+            blocked = [result for result in results if result.status == "blocked"]
+            written = [result for result in results if result.status == "written"]
+            planned = [result for result in results if result.status == "planned"]
+            skipped = [result for result in results if result.status == "skipped"]
+            print(
+                "AMPG_DEPLOY_APPLY_SUMMARY "
+                f"stage=addresses "
+                f"mode={'dry-run' if args.dry_run else 'live'} "
+                f"results={len(results)} "
+                f"planned={len(planned)} "
+                f"written={len(written)} "
+                f"skipped={len(skipped)} "
+                f"blocked={len(blocked)} "
+                f"registry=\"{_quote(str(address_registry_path(config)))}\""
             )
             return 1 if blocked else 0
     return 1
@@ -1161,6 +1183,21 @@ def _print_start_apply_result(result: StartApplyResult) -> None:
         f"status={result.status} "
         f"return_code={return_code} "
         f"command=\"{_quote(format_command(result.command))}\" "
+        f"message=\"{_quote(result.message)}\""
+    )
+
+
+def _print_address_apply_result(result: AddressApplyResult) -> None:
+    path = str(result.path) if result.path else "-"
+    print(
+        "AMPG_DEPLOY_ADDRESS "
+        f"site={result.site_id} "
+        f"protocol={result.protocol} "
+        f"mode={result.mode} "
+        f"status={result.status} "
+        f"url=\"{_quote(result.url)}\" "
+        f"source=\"{_quote(result.source)}\" "
+        f"path=\"{_quote(path)}\" "
         f"message=\"{_quote(result.message)}\""
     )
 

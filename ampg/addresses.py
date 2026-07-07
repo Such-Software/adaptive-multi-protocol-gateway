@@ -185,27 +185,41 @@ def _protocol_specific_configured_url(protocol: ProtocolConfig) -> Any:
     return None
 
 
-def capture_addresses(config: GatewayConfig) -> list[AddressCaptureResult]:
-    records = load_address_registry(config)
+def capture_address_results(config: GatewayConfig) -> list[AddressCaptureResult]:
     results: list[AddressCaptureResult] = []
-    changed = False
     for site in config.sites:
         for protocol in site.protocols.values():
             if not protocol.enabled:
                 continue
-            result = _capture_protocol_address(config, site, protocol)
-            results.append(result)
-            if result.status == "captured":
-                records[(site.id, protocol.name)] = AddressRecord(
-                    site_id=site.id,
-                    protocol=protocol.name,
-                    url=result.url,
-                    address_status="captured",
-                    source=result.source,
-                )
-                changed = True
+            results.append(_capture_protocol_address(config, site, protocol))
+    return results
+
+
+def write_captured_address_results(
+    config: GatewayConfig,
+    results: list[AddressCaptureResult],
+) -> Path | None:
+    records = load_address_registry(config)
+    changed = False
+    for result in results:
+        if result.status != "captured":
+            continue
+        records[(result.site_id, result.protocol)] = AddressRecord(
+            site_id=result.site_id,
+            protocol=result.protocol,
+            url=result.url,
+            address_status="captured",
+            source=result.source,
+        )
+        changed = True
     if changed:
-        write_address_registry(config, records)
+        return write_address_registry(config, records)
+    return None
+
+
+def capture_addresses(config: GatewayConfig) -> list[AddressCaptureResult]:
+    results = capture_address_results(config)
+    write_captured_address_results(config, results)
     return results
 
 

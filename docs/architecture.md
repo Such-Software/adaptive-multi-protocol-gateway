@@ -142,6 +142,10 @@ after the state files they reference exist. It does not start or reload services
 services after state and supervisor files exist. Address capture and health verification
 remain separate stages.
 
+`ampg deploy apply --stage addresses` records daemon-written public addresses after the
+transport has produced them. It writes only the AMPG address registry; health
+verification remains a separate stage.
+
 The dry-run command is intentionally stricter than `doctor`: missing generated output is
 blocked during activation, because AMPG must not point a transport at an unbuilt output
 root.

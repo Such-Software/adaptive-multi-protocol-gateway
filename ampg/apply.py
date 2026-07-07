@@ -8,6 +8,11 @@ import shutil
 import shlex
 import subprocess
 
+from .addresses import (
+    AddressCaptureResult,
+    capture_address_results,
+    write_captured_address_results,
+)
 from .config import GatewayConfig
 from .install_plan import (
     InstallStateCopy,
@@ -67,6 +72,18 @@ class StartApplyResult:
     mode: str
     command: tuple[str, ...]
     return_code: int | None
+    message: str
+
+
+@dataclass(frozen=True)
+class AddressApplyResult:
+    site_id: str
+    protocol: str
+    status: str
+    mode: str
+    url: str
+    source: str
+    path: Path | None
     message: str
 
 
@@ -251,6 +268,17 @@ def apply_start(
             )
         )
     return results
+
+
+def apply_addresses(
+    config: GatewayConfig,
+    *,
+    dry_run: bool,
+) -> list[AddressApplyResult]:
+    captures = capture_address_results(config)
+    if not dry_run:
+        write_captured_address_results(config, captures)
+    return [_address_result(result, dry_run=dry_run) for result in captures]
 
 
 def _validate_state_copy(
@@ -449,6 +477,36 @@ def _validate_start_action(
         mode=mode,
         return_code=None,
         message="start command passed safety checks",
+    )
+
+
+def _address_result(
+    result: AddressCaptureResult,
+    *,
+    dry_run: bool,
+) -> AddressApplyResult:
+    if result.status == "captured":
+        status = "planned" if dry_run else "written"
+        message = (
+            "would record captured public transport address"
+            if dry_run
+            else "recorded captured public transport address"
+        )
+    elif result.status == "missing":
+        status = "blocked"
+        message = result.message
+    else:
+        status = "skipped"
+        message = result.message
+    return AddressApplyResult(
+        site_id=result.site_id,
+        protocol=result.protocol,
+        status=status,
+        mode="dry-run" if dry_run else "live",
+        url=result.url,
+        source=result.source,
+        path=result.path,
+        message=message,
     )
 
 

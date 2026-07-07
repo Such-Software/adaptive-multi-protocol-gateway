@@ -62,6 +62,7 @@ python3 -m ampg --config gateway.toml apply --dry-run --profile vps-full
 python3 -m ampg --config gateway.toml deploy apply --stage state --dry-run --profile vps-full
 python3 -m ampg --config gateway.toml deploy apply --stage supervisor --dry-run --profile vps-full
 python3 -m ampg --config gateway.toml deploy apply --stage start --dry-run --profile vps-full
+python3 -m ampg --config gateway.toml deploy apply --stage addresses --dry-run --profile vps-full
 ```
 
 `init site` writes a readable `gateway.toml` with selected transports enabled and common
@@ -71,7 +72,8 @@ reachability hints. `apply --dry-run` prints the activation sequence and a prefl
 verdict without changing services. `deploy apply --stage state` copies approved
 managed-daemon config into AMPG-owned state. `deploy apply --stage supervisor` installs
 approved supervisor files after state exists. `deploy apply --stage start` starts
-AMPG-owned services after state and supervisor files are present.
+AMPG-owned services after state and supervisor files are present. `deploy apply --stage
+addresses` captures daemon-written public addresses into the address registry.
 
 ## Interaction tiers
 
@@ -141,6 +143,8 @@ python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage supe
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage supervisor --profile mobile-i2p --yes
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage start --dry-run --profile mobile-i2p
 python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage start --profile mobile-i2p --yes
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage addresses --dry-run --profile mobile-i2p
+python3 -m ampg --config examples/wownero.gateway.toml deploy apply --stage addresses --profile mobile-i2p --yes
 python3 -m ampg --config examples/wownero.gateway.toml build
 python3 -m ampg --config examples/wownero.gateway.toml build --profile tor-i2p
 python3 -m ampg --config examples/wownero.gateway.toml build --protocol tor --protocol i2p
@@ -174,8 +178,9 @@ platform supervisor files, but are not installed or started. Managed daemon conf
 runtime state at `gateway.state_dir`.
 
 Captured transport addresses are written under `gateway.state_dir` by
-`addresses capture` or `addresses set`. Fixture manifests and health plans use explicit
-config first, then captured addresses, then deterministic placeholders.
+`deploy apply --stage addresses`, `addresses capture`, or `addresses set`. Fixture
+manifests and health plans use explicit config first, then captured addresses, then
+deterministic placeholders.
 
 `approvals list` reports whether generated artifact digests are missing, stale,
 unapproved, or approved. `approvals approve` records reviewed digests under
@@ -203,6 +208,10 @@ AMPG-owned services whose state and supervisor files are already installed. The 
 requires `--yes`; it runs only structured platform commands for AMPG-named services. It
 does not install packages, rewrite config, delete files, capture addresses, or run health
 checks.
+
+`deploy apply --stage addresses --dry-run` shows daemon-written public addresses that can
+be recorded. The live form requires `--yes`; it writes captured addresses to
+`gateway.state_dir` and leaves health verification for the next stage.
 
 `dns plan --free-domain-hints` prints optional community subdomain services that may help
 new users get a clearnet name without buying a domain. These are third-party registries;
@@ -232,4 +241,5 @@ Explicit `--protocol` and `--platform` flags override the profile when present.
 - [ ] Run `ampg deploy apply --stage state --dry-run`; confirm approved state copies.
 - [ ] Run `ampg deploy apply --stage supervisor --dry-run`; confirm approved service files.
 - [ ] Run `ampg deploy apply --stage start --dry-run`; confirm service-manager commands.
+- [ ] Run `ampg deploy apply --stage addresses --dry-run`; confirm captured transport addresses.
 - [ ] Run live apply after the preflight gate is ready.

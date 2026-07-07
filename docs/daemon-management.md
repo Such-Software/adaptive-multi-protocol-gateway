@@ -62,6 +62,8 @@ python3 -m ampg --config gateway.toml deploy apply --stage supervisor --dry-run 
 python3 -m ampg --config gateway.toml deploy apply --stage supervisor --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml deploy apply --stage start --dry-run --profile mobile-i2p
 python3 -m ampg --config gateway.toml deploy apply --stage start --profile mobile-i2p --yes
+python3 -m ampg --config gateway.toml deploy apply --stage addresses --dry-run --profile mobile-i2p
+python3 -m ampg --config gateway.toml deploy apply --stage addresses --profile mobile-i2p --yes
 python3 -m ampg --config gateway.toml doctor --platform android-termux
 ```
 
@@ -99,9 +101,9 @@ daemon-written addresses under `gateway.state_dir`.
 which paths are AMPG-owned, daemon-written, required, or sensitive.
 
 `addresses list` prints the effective public address for each enabled protocol:
-configured, captured, derived, or placeholder. `addresses capture` reads daemon-written
-address files from AMPG state or a protocol `address_file` override, then updates the
-address registry under `state_dir`.
+configured, captured, derived, or placeholder. `deploy apply --stage addresses` and
+`addresses capture` read daemon-written address files from AMPG state or a protocol
+`address_file` override, then update the address registry under `state_dir`.
 
 `health-plan` prints fixture-based checks to run after services start. Published checks
 target real transport URLs; preview checks target local loopback preview endpoints.
@@ -138,6 +140,11 @@ services, reload service managers, or delete service files.
 requires both state and supervisor files to exist, and runs only structured platform
 commands for AMPG-named services. It does not install packages, rewrite config, remove
 files, capture addresses, or run health checks.
+
+`deploy apply --stage addresses` is the fourth live apply stage. Dry-run mode prints
+`AMPG_DEPLOY_ADDRESS` rows for configured, skipped, missing, and capturable addresses.
+Live mode requires `--yes` and writes captured transport addresses under
+`gateway.state_dir`. It does not rewrite daemon config or run health checks.
 
 `--protocol` scopes operational commands to selected enabled protocols. A clearnet
 `adopt` failure will block a full activation run, but it will not block

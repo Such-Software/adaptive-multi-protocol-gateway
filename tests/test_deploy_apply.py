@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from ampg.addresses import address_registry_path
 from ampg.apply import CommandRunResult, apply_start, apply_state, apply_supervisor
 from ampg.cli import main
 from ampg.config import load_config
@@ -146,6 +147,13 @@ def _run_termux_supervisor_apply(config_path: Path, root: Path) -> None:
     blocked = [result for result in results if result.status == "blocked"]
     if blocked:
         raise AssertionError(blocked[0].message)
+
+
+def _write_i2p_address_file(root: Path, value: str = "captureexample.b32.i2p") -> Path:
+    path = root / ".ampg/state/example/i2p/b32.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(value + "\n", encoding="utf-8")
+    return path
 
 
 class DeployApplyTest(unittest.TestCase):
@@ -478,6 +486,85 @@ class DeployApplyTest(unittest.TestCase):
         self.assertTrue(all(result.status == "started" for result in results))
         self.assertIn(("sv-enable", "ampg-example-i2p-i2pd"), commands)
         self.assertIn(("sv-enable", "ampg-example-i2p-nginx-loopback"), commands)
+
+    def test_deploy_apply_addresses_blocks_when_address_is_missing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "addresses",
+                    "--dry-run",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+
+        self.assertEqual(1, status)
+        self.assertEqual("", error)
+        self.assertIn("AMPG_DEPLOY_ADDRESS", output)
+        self.assertIn("status=blocked", output)
+        self.assertIn("no address file found", output)
+
+    def test_deploy_apply_addresses_dry_run_does_not_write_registry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_i2p_address_file(root)
+            config = load_config(config_path)
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "addresses",
+                    "--dry-run",
+                    "--profile",
+                    "mobile-i2p",
+                ]
+            )
+            registry_exists = address_registry_path(config).exists()
+
+        self.assertEqual(0, status, error)
+        self.assertIn("AMPG_DEPLOY_ADDRESS", output)
+        self.assertIn("status=planned", output)
+        self.assertIn("http://captureexample.b32.i2p/", output)
+        self.assertFalse(registry_exists)
+
+    def test_deploy_apply_addresses_live_writes_registry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            config_path = _init_i2p_config(root)
+            _write_i2p_address_file(root)
+            config = load_config(config_path)
+
+            status, output, error = _run_cli(
+                [
+                    "--config",
+                    str(config_path),
+                    "deploy",
+                    "apply",
+                    "--stage",
+                    "addresses",
+                    "--profile",
+                    "mobile-i2p",
+                    "--yes",
+                ]
+            )
+            registry_text = address_registry_path(config).read_text(encoding="utf-8")
+
+        self.assertEqual(0, status, error)
+        self.assertIn("status=written", output)
+        self.assertIn("http://captureexample.b32.i2p/", registry_text)
 
 
 if __name__ == "__main__":

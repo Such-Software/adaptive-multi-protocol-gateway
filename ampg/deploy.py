@@ -82,7 +82,6 @@ def deploy_plan(
             daemon_probe=daemon_probe,
         ),
         _artifact_step(config, command_context, platform_provider=platform_provider),
-        _address_step(config, command_context),
         _apply_preflight_step(
             config,
             command_context,
@@ -95,6 +94,7 @@ def deploy_plan(
             platform_provider=platform_provider,
             daemon_probe=daemon_probe,
         ),
+        _address_step(config, command_context),
     )
     status = _overall_status(steps)
     return DeployPlan(
@@ -273,7 +273,7 @@ def _address_step(config: GatewayConfig, commands: _CommandContext) -> DeploySte
         return DeployStep(
             "addresses",
             "review",
-            commands.command("addresses capture"),
+            commands.command("deploy apply --stage addresses --dry-run"),
             f"capture or set generated transport address(es): {names}",
         )
     return DeployStep("addresses", "ready", commands.command("addresses list"), "addresses are known")

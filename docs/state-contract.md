@@ -61,3 +61,7 @@ explicit stage.
 `deploy apply --stage start` runs the service-manager start commands for AMPG-named
 services only after required state and supervisor files exist. It does not write or
 delete state files.
+
+`deploy apply --stage addresses` reads daemon-written address files from the state
+contract and writes captured public addresses to `addresses.json` under
+`gateway.state_dir`.
