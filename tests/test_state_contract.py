@@ -64,7 +64,7 @@ keys_file = "example-web.dat"
 
         by_role_path = {(contract.role, contract.path) for contract in contracts}
         self.assertIn(("daemon-config", root / "state/example/i2p/i2pd-tunnels.conf"), by_role_path)
-        self.assertIn(("identity-key", root / "state/example/i2p/example-web.dat"), by_role_path)
+        self.assertIn(("identity-key", root / "state/example/i2p/data/example-web.dat"), by_role_path)
         self.assertIn(("address-file", root / "state/example/i2p/hostname.txt"), by_role_path)
         sensitive = {contract.role for contract in contracts if contract.sensitive}
         self.assertEqual({"identity-key"}, sensitive)

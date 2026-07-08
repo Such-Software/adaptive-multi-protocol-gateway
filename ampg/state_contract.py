@@ -210,7 +210,7 @@ def _i2p_contract(
             site,
             protocol,
             role="identity-key",
-            path=state_dir / key_file,
+            path=state_dir / "data" / key_file,
             owner="daemon",
             required=True,
             sensitive=True,

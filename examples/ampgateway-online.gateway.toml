@@ -59,7 +59,7 @@ daemon_policy = "auto"
 local_port = 18181
 keys_file = "ampgateway-online-web.dat"
 tunnel_name = "ampgateway-online-web"
-i2p_url = "http://vfhcumcxtbysxr6wvbpdytb6jpslcqlo3j6e35w7s63el5vsorca.b32.i2p/"
+i2p_url = "http://veyotzzzjal5acfkjsoeuzvt45s3hynr55rmrt6hotwcdlwmbfia.b32.i2p/"
 max_asset_bytes = 1048576
 script_policy = "strip"
 
@@ -125,7 +125,7 @@ daemon_policy = "auto"
 local_port = 18281
 keys_file = "ampgateway-site-web.dat"
 tunnel_name = "ampgateway-site-web"
-i2p_url = "http://zajoo4f5dso64tvtazas27se2galkihgpfgoy636uxm7loo42cdq.b32.i2p/"
+i2p_url = "http://ipahplmdbdwa23wpslqfylghlbqdlmsh23cj64fsvbp3lftxozka.b32.i2p/"
 max_asset_bytes = 1048576
 script_policy = "strip"
 

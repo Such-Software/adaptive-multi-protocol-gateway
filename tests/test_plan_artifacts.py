@@ -71,6 +71,8 @@ port = 1965
             self.assertIn("HiddenServicePort 80 127.0.0.1:19080", torrc.read_text())
             self.assertIn("listen 127.0.0.1:19080;", tor_nginx.read_text())
             self.assertIn("[example-web]", i2p_tunnel.read_text())
+            self.assertIn("type = http", i2p_tunnel.read_text())
+            self.assertIn("inport = 80", i2p_tunnel.read_text())
             self.assertIn("keys = example-web.dat", i2p_tunnel.read_text())
             self.assertIn("listen 127.0.0.1:19081;", i2p_nginx.read_text())
             self.assertIn("daemon = agate", agate_plan.read_text())

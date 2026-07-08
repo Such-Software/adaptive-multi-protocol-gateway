@@ -226,12 +226,12 @@ tunnel_name = "example-web"
             set(by_name),
         )
         self.assertIn("[example-web]", by_name["i2pd-tunnels.conf"].content)
-        self.assertIn(
-            f"keys = {root / '.ampg/state/example/i2p/example-web.dat'}",
-            by_name["i2pd-tunnels.conf"].content,
-        )
+        self.assertIn("type = http", by_name["i2pd-tunnels.conf"].content)
+        self.assertIn("inport = 80", by_name["i2pd-tunnels.conf"].content)
+        self.assertIn("keys = example-web.dat", by_name["i2pd-tunnels.conf"].content)
         self.assertIn("listen 127.0.0.1:19081", by_name["nginx-loopback.conf"].content)
         self.assertIn(f"mkdir -p {root / '.ampg/state/example/i2p'}", by_name["i2pd.run"].content)
+        self.assertIn(f"mkdir -p {root / '.ampg/state/example/i2p/data'}", by_name["i2pd.run"].content)
         self.assertIn("exec i2pd", by_name["i2pd.run"].content)
         self.assertIn("exec nginx", by_name["nginx-loopback.run"].content)
 
