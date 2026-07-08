@@ -73,6 +73,10 @@ def _daemon_adapters_doc() -> str:
         sections.append(f"- Protocols: {', '.join(adapter.protocols)}")
         sections.append(f"- Default policy: `{adapter.default_policy}`")
         sections.append(f"- Generated artifacts: {', '.join(adapter.generated_artifacts)}")
+        sections.append(
+            "- Provider sources: "
+            + (", ".join(f"`{source}`" for source in adapter.provider_sources) or "-")
+        )
         sections.append("")
         sections.append("Notes:")
         for note in adapter.notes:

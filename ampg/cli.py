@@ -1634,6 +1634,7 @@ def _print_transport_status(status: TransportStatus) -> None:
         f"supervisor={status.supervisor} "
         f"adapter={status.adapter} "
         f"backend={status.backend} "
+        f"provider_source={status.provider_source} "
         f"installed={_bool(status.installed)} "
         f"running={_bool(status.running)} "
         f"adoptable={_bool(status.adoptable)} "

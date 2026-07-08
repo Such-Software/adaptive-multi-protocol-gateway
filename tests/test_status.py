@@ -74,6 +74,7 @@ daemon_policy = "auto"
         self.assertEqual(1, len(statuses))
         self.assertEqual("ok", statuses[0].status)
         self.assertEqual("adopt-existing", statuses[0].action)
+        self.assertEqual("system-adopted", statuses[0].provider_source)
         self.assertTrue(statuses[0].adoptable)
 
     def test_auto_policy_manages_missing_daemon_on_manageable_platform(self):
@@ -98,6 +99,7 @@ daemon_policy = "auto"
 
         self.assertEqual("ok", statuses[0].status)
         self.assertEqual("manage-owned", statuses[0].action)
+        self.assertEqual("platform-package", statuses[0].provider_source)
         self.assertTrue(statuses[0].manageable)
 
     def test_adopt_policy_errors_when_daemon_is_missing(self):
@@ -122,6 +124,7 @@ daemon_policy = "adopt"
 
         self.assertEqual("error", statuses[0].status)
         self.assertEqual("unavailable", statuses[0].action)
+        self.assertEqual("unavailable", statuses[0].provider_source)
         self.assertIn("nginx is not installed", statuses[0].message)
 
     def test_unknown_adapter_errors_unless_external(self):

@@ -40,6 +40,7 @@ class TransportStatus:
     supervisor: str
     adapter: str
     backend: str
+    provider_source: str
     installed: bool
     running: bool
     adoptable: bool
@@ -265,6 +266,11 @@ def _transport_status(
         supervisor=provider.process_supervisor,
         adapter=f"{adapter.protocol}/{adapter.daemon}",
         backend=adapter.backend,
+        provider_source=_provider_source_for_status(
+            action=action,
+            installed=daemon.installed,
+            executable_path=daemon.executable_path,
+        ),
         installed=daemon.installed,
         running=daemon.running,
         adoptable=adoptable,
@@ -274,6 +280,18 @@ def _transport_status(
         action=action,
         message=message,
     )
+
+
+def _provider_source_for_status(*, action: str, installed: bool, executable_path: str | None) -> str:
+    if action == "adopt-existing":
+        return "system-adopted"
+    if action == "manage-owned":
+        if installed or executable_path:
+            return "system-managed"
+        return "platform-package"
+    if action == "render-only":
+        return "external"
+    return "unavailable"
 
 
 def _process_running(executable: str) -> bool:

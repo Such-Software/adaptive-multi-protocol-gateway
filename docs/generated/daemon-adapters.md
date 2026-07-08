@@ -10,6 +10,7 @@ This file is generated from code. Do not edit it by hand.
 - Protocols: clearnet, tor, i2p
 - Default policy: `adopt`
 - Generated artifacts: server block snippets
+- Provider sources: `configured`, `system-adopted`, `system-managed`, `platform-package`
 
 Notes:
 - Clearnet defaults to adopt because TLS and public vhost policy are operator-owned.
@@ -20,6 +21,7 @@ Notes:
 - Protocols: tor
 - Default policy: `auto`
 - Generated artifacts: torrc hidden-service snippet
+- Provider sources: `configured`, `bundled-sidecar`, `system-adopted`, `system-managed`, `platform-package`
 
 Notes:
 - AMPG should preserve existing HiddenServiceDir material when adopting.
@@ -30,6 +32,7 @@ Notes:
 - Protocols: i2p
 - Default policy: `auto`
 - Generated artifacts: i2pd server tunnel snippet
+- Provider sources: `configured`, `bundled-sidecar`, `system-adopted`, `system-managed`, `platform-package`
 
 Notes:
 - Web tunnels should use web-specific key files.
@@ -40,6 +43,7 @@ Notes:
 - Protocols: gemini
 - Default policy: `auto`
 - Generated artifacts: Agate plan values
+- Provider sources: `configured`, `bundled-sidecar`, `system-adopted`, `system-managed`, `platform-package`
 
 Notes:
 - Gemini serves generated Gemtext output directly.
@@ -50,6 +54,7 @@ Notes:
 - Protocols: ipfs
 - Default policy: `auto`
 - Generated artifacts: fixture manifest route expectations
+- Provider sources: `configured`, `bundled-sidecar`, `system-adopted`, `system-managed`, `platform-package`
 
 Notes:
 - IPFS output is static web content for a local gateway or later pinning.
@@ -60,6 +65,7 @@ Notes:
 - Protocols: reticulum
 - Default policy: `auto`
 - Generated artifacts: Reticulum page-service plan
+- Provider sources: `configured`, `bundled-sidecar`, `system-adopted`, `system-managed`, `platform-package`, `operator-interface`
 
 Notes:
 - Reticulum output is planned as small page-service content.

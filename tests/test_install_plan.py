@@ -3,6 +3,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from ampg.approvals import ApprovalInput, approve_artifacts
 from ampg.cli import main
@@ -170,7 +171,7 @@ daemon_policy = "auto"
             )
 
             stdout = io.StringIO()
-            with contextlib.redirect_stdout(stdout):
+            with contextlib.redirect_stdout(stdout), patch("ampg.status.shutil.which", return_value=None):
                 status = main(
                     [
                         "--config",

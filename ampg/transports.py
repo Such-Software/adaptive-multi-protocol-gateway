@@ -4,6 +4,14 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class ProviderSource:
+    kind: str
+    discovery: str
+    lifecycle: str
+    notes: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class TransportAdapter:
     protocol: str
     daemon: str
@@ -13,7 +21,46 @@ class TransportAdapter:
     managed_supported: bool
     default_ports: tuple[int, ...] = ()
     generated_artifacts: tuple[str, ...] = ()
+    provider_sources: tuple[ProviderSource, ...] = ()
     notes: tuple[str, ...] = ()
+
+
+COMMON_SERVICE_PROVIDER_SOURCES = (
+    ProviderSource(
+        kind="configured",
+        discovery="explicit daemon config and approved generated snippets",
+        lifecycle="operator-owned unless daemon_policy selects manage",
+        notes=("Explicit config always wins over automatic discovery.",),
+    ),
+    ProviderSource(
+        kind="system-adopted",
+        discovery="running system daemon, service, or listen endpoint",
+        lifecycle="operator-owned; AMPG may generate snippets but does not own the service",
+        notes=("Used when daemon_policy is adopt or auto with a healthy daemon.",),
+    ),
+    ProviderSource(
+        kind="system-managed",
+        discovery="installed daemon binary on the selected platform",
+        lifecycle="AMPG-owned state and AMPG-named supervisor entry",
+        notes=("Used when daemon_policy is manage or auto and the platform can supervise it.",),
+    ),
+    ProviderSource(
+        kind="platform-package",
+        discovery="allowlisted package backend such as apt, brew, or pkg",
+        lifecycle="installed only through reviewed deploy apply package stage",
+        notes=("Package install is separate from state, supervisor, start, address, and health stages.",),
+    ),
+)
+
+
+USERSPACE_PROVIDER_SOURCES = COMMON_SERVICE_PROVIDER_SOURCES + (
+    ProviderSource(
+        kind="bundled-sidecar",
+        discovery="AMPG package or app resource provider directory",
+        lifecycle="AMPG-owned process and state",
+        notes=("Useful for old laptops, single-purpose boxes, and mobile-server shells.",),
+    ),
+)
 
 
 TRANSPORT_ADAPTERS = (
@@ -26,6 +73,7 @@ TRANSPORT_ADAPTERS = (
         managed_supported=True,
         default_ports=(80, 443),
         generated_artifacts=("nginx server block snippet",),
+        provider_sources=COMMON_SERVICE_PROVIDER_SOURCES,
         notes=(
             "Clearnet ingress is usually adopted because TLS and public vhost policy are operator-owned.",
         ),
@@ -39,6 +87,7 @@ TRANSPORT_ADAPTERS = (
         managed_supported=True,
         default_ports=(18080,),
         generated_artifacts=("torrc hidden-service snippet", "loopback HTTP server block"),
+        provider_sources=USERSPACE_PROVIDER_SOURCES,
         notes=(
             "Adopted Tor keeps existing HiddenServiceDir material.",
             "Managed Tor stores onion service keys under AMPG state.",
@@ -53,6 +102,18 @@ TRANSPORT_ADAPTERS = (
         managed_supported=False,
         default_ports=(18080,),
         generated_artifacts=("future Arti onion-service config",),
+        provider_sources=(
+            ProviderSource(
+                kind="bundled-sidecar",
+                discovery="AMPG package or app resource provider directory",
+                lifecycle="future AMPG-owned Arti onion-service process",
+            ),
+            ProviderSource(
+                kind="configured",
+                discovery="explicit arti binary path and onion-service config",
+                lifecycle="future AMPG-owned or operator-owned by policy",
+            ),
+        ),
         notes=("Modeled as a future backend until the AMPG Arti adapter is implemented.",),
     ),
     TransportAdapter(
@@ -64,6 +125,7 @@ TRANSPORT_ADAPTERS = (
         managed_supported=True,
         default_ports=(18081,),
         generated_artifacts=("i2pd server tunnel snippet", "loopback HTTP server block"),
+        provider_sources=USERSPACE_PROVIDER_SOURCES,
         notes=("Destination keys are transport identity material and must be preserved.",),
     ),
     TransportAdapter(
@@ -75,6 +137,7 @@ TRANSPORT_ADAPTERS = (
         managed_supported=True,
         default_ports=(1965,),
         generated_artifacts=("Agate plan values",),
+        provider_sources=USERSPACE_PROVIDER_SOURCES,
         notes=("Gemini serves generated Gemtext output directly.",),
     ),
     TransportAdapter(
@@ -86,6 +149,7 @@ TRANSPORT_ADAPTERS = (
         managed_supported=True,
         default_ports=(5001, 8080),
         generated_artifacts=("pin/add plan",),
+        provider_sources=USERSPACE_PROVIDER_SOURCES,
         notes=("IPFS is content-addressed distribution, not an anonymity layer.",),
     ),
     TransportAdapter(
@@ -97,6 +161,15 @@ TRANSPORT_ADAPTERS = (
         managed_supported=True,
         default_ports=(),
         generated_artifacts=("Reticulum page-service plan",),
+        provider_sources=USERSPACE_PROVIDER_SOURCES
+        + (
+            ProviderSource(
+                kind="operator-interface",
+                discovery="explicit Reticulum interface configuration",
+                lifecycle="operator-owned physical or link-layer interface",
+                notes=("AMPG can manage page serving while interface setup may remain manual.",),
+            ),
+        ),
         notes=(
             "Reticulum is resilient/private routing, not an anonymity layer.",
             "Physical interfaces may require operator setup outside AMPG.",

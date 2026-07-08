@@ -31,6 +31,7 @@ class DaemonAdapter:
     default_policy: str
     generated_artifacts: tuple[str, ...]
     notes: tuple[str, ...]
+    provider_sources: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -512,6 +513,7 @@ DAEMON_ADAPTERS = (
             "Clearnet defaults to adopt because TLS and public vhost policy are operator-owned.",
             "Tor/I2P HTTP targets can use loopback-only server blocks.",
         ),
+        provider_sources=("configured", "system-adopted", "system-managed", "platform-package"),
     ),
     DaemonAdapter(
         daemon=DEFAULT_DAEMONS["tor"],
@@ -522,6 +524,7 @@ DAEMON_ADAPTERS = (
             "AMPG should preserve existing HiddenServiceDir material when adopting.",
             "Managed hidden-service keys belong under AMPG state.",
         ),
+        provider_sources=("configured", "bundled-sidecar", "system-adopted", "system-managed", "platform-package"),
     ),
     DaemonAdapter(
         daemon=DEFAULT_DAEMONS["i2p"],
@@ -532,6 +535,7 @@ DAEMON_ADAPTERS = (
             "Web tunnels should use web-specific key files.",
             "Existing RPC/P2P tunnel keys are not reused for web publishing.",
         ),
+        provider_sources=("configured", "bundled-sidecar", "system-adopted", "system-managed", "platform-package"),
     ),
     DaemonAdapter(
         daemon=DEFAULT_DAEMONS["gemini"],
@@ -542,6 +546,7 @@ DAEMON_ADAPTERS = (
             "Gemini serves generated Gemtext output directly.",
             "Certificate and key paths are plan values until install/apply support exists.",
         ),
+        provider_sources=("configured", "bundled-sidecar", "system-adopted", "system-managed", "platform-package"),
     ),
     DaemonAdapter(
         daemon=DEFAULT_DAEMONS["ipfs"],
@@ -552,6 +557,7 @@ DAEMON_ADAPTERS = (
             "IPFS output is static web content for a local gateway or later pinning.",
             "IPFS is content-addressed distribution, not an anonymity layer.",
         ),
+        provider_sources=("configured", "bundled-sidecar", "system-adopted", "system-managed", "platform-package"),
     ),
     DaemonAdapter(
         daemon=DEFAULT_DAEMONS["reticulum"],
@@ -562,6 +568,14 @@ DAEMON_ADAPTERS = (
             "Reticulum output is planned as small page-service content.",
             "Reticulum is resilient/private routing, not an anonymity layer.",
             "Physical interfaces may require explicit operator setup.",
+        ),
+        provider_sources=(
+            "configured",
+            "bundled-sidecar",
+            "system-adopted",
+            "system-managed",
+            "platform-package",
+            "operator-interface",
         ),
     ),
 )

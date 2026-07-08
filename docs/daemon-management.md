@@ -22,17 +22,36 @@ Managed daemons:
 - use AMPG-owned ports, sockets, hidden-service dirs, key files, and output roots.
 - can be stopped, restarted, or removed by AMPG.
 
+## Provider model
+
+A transport provider is the implementation AMPG uses to publish one protocol target.
+Every provider must resolve to a local endpoint, generated config, managed state, and a
+health check.
+
+Provider sources:
+
+- `configured`: explicit config from `gateway.toml` or approved generated snippets.
+- `bundled-sidecar`: a provider shipped with AMPG or an app bundle and run from AMPG
+  state.
+- `system-adopted`: a healthy daemon that AMPG did not start and does not own.
+- `system-managed`: an installed daemon binary supervised through AMPG-owned state.
+- `platform-package`: a daemon package installed by an allowlisted apply stage.
+- `operator-interface`: physical or link-layer setup that remains operator-owned.
+- `external`: render outputs and review artifacts only.
+
 ## Discovery order
 
 For each enabled protocol, AMPG checks:
 
 1. Explicit config in `gateway.toml`.
-2. AMPG-owned state from previous runs.
-3. Common system services and ports.
-4. Known config paths for supported daemons.
+2. Bundled AMPG providers for the current platform.
+3. AMPG-owned state from previous runs.
+4. Common system services and ports.
+5. Known config paths for supported daemons.
+6. Platform package backends for managed install stages.
 
-The result is shown in `ampg status`. `ampg plan` shows rendered outputs and reviewable
-config artifacts.
+The result is shown in `ampg status` as `provider_source`. `ampg plan` shows rendered
+outputs and reviewable config artifacts.
 
 ## Preflight commands
 
