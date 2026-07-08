@@ -462,11 +462,27 @@ h3 {
   word-break: break-word;
 }
 
-.domain-card a {
+.transport-links {
+  display: grid;
+  gap: 8px;
   margin-top: auto;
+}
+
+.domain-card a {
   color: var(--teal);
   font-weight: 800;
   text-decoration: none;
+}
+
+.transport-link {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(246, 241, 228, 0.05);
+  word-break: break-word;
 }
 
 .domain-card a:hover,
