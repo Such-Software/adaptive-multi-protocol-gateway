@@ -3,11 +3,12 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from ampg.cli import main
 from ampg.config import load_config
 from ampg.platforms import platform_by_name
-from ampg.status import DaemonProbe, doctor_gateway, gateway_status
+from ampg.status import DaemonProbe, _process_running, doctor_gateway, gateway_status
 
 
 def _probe(*, installed: bool = False, running: bool = False):
@@ -196,6 +197,30 @@ daemon_policy = "external"
         self.assertIn("AMPG_DOCTOR_SUMMARY", output)
         self.assertIn("warnings=1", output)
         self.assertIn("errors=0", output)
+
+    def test_i2pd_probe_accepts_distro_daemon_process_name(self):
+        calls: list[tuple[str, ...]] = []
+
+        def run(command, **_kwargs):
+            calls.append(tuple(command))
+
+            class Result:
+                returncode = 0 if command[-1] == "i2pd-daemon" else 1
+
+            return Result()
+
+        with patch("ampg.status.shutil.which", return_value="/usr/bin/pgrep"):
+            with patch("ampg.status.subprocess.run", side_effect=run):
+                running = _process_running("i2pd")
+
+        self.assertTrue(running)
+        self.assertEqual(
+            [
+                ("/usr/bin/pgrep", "-x", "i2pd"),
+                ("/usr/bin/pgrep", "-x", "i2pd-daemon"),
+            ],
+            calls,
+        )
 
 
 if __name__ == "__main__":

@@ -17,6 +17,9 @@ from .transports import (
 
 VALID_DAEMON_POLICIES = {"external", "adopt", "manage", "auto"}
 SUPPORTED_RENDERERS = {"clearnet", "privacy-html", "gemtext", "micron"}
+PROCESS_NAME_ALIASES = {
+    "i2pd": ("i2pd", "i2pd-daemon"),
+}
 
 
 @dataclass(frozen=True)
@@ -277,9 +280,14 @@ def _process_running(executable: str) -> bool:
     pgrep = shutil.which("pgrep")
     if not pgrep:
         return False
+    names = PROCESS_NAME_ALIASES.get(executable, (executable,))
+    return any(_pgrep_exact(pgrep, name) for name in names)
+
+
+def _pgrep_exact(pgrep: str, name: str) -> bool:
     try:
         result = subprocess.run(
-            [pgrep, "-x", executable],
+            [pgrep, "-x", name],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             timeout=1,
