@@ -84,6 +84,7 @@ def _fixture_entry(
         "checks": {
             "transport": transport,
             "profile": transport,
+            "isolation": "transport-profile",
         },
         "interaction": _interaction_policy(protocol, route_policy),
     }

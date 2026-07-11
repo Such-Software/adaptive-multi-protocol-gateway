@@ -72,7 +72,14 @@ cid = "bafyexample"
             self.assertEqual("placeholder", by_protocol["tor"]["address_status"])
             self.assertEqual("gemini://example.test/", by_protocol["gemini"]["url"])
             self.assertEqual("ipfs://bafyexample", by_protocol["ipfs"]["url"])
-            self.assertEqual({"transport": "ipfs", "profile": "ipfs"}, by_protocol["ipfs"]["checks"])
+            self.assertEqual(
+                {
+                    "transport": "ipfs",
+                    "profile": "ipfs",
+                    "isolation": "transport-profile",
+                },
+                by_protocol["ipfs"]["checks"],
+            )
             self.assertEqual(
                 {
                     "identity": "none",

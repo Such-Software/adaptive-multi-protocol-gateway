@@ -19,13 +19,17 @@ The manifest contains public route expectations only:
 - enabled protocol fixtures.
 - protocol renderer and relative output path.
 - route URL for AMPB checks.
-- expected AMPB transport and profile.
+- expected AMPB transport, profile, and transport-profile isolation.
 - declared interaction tier, identity adapter, payment adapter, realtime flag, and
   public exposure flag.
 - optional route-group metadata for configured public route policies.
 
 It must not contain private host inventory, hidden-service keys, tunnel keys, credentials,
 or deployment notes.
+
+The isolation check is a browser-facing result, not a daemon-management instruction.
+AMPG declares which transport profile must consume the route; AMPB independently decides
+whether to adopt or start the local transport needed to reach it.
 
 ## Commands
 

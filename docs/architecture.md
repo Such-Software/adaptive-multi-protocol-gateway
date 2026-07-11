@@ -94,6 +94,10 @@ Daemon adapters provide a common interface:
 Adapters must be conservative. They do not modify non-AMPG config without showing a
 plan first, and managed config lives under AMPG-owned state directories.
 
+Fixture manifests are the AMPG-to-AMPB boundary. They declare the published URL, expected
+transport, expected profile, and transport-profile isolation result. They do not prescribe
+browser process management or local daemon ownership; those decisions remain inside AMPB.
+
 ## Platform providers
 
 Platform providers decide what daemon management means on the current host. AMPG detects

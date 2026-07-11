@@ -38,7 +38,10 @@ class PreviewTest(unittest.TestCase):
             self.assertEqual("http://127.0.0.1:19101/", tor_root["url"])
             self.assertEqual({"transport": "clearnet", "profile": "clearnet"}, tor_root["checks"])
             self.assertEqual("http://preview.onion/", tor_root["published"]["url"])
-            self.assertEqual({"transport": "tor", "profile": "tor"}, tor_root["published"]["checks"])
+            self.assertEqual(
+                {"transport": "tor", "profile": "tor", "isolation": "transport-profile"},
+                tor_root["published"]["checks"],
+            )
             self.assertEqual("preview", tor_root["address_status"])
             self.assertEqual("ready", tor_root["preview"]["status"])
 
