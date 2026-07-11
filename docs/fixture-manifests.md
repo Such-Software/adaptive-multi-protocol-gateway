@@ -5,6 +5,10 @@
 AMPG writes deterministic fixture manifests so AMPB can verify that generated site
 variants route to the expected browser transport context.
 
+Fixture manifests are test contracts, not signed service discovery. See
+[Signed service manifests](service-manifests.md) for the client-facing identity and endpoint
+contract.
+
 Current manifests use `ampg.fixture-manifest.v2`. The browser-facing `checks.context`
 field is a logical transport context and does not imply a separate browser profile or
 window.

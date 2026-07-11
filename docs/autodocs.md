@@ -23,6 +23,10 @@ code. Generated artifacts are committed, then checked in CI by regenerating and 
 : Generated from the route-manifest validator. App repos can use it to emit and validate
   `ampg.route-manifest.v1` without depending on AMPG internals.
 
+`schemas/amp.service-manifest.v1.schema.json`
+: Generated from the signed service-manifest validator. Clients and applications can share
+  the public identity, route, delegation, and signature contract without importing AMPG.
+
 `openapi.json`
 : Generated if AMPG exposes a local control API for status, builds, plans, and daemon
   health.
@@ -67,5 +71,6 @@ outside the public repo.
 - [ ] Generate daemon adapter docs from registered adapters.
 - [ ] Generate renderer docs from renderer defaults.
 - [ ] Generate route-manifest JSON Schema from code.
+- [ ] Generate service-manifest JSON Schema from code.
 - [ ] Commit generated artifacts.
 - [ ] Fail CI when regeneration produces a diff.

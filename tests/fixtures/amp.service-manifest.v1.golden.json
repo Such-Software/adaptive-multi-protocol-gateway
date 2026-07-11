@@ -1,0 +1,66 @@
+{
+  "canonical_payload_utf8": "{\"api\":{\"contract\":\"amp.example.customer-api\",\"schema_sha256\":\"1111111111111111111111111111111111111111111111111111111111111111\",\"version\":\"1.0.0\"},\"expires_at\":\"2036-01-01T00:00:00Z\",\"issued_at\":\"2026-01-01T00:00:00Z\",\"name\":\"AMP Service Manifest Golden Fixture\",\"root_public_key\":\"f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9\",\"routes\":[{\"auth\":[\"nip98\"],\"capabilities\":[\"catalog.read\",\"job.submit\",\"job.status\"],\"context\":\"clearnet\",\"endpoint\":\"https://ampgateway.site/\",\"interaction_tier\":\"transactional\",\"payments\":[\"server-invoice\"],\"priority\":10,\"transport\":\"clearnet\"},{\"auth\":[\"nip98\"],\"capabilities\":[\"catalog.read\",\"job.submit\",\"job.status\"],\"context\":\"tor\",\"endpoint\":\"http://fy2zosxp4oqqcacxcegvwshtmsiiyztnwoinbm46yoig4o3kveidotyd.onion/\",\"interaction_tier\":\"transactional\",\"payments\":[\"server-invoice\"],\"priority\":20,\"transport\":\"tor\"}],\"sequence\":1,\"service_id\":\"amp:5603a5186ef45121612a9b5ff37ae53b81000881d864df7f367aeba037c0e346\"}",
+  "description": "Public cross-language golden vector. The test secret key is not operational.",
+  "manifest": {
+    "payload": {
+      "api": {
+        "contract": "amp.example.customer-api",
+        "schema_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "version": "1.0.0"
+      },
+      "expires_at": "2036-01-01T00:00:00Z",
+      "issued_at": "2026-01-01T00:00:00Z",
+      "name": "AMP Service Manifest Golden Fixture",
+      "root_public_key": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+      "routes": [
+        {
+          "auth": [
+            "nip98"
+          ],
+          "capabilities": [
+            "catalog.read",
+            "job.submit",
+            "job.status"
+          ],
+          "context": "clearnet",
+          "endpoint": "https://ampgateway.site/",
+          "interaction_tier": "transactional",
+          "payments": [
+            "server-invoice"
+          ],
+          "priority": 10,
+          "transport": "clearnet"
+        },
+        {
+          "auth": [
+            "nip98"
+          ],
+          "capabilities": [
+            "catalog.read",
+            "job.submit",
+            "job.status"
+          ],
+          "context": "tor",
+          "endpoint": "http://fy2zosxp4oqqcacxcegvwshtmsiiyztnwoinbm46yoig4o3kveidotyd.onion/",
+          "interaction_tier": "transactional",
+          "payments": [
+            "server-invoice"
+          ],
+          "priority": 20,
+          "transport": "tor"
+        }
+      ],
+      "sequence": 1,
+      "service_id": "amp:5603a5186ef45121612a9b5ff37ae53b81000881d864df7f367aeba037c0e346"
+    },
+    "schema": "amp.service-manifest.v1",
+    "signature": {
+      "algorithm": "BIP340-secp256k1",
+      "canonicalization": "RFC8785-JCS",
+      "public_key": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9",
+      "value": "0c0edc3bc02c3697f7bffd9bd6c03558b400c586ef0d8daf48e8486d387aae5aee1e17a5243514e4254a534574d34362224df73a99f332e1747a648eb44c42b9"
+    }
+  },
+  "payload_digest": "178adc9a4630cda6f6e8b3d1c289c38c346602b2067bf5794a02e4b20bd37a63",
+  "test_secret_key": "0000000000000000000000000000000000000000000000000000000000000003"
+}

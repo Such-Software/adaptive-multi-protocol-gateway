@@ -104,6 +104,7 @@ API remains internal even when the public site is available on Tor or I2P.
 - [Daemon management](docs/daemon-management.md)
 - [Domain onboarding](docs/domain-onboarding.md)
 - [Fixture manifests](docs/fixture-manifests.md)
+- [Signed service manifests](docs/service-manifests.md)
 - [State contract](docs/state-contract.md)
 - [Visual guide](docs/visual-guide.md)
 - [Interaction capabilities](docs/interaction-capabilities.md)
@@ -173,6 +174,8 @@ python3 -m ampg --config examples/wownero.gateway.toml routes explain
 python3 -m ampg --config examples/wownero.gateway.toml routes validate
 python3 tools/generate_route_manifest.py examples/route-catalog.json examples/route-manifest.json
 python3 -m ampg route-manifest validate examples/route-manifest.json
+python3 -m ampg service-manifest validate examples/service-manifest.json --at 2027-01-01T00:00:00Z
+python3 -m ampg service-manifest digest examples/service-manifest.json
 python3 -m ampg --config examples/wownero.gateway.toml audit
 python3 -m ampg --config examples/i2p-only.gateway.toml build
 python3 -m ampg docs generate

@@ -98,6 +98,13 @@ Fixture manifests are the AMPG-to-AMPB boundary. They declare the published URL,
 transport, logical context, and transport-context isolation result. They do not prescribe
 browser tabs, processes, or local daemon ownership; those decisions remain inside AMPB.
 
+Signed service manifests are the service-to-client identity boundary. An application-owned
+route manifest supplies publication policy, while a service manifest represents approved public
+policy plus deployed transport addresses. AMPG currently validates manifests and calculates their
+digests; applications or hardened external signers own private-key operations. A shared service
+identity binds endpoints but never merges browser origins or transport contexts. See
+[Signed service manifests](service-manifests.md).
+
 ## Platform providers
 
 Platform providers decide what daemon management means on the current host. AMPG detects

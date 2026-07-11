@@ -1,0 +1,290 @@
+{
+  "$defs": {
+    "api": {
+      "additionalProperties": false,
+      "properties": {
+        "contract": {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string"
+        },
+        "schema_sha256": {
+          "$ref": "#/$defs/hex32"
+        },
+        "version": {
+          "maxLength": 40,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract",
+        "version",
+        "schema_sha256"
+      ],
+      "type": "object"
+    },
+    "delegation": {
+      "additionalProperties": false,
+      "properties": {
+        "payload": {
+          "$ref": "#/$defs/delegationPayload"
+        },
+        "signature": {
+          "$ref": "#/$defs/signature"
+        }
+      },
+      "required": [
+        "payload",
+        "signature"
+      ],
+      "type": "object"
+    },
+    "delegationPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "expires_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "root_public_key": {
+          "$ref": "#/$defs/hex32"
+        },
+        "schema": {
+          "const": "amp.service-key-delegation.v1"
+        },
+        "sequence": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "service_id": {
+          "pattern": "^amp:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "signing_public_key": {
+          "$ref": "#/$defs/hex32"
+        }
+      },
+      "required": [
+        "schema",
+        "service_id",
+        "root_public_key",
+        "signing_public_key",
+        "issued_at",
+        "expires_at",
+        "sequence"
+      ],
+      "type": "object"
+    },
+    "hex32": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "hex64": {
+      "pattern": "^[0-9a-f]{128}$",
+      "type": "string"
+    },
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "api": {
+          "$ref": "#/$defs/api"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "type": "string"
+        },
+        "previous_manifest_digest": {
+          "$ref": "#/$defs/hex32"
+        },
+        "root_public_key": {
+          "$ref": "#/$defs/hex32"
+        },
+        "routes": {
+          "items": {
+            "$ref": "#/$defs/route"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "type": "array"
+        },
+        "sequence": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "service_id": {
+          "pattern": "^amp:[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "service_id",
+        "name",
+        "root_public_key",
+        "routes",
+        "issued_at",
+        "expires_at",
+        "sequence"
+      ],
+      "type": "object"
+    },
+    "route": {
+      "additionalProperties": false,
+      "properties": {
+        "auth": {
+          "items": {
+            "enum": [
+              "none",
+              "nip98",
+              "smirk-action",
+              "smirk-session",
+              "siwe",
+              "http-session"
+            ]
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "capabilities": {
+          "items": {
+            "maxLength": 120,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 64,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "context": {
+          "enum": [
+            "clearnet",
+            "tor",
+            "i2p",
+            "gemini",
+            "ipfs",
+            "reticulum"
+          ]
+        },
+        "endpoint": {
+          "maxLength": 2048,
+          "minLength": 1,
+          "type": "string"
+        },
+        "interaction_tier": {
+          "enum": [
+            "static",
+            "interactive-lite",
+            "identity",
+            "transactional",
+            "realtime"
+          ]
+        },
+        "payments": {
+          "items": {
+            "enum": [
+              "none",
+              "smirk-wallet",
+              "server-invoice",
+              "payment-capability",
+              "static-instructions"
+            ]
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "priority": {
+          "maximum": 1000,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "transport": {
+          "enum": [
+            "clearnet",
+            "tor",
+            "i2p",
+            "gemini",
+            "ipfs",
+            "reticulum"
+          ]
+        }
+      },
+      "required": [
+        "transport",
+        "endpoint",
+        "context",
+        "interaction_tier",
+        "priority",
+        "auth",
+        "payments"
+      ],
+      "type": "object"
+    },
+    "signature": {
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": {
+          "const": "BIP340-secp256k1"
+        },
+        "canonicalization": {
+          "const": "RFC8785-JCS"
+        },
+        "public_key": {
+          "$ref": "#/$defs/hex32"
+        },
+        "value": {
+          "$ref": "#/$defs/hex64"
+        }
+      },
+      "required": [
+        "algorithm",
+        "canonicalization",
+        "public_key",
+        "value"
+      ],
+      "type": "object"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "maxLength": 40,
+      "type": "string"
+    }
+  },
+  "$id": "urn:amp:schema:service-manifest:v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Signed public identity and multi-transport route contract.",
+  "properties": {
+    "delegation": {
+      "$ref": "#/$defs/delegation"
+    },
+    "payload": {
+      "$ref": "#/$defs/payload"
+    },
+    "schema": {
+      "const": "amp.service-manifest.v1"
+    },
+    "signature": {
+      "$ref": "#/$defs/signature"
+    }
+  },
+  "required": [
+    "schema",
+    "payload",
+    "signature"
+  ],
+  "title": "AMP Signed Service Manifest",
+  "type": "object"
+}

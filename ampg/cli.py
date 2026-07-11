@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 from pathlib import Path
 import sys
 
@@ -95,6 +96,12 @@ from .route_manifest import (
 )
 from .route_policy import RouteExposure, RouteIssue, route_exposures, route_issues
 from .selection import protocols_for_selection, select_profile, select_protocols
+from .service_manifest import (
+    read_service_manifest,
+    service_manifest_digest,
+    service_manifest_schema_json,
+    validate_service_manifest,
+)
 from .state_contract import StatePathContract, state_contract
 from .status import DoctorIssue, TransportStatus, doctor_gateway, gateway_status
 
@@ -537,6 +544,36 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Write the JSON Schema to this path instead of stdout.",
     )
+    service_manifest_parser = subcommands.add_parser(
+        "service-manifest",
+        help="Validate or inspect a signed public service manifest.",
+    )
+    service_manifest_subcommands = service_manifest_parser.add_subparsers(
+        dest="service_manifest_command",
+        required=True,
+    )
+    service_manifest_validate = service_manifest_subcommands.add_parser(
+        "validate",
+        help="Validate structure, validity, delegation, and BIP-340 signatures.",
+    )
+    service_manifest_validate.add_argument("path", type=Path, help="Signed manifest JSON path.")
+    service_manifest_validate.add_argument(
+        "--at", help="Validate at an RFC 3339 timestamp instead of the current time."
+    )
+    service_manifest_validate.add_argument(
+        "--skip-time", action="store_true", help="Skip issued-at and expiration checks."
+    )
+    service_manifest_validate.add_argument("--minimum-sequence", type=int)
+    service_manifest_validate.add_argument("--minimum-delegation-sequence", type=int)
+    service_manifest_validate.add_argument("--expected-previous")
+    service_manifest_digest_parser = service_manifest_subcommands.add_parser(
+        "digest", help="Print the domain-separated payload digest."
+    )
+    service_manifest_digest_parser.add_argument("path", type=Path)
+    service_manifest_schema = service_manifest_subcommands.add_parser(
+        "schema", help="Print the generated service-manifest JSON Schema."
+    )
+    service_manifest_schema.add_argument("--output", type=Path)
     audit_parser = subcommands.add_parser("audit", help="Audit source HTML quality.")
     audit_parser.add_argument(
         "--fail-on-warn",
@@ -561,6 +598,8 @@ def main(argv: list[str] | None = None) -> int:
             return _cmd_docs(args)
         if args.command == "route-manifest":
             return _cmd_route_manifest(args)
+        if args.command == "service-manifest":
+            return _cmd_service_manifest(args)
         config = _selected_config(load_config(args.config), args)
         if args.command == "plan":
             return _cmd_plan(config, write_artifacts=_write_artifacts_enabled(config, args))
@@ -1889,6 +1928,108 @@ def _cmd_route_manifest(args) -> int:
         return 0
 
     return 1
+
+
+def _cmd_service_manifest(args) -> int:
+    if args.service_manifest_command == "schema":
+        content = service_manifest_schema_json()
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(content, encoding="utf-8")
+            print(f"AMPG_SERVICE_MANIFEST_SCHEMA path={args.output}")
+        else:
+            print(content, end="")
+        return 0
+
+    try:
+        data = read_service_manifest(args.path)
+    except ValueError as exc:
+        print(
+            f'AMPG_SERVICE_MANIFEST path={args.path} status=error message="{exc}"',
+            file=sys.stderr,
+        )
+        return 1
+
+    if args.service_manifest_command == "digest":
+        payload = data.get("payload")
+        if not isinstance(payload, dict):
+            print(
+                f'AMPG_SERVICE_MANIFEST path={args.path} status=error message="payload must be an object"',
+                file=sys.stderr,
+            )
+            return 1
+        issues = validate_service_manifest(data, verify_signature=False)
+        if issues:
+            for issue in issues:
+                print(
+                    "AMPG_SERVICE_MANIFEST_ISSUE "
+                    f"path={args.path} json_path={issue.path} "
+                    f'code={issue.code} message="{issue.message}"'
+                )
+            print(
+                f"AMPG_SERVICE_MANIFEST path={args.path} status=fail issues={len(issues)}"
+            )
+            return 1
+        try:
+            digest = service_manifest_digest(payload).hex()
+        except (TypeError, ValueError) as exc:
+            print(
+                f'AMPG_SERVICE_MANIFEST path={args.path} status=error message="{exc}"',
+                file=sys.stderr,
+            )
+            return 1
+        print(f"AMPG_SERVICE_MANIFEST_DIGEST path={args.path} digest={digest}")
+        return 0
+
+    if args.service_manifest_command == "validate":
+        try:
+            now = None if args.skip_time else _service_manifest_time(args.at)
+        except ValueError as exc:
+            print(
+                f'AMPG_SERVICE_MANIFEST path={args.path} status=error message="{exc}"',
+                file=sys.stderr,
+            )
+            return 1
+        issues = validate_service_manifest(
+            data,
+            now=now,
+            minimum_sequence=args.minimum_sequence,
+            minimum_delegation_sequence=args.minimum_delegation_sequence,
+            expected_previous=args.expected_previous,
+        )
+        for issue in issues:
+            print(
+                "AMPG_SERVICE_MANIFEST_ISSUE "
+                f"path={args.path} json_path={issue.path} "
+                f'code={issue.code} message="{issue.message}"'
+            )
+        if issues:
+            print(
+                f"AMPG_SERVICE_MANIFEST path={args.path} status=fail issues={len(issues)}"
+            )
+            return 1
+        payload = data["payload"]
+        print(
+            "AMPG_SERVICE_MANIFEST "
+            f"path={args.path} schema={data['schema']} "
+            f"service_id={payload['service_id']} sequence={payload['sequence']} "
+            f"routes={len(payload['routes'])} "
+            f"digest={service_manifest_digest(payload).hex()} status=ok"
+        )
+        return 0
+    return 1
+
+
+def _service_manifest_time(value: str | None) -> datetime:
+    if value is None:
+        return datetime.now(timezone.utc)
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("--at must be an RFC 3339 timestamp") from exc
+    if parsed.tzinfo is None:
+        raise ValueError("--at must include a UTC offset")
+    return parsed.astimezone(timezone.utc)
 
 
 def _print_route_exposure(exposure: RouteExposure) -> None:
