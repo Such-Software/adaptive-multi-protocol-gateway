@@ -1,6 +1,6 @@
 # Autodocs And Drift Gates
 
-> Status: draft | Updated 2026-07-05 | Applies to: AMPG generated docs
+> Status: draft | Updated 2026-07-11 | Applies to: AMPG generated docs
 
 AMPG should publish concise hand-written docs and generate the parts that can drift from
 code. Generated artifacts are committed, then checked in CI by regenerating and diffing.
@@ -38,13 +38,17 @@ git diff --exit-code docs/generated schemas openapi.json
 python3 tools/docs_check.py
 ```
 
-`ampg docs check` should verify:
+`python3 tools/docs_check.py` verifies:
 
 - every Markdown file starts with a `> Status:` header.
 - internal links resolve.
-- generated docs are not edited by hand.
-- public docs contain no private keys, onion keys, I2P keys, Reticulum identities, or
-  local production secrets.
+- local links stay inside the repository.
+- public docs do not name private fixture targets.
+- public docs do not contain obvious private-key blocks, common API tokens, or assigned
+  secret values.
+
+`python3 -m ampg docs generate --check` verifies that generated docs and schemas match
+the code-owned metadata.
 
 ## Public/private boundary
 

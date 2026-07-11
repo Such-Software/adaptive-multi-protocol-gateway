@@ -1,6 +1,6 @@
 # Architecture
 
-> Status: draft | Updated 2026-07-07 | Applies to: AMPG core
+> Status: draft | Updated 2026-07-11 | Applies to: AMPG core
 
 AMPG is a compiler plus an ingress manager. The compiler turns one site into a
 protocol-neutral content graph, then renders protocol-specific outputs. The ingress
@@ -194,8 +194,10 @@ v1 is static-first, but the architecture reserves a path for interactive applica
 Interactivity is declared per route group:
 
 - `static`: files only.
-- `forms`: server-rendered actions and full-page responses.
-- `sessions`: authenticated flows with strict session policy.
+- `interactive-lite`: deterministic games, status lookups, quote forms, and other flows
+  without account state or payment confirmation.
+- `identity`: authenticated sessions, wallet sign-in, or signed capability links.
+- `transactional`: server-confirmed orders, deposits, invoices, donations, or payment intents.
 - `realtime`: rich browser/admin interfaces; HTTP transports only.
 - `internal`: workers, webhooks, private admin APIs; never published automatically.
 

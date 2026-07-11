@@ -11,6 +11,26 @@ from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+FORBIDDEN_PUBLIC_TERMS = (
+    "wowrace",
+    "wowngeon",
+    "smirk-monorepo",
+    "medusa-multi-tenant-platform",
+    "ai-gen-bot",
+)
+SECRET_PATTERNS = (
+    ("private key block", re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----")),
+    ("open ssh private key block", re.compile(r"-----BEGIN OPENSSH PRIVATE KEY-----")),
+    ("aws access key", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("github token", re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b")),
+    ("slack token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b")),
+    (
+        "assigned secret",
+        re.compile(
+            r"(?i)\b(api[_-]?key|secret|password|token)\s*=\s*['\"][^'\"]{8,}['\"]"
+        ),
+    ),
+)
 
 
 def iter_markdown() -> list[Path]:
@@ -50,12 +70,24 @@ def main() -> int:
         text = path.read_text(encoding="utf-8")
         if not has_status_header(text):
             errors.append(f"{rel}: missing > Status: header in first 6 lines")
+        lower_text = text.lower()
+        for term in FORBIDDEN_PUBLIC_TERMS:
+            if term in lower_text:
+                errors.append(f"{rel}: public docs contain private target term {term!r}")
+        for label, pattern in SECRET_PATTERNS:
+            if pattern.search(text):
+                errors.append(f"{rel}: public docs may contain {label}")
 
         for match in LINK_RE.finditer(text):
             target = local_link_target(path, match.group(1))
             if target is None:
                 continue
             checked_links += 1
+            try:
+                target.relative_to(ROOT)
+            except ValueError:
+                errors.append(f"{rel}: link escapes repo -> {match.group(1)}")
+                continue
             if not target.exists():
                 errors.append(f"{rel}: broken link -> {match.group(1)}")
 
