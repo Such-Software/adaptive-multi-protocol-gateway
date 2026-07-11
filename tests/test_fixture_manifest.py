@@ -59,7 +59,7 @@ cid = "bafyexample"
             manifest = fixture_manifest(config, config.sites[0])
             written = write_fixture_manifests(config)
 
-            self.assertEqual("ampg.fixture-manifest.v1", manifest["schema"])
+            self.assertEqual("ampg.fixture-manifest.v2", manifest["schema"])
             self.assertEqual(["example"], [result.site_id for result in written])
             self.assertEqual(5, written[0].fixture_count)
 
@@ -75,8 +75,8 @@ cid = "bafyexample"
             self.assertEqual(
                 {
                     "transport": "ipfs",
-                    "profile": "ipfs",
-                    "isolation": "transport-profile",
+                    "context": "ipfs",
+                    "isolation": "transport-context",
                 },
                 by_protocol["ipfs"]["checks"],
             )

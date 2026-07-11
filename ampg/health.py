@@ -67,7 +67,7 @@ def _health_check(site: SiteConfig, fixture: dict[str, Any], *, mode: str) -> He
     output_root = site.outputs.root / protocol
     route = str(fixture.get("route", {}).get("fixture_path", "/"))
     transport = str(fixture["checks"]["transport"])
-    profile = str(fixture["checks"]["profile"])
+    profile = str(fixture["checks"].get("context", fixture["checks"].get("profile", transport)))
     address_status = str(fixture["address_status"])
     output_ready = (output_root / ".ampg-output").exists()
     preview_status = fixture.get("preview", {}).get("status")

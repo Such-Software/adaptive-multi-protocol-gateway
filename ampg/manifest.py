@@ -10,7 +10,7 @@ from .config import GatewayConfig, ProtocolConfig, RoutePolicyConfig, SiteConfig
 from .route_policy import fixture_path, route_exposed
 
 
-SCHEMA = "ampg.fixture-manifest.v1"
+SCHEMA = "ampg.fixture-manifest.v2"
 
 
 @dataclass(frozen=True)
@@ -83,8 +83,8 @@ def _fixture_entry(
         "output_path": _output_path_for_route(protocol.name, route_policy),
         "checks": {
             "transport": transport,
-            "profile": transport,
-            "isolation": "transport-profile",
+            "context": transport,
+            "isolation": "transport-context",
         },
         "interaction": _interaction_policy(protocol, route_policy),
     }

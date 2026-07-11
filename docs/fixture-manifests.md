@@ -1,9 +1,13 @@
 # Fixture Manifests
 
-> Status: draft | Updated 2026-07-07 | Applies to: AMPG and AMPB compatibility checks
+> Status: draft | Updated 2026-07-11 | Applies to: AMPG and AMPB compatibility checks
 
 AMPG writes deterministic fixture manifests so AMPB can verify that generated site
-variants route to the expected browser transport and profile.
+variants route to the expected browser transport context.
+
+Current manifests use `ampg.fixture-manifest.v2`. The browser-facing `checks.context`
+field is a logical transport context and does not imply a separate browser profile or
+window.
 
 ## Output
 
@@ -19,7 +23,7 @@ The manifest contains public route expectations only:
 - enabled protocol fixtures.
 - protocol renderer and relative output path.
 - route URL for AMPB checks.
-- expected AMPB transport, profile, and transport-profile isolation.
+- expected AMPB transport, logical context, and transport-context isolation.
 - declared interaction tier, identity adapter, payment adapter, realtime flag, and
   public exposure flag.
 - optional route-group metadata for configured public route policies.
@@ -28,8 +32,9 @@ It must not contain private host inventory, hidden-service keys, tunnel keys, cr
 or deployment notes.
 
 The isolation check is a browser-facing result, not a daemon-management instruction.
-AMPG declares which transport profile must consume the route; AMPB independently decides
-whether to adopt or start the local transport needed to reach it.
+AMPG declares which transport context must consume the route; AMPB independently decides
+how to isolate that context and whether to adopt or start the local transport needed to
+reach it.
 
 ## Commands
 

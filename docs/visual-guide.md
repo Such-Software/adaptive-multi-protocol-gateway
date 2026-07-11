@@ -190,7 +190,7 @@ sequenceDiagram
   Site->>AMPG: build selected outputs
   AMPG->>Manifest: write route expectations
   AMPB->>Manifest: load fixtures
-  AMPB->>Transport: request fixture URL through expected profile
+  AMPB->>Transport: request fixture URL through expected context
   Transport-->>AMPB: return generated output
   AMPB-->>AMPG: report pass or failure
 ```

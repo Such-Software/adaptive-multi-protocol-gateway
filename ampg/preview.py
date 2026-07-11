@@ -97,7 +97,8 @@ def preview_fixture_manifest(
         fixture["address_status"] = "preview"
         fixture["checks"] = {
             "transport": "clearnet",
-            "profile": "clearnet",
+            "context": "clearnet",
+            "isolation": "transport-context",
         }
     return manifest
 
