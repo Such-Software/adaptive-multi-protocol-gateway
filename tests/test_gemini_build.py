@@ -116,8 +116,12 @@ max_asset_bytes = 1024
             self.assertFalse((root / "out/reticulum/app.js").exists())
             self.assertFalse((root / "out/reticulum/styles.css").exists())
             micron = (root / "out/reticulum/index.mu").read_text(encoding="utf-8")
-            self.assertIn("# Home", micron)
-            self.assertIn("=> about.mu About", micron)
+            # A .mu file must contain micron, not Gemtext. Nomad Network renders
+            # Gemtext markers as raw punctuation.
+            self.assertIn(">Home", micron)
+            self.assertNotIn("# Home", micron)
+            self.assertIn("`[About`about.mu]", micron)
+            self.assertNotIn("=> about.mu", micron)
             self.assertNotIn("bad", micron)
 
 

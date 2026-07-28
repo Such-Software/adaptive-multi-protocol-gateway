@@ -461,5 +461,97 @@ daemon_policy = "auto"
         self.assertIn("ExecStart=/bin/sh -lc 'exec tor", service.content)
 
 
+class DaemonConfigInjectionTests(unittest.TestCase):
+    """torrc and tunnels.conf are line-oriented with no escape mechanism, so an
+    interpolated newline injects an arbitrary directive."""
+
+    def test_rejects_newline_in_tunnel_name(self):
+        from ampg.install_plan import _validate_config_token
+
+        with self.assertRaises(ValueError):
+            _validate_config_token("web\nhost = attacker.example", "tunnel_name")
+
+    def test_rejects_separator_characters(self):
+        from ampg.install_plan import _validate_config_token
+
+        for value in ["a b", "../../etc/tor", "name=value", "a\rb", ""]:
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    _validate_config_token(value, "keys_file")
+
+    def test_accepts_ordinary_identifiers(self):
+        from ampg.install_plan import _validate_config_token
+
+        self.assertEqual(_validate_config_token("smirk-web.dat", "keys_file"), "smirk-web.dat")
+
+    def test_rejects_line_break_in_state_path(self):
+        from ampg.install_plan import _validate_config_path
+
+        with self.assertRaises(ValueError):
+            _validate_config_path(Path("/var/lib/x\nDataDirectory /tmp/evil"), "state directory")
+
+
+class SystemdHardeningTests(unittest.TestCase):
+    """A unit with no User= runs as whoever installs it, normally root."""
+
+    def _unit(self, **options) -> str:
+        import dataclasses
+
+        from ampg.install_plan import _supervisor_content
+
+        config = load_config(
+            _write_config(
+                Path(tempfile.mkdtemp()),
+                """
+[site.protocols.tor]
+enabled = true
+renderer = "gemtext"
+daemon = "tor"
+daemon_policy = "auto"
+""",
+            )
+        )
+        site = config.sites[0]
+        base = site.protocols["tor"]
+        protocol = dataclasses.replace(base, options={**base.options, **options})
+        return _supervisor_content(
+            config,
+            site,
+            protocol,
+            platform_by_name("linux-systemd"),
+            service_suffix="daemon",
+            command="exec tor -f /etc/tor/torrc",
+        )
+
+    def test_unit_warns_loudly_when_no_service_user_configured(self):
+        unit = self._unit()
+
+        self.assertIn("WARNING: no service_user configured", unit)
+        self.assertNotIn("\nUser=", unit)
+
+    def test_unit_sets_account_when_service_user_configured(self):
+        unit = self._unit(service_user="ampg-tor")
+
+        self.assertIn("User=ampg-tor", unit)
+        self.assertIn("Group=ampg-tor", unit)
+        self.assertNotIn("WARNING: no service_user", unit)
+
+    def test_unit_carries_baseline_hardening(self):
+        unit = self._unit(service_user="ampg-tor")
+
+        for directive in (
+            "NoNewPrivileges=true",
+            "PrivateTmp=true",
+            "RestrictSUIDSGID=true",
+            "CapabilityBoundingSet=",
+        ):
+            with self.subTest(directive=directive):
+                self.assertIn(directive, unit)
+
+    def test_unit_rejects_injected_service_user(self):
+        with self.assertRaises(ValueError):
+            self._unit(service_user="root\nExecStartPre=/bin/evil")
+
+
 if __name__ == "__main__":
     unittest.main()
