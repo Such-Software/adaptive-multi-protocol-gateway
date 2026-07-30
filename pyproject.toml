@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [project.scripts]
 ampg = "ampg.cli:main"
+ampg-dns-manifest = "ampg.dns_manifest_cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

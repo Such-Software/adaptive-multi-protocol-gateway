@@ -42,6 +42,31 @@ whole zone before applying. The documented Namecheap API record types do not inc
 unsupported record types and relies on TXT discovery hints unless another provider path
 is configured.
 
+Application and service onboarding can use a secretless JSON manifest without
+creating a synthetic `gateway.toml`:
+
+```sh
+ampg-dns-manifest --manifest ~/Build/example/dns-manifest.json --offline
+ampg-dns-manifest \
+  --manifest ~/Build/example/dns-manifest.json \
+  --credentials /tmp/ephemeral-namecheap.ini \
+  --client-ip 203.0.113.10
+ampg-dns-manifest \
+  --manifest ~/Build/example/dns-manifest.json \
+  --credentials /tmp/ephemeral-namecheap.ini \
+  --client-ip 203.0.113.10 \
+  --backup-dir ~/Build/example/dns-backups \
+  --apply-zone example.com
+```
+
+The generic writer is also read-only by default. The exact `--apply-zone`
+sentinel and an absolute backup directory are mandatory for a write.
+`protected_names` can forbid all changes at sensitive names such as `@`.
+Each managed record explicitly chooses whether to replace all values at its
+name/type or only values with a known prefix; unrelated TXT values survive.
+Credential files must be short-lived inputs created by the approved secret
+handoff and must never be committed or placed in Seafile.
+
 `dns plan --free-domain-hints` prints `AMPG_FREE_DOMAIN_HINT` rows for optional
 third-party services that may provide free subdomains for personal sites, hobby apps, or
 open-source projects. AMPG does not register these names automatically because each
