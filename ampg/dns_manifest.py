@@ -21,6 +21,16 @@ from .dns import (
     NamecheapDNSProvider,
     ProviderDNSRecord,
 )
+from .dynadot_dns import (
+    DYNADOT_SUPPORTED_RECORD_TYPES,
+    DynadotDNSProvider,
+)
+
+
+_PROVIDER_RECORD_TYPES = {
+    "namecheap": NAMECHEAP_SUPPORTED_RECORD_TYPES,
+    "dynadot": DYNADOT_SUPPORTED_RECORD_TYPES,
+}
 
 
 _HOSTNAME = re.compile(
@@ -77,6 +87,7 @@ def _record_identity(record: ProviderDNSRecord) -> tuple[Any, ...]:
         record.value.strip(),
         int(record.ttl),
         record.mx_pref,
+        record.provider_value2,
     )
 
 
@@ -89,13 +100,14 @@ def _record_sort_key(record: ProviderDNSRecord) -> tuple[str, str, str, int]:
     )
 
 
-def _load_record(raw: Any) -> ManagedDNSRecord:
+def _load_record(raw: Any, provider: str) -> ManagedDNSRecord:
     if not isinstance(raw, dict):
         raise ValueError("managed DNS records must be objects")
     name = _record_name(_required_string(raw, "name"))
     record_type = _required_string(raw, "type").upper()
-    if record_type not in NAMECHEAP_SUPPORTED_RECORD_TYPES:
-        raise ValueError(f"unsupported Namecheap record type: {record_type}")
+    supported_types = _PROVIDER_RECORD_TYPES[provider]
+    if record_type not in supported_types:
+        raise ValueError(f"unsupported {provider} record type: {record_type}")
     value = _required_string(raw, "value")
     if (
         "\n" in value
@@ -114,6 +126,16 @@ def _load_record(raw: Any) -> ManagedDNSRecord:
             raise ValueError(f"record {name}/MX requires mx_pref")
     elif mx_pref is not None:
         raise ValueError(f"record {name}/{record_type} cannot set mx_pref")
+    provider_value2 = raw.get("provider_value2")
+    if provider_value2 is not None:
+        if provider != "dynadot" or record_type == "MX":
+            raise ValueError(
+                f"record {name}/{record_type} cannot set provider_value2"
+            )
+        if not isinstance(provider_value2, str) or not provider_value2:
+            raise ValueError(
+                f"record {name}/{record_type} has invalid provider_value2"
+            )
 
     replace = raw.get("replace", "all")
     if replace not in {"all", "value_prefix"}:
@@ -136,11 +158,13 @@ def _load_record(raw: Any) -> ManagedDNSRecord:
     ):
         raise ValueError(f"record {name}/{record_type} has invalid conflicts")
     conflict_types = tuple(item.upper() for item in raw_conflicts)
-    if any(item not in NAMECHEAP_SUPPORTED_RECORD_TYPES for item in conflict_types):
+    if any(item not in supported_types for item in conflict_types):
         raise ValueError(f"record {name}/{record_type} has unsupported conflicts")
 
     return ManagedDNSRecord(
-        record=ProviderDNSRecord(name, record_type, value, ttl, mx_pref),
+        record=ProviderDNSRecord(
+            name, record_type, value, ttl, mx_pref, provider_value2
+        ),
         replace=replace,
         match_value_prefix=match_value_prefix,
         conflict_types=conflict_types,
@@ -163,8 +187,8 @@ def load_dns_manifest(path: Path) -> DNSManifest:
     if not _HOSTNAME.fullmatch(zone):
         raise ValueError("zone must be a DNS hostname")
     provider = _required_string(document, "provider")
-    if provider != "namecheap":
-        raise ValueError("contract version 1 supports only Namecheap")
+    if provider not in _PROVIDER_RECORD_TYPES:
+        raise ValueError("contract version 1 has an unsupported DNS provider")
     if document.get("preserve_unmanaged") is not True:
         raise ValueError("preserve_unmanaged must be true")
     raw_protected = document.get("protected_names", [])
@@ -179,7 +203,7 @@ def load_dns_manifest(path: Path) -> DNSManifest:
         raise ValueError("records must be a non-empty list")
     if len(raw_records) > 100:
         raise ValueError("DNS manifest has too many managed records")
-    records = tuple(_load_record(raw) for raw in raw_records)
+    records = tuple(_load_record(raw, provider) for raw in raw_records)
     for managed in records:
         if _record_name(managed.record.name) in protected_names:
             raise ValueError(
@@ -241,8 +265,8 @@ def _changes(
     before_set = {_record_identity(record) for record in before}
     after_set = {_record_identity(record) for record in after}
     changes: list[dict[str, Any]] = []
-    for identity in sorted(before_set - after_set):
-        name, record_type, value, ttl, mx_pref = identity
+    for identity in sorted(before_set - after_set, key=repr):
+        name, record_type, value, ttl, mx_pref, provider_value2 = identity
         changes.append(
             {
                 "action": "remove",
@@ -251,10 +275,11 @@ def _changes(
                 "value": value,
                 "ttl": ttl,
                 "mx_pref": mx_pref,
+                "provider_value2": provider_value2,
             }
         )
-    for identity in sorted(after_set - before_set):
-        name, record_type, value, ttl, mx_pref = identity
+    for identity in sorted(after_set - before_set, key=repr):
+        name, record_type, value, ttl, mx_pref, provider_value2 = identity
         changes.append(
             {
                 "action": "add",
@@ -263,6 +288,7 @@ def _changes(
                 "value": value,
                 "ttl": ttl,
                 "mx_pref": mx_pref,
+                "provider_value2": provider_value2,
             }
         )
     return changes
@@ -273,6 +299,7 @@ def offline_plan(manifest: DNSManifest) -> dict[str, Any]:
         "contract_version": 1,
         "app_id": manifest.app_id,
         "zone": manifest.zone,
+        "provider": manifest.provider,
         "mode": "offline-plan",
         "preserve_unmanaged": True,
         "protected_names": list(manifest.protected_names),
@@ -283,6 +310,7 @@ def offline_plan(manifest: DNSManifest) -> dict[str, Any]:
                 "value": entry.record.value,
                 "ttl": entry.record.ttl,
                 "mx_pref": entry.record.mx_pref,
+                "provider_value2": entry.record.provider_value2,
                 "replace": entry.replace,
             }
             for entry in manifest.records
@@ -290,9 +318,15 @@ def offline_plan(manifest: DNSManifest) -> dict[str, Any]:
     }
 
 
-def _write_backup(zone: str, raw: str, backup_dir: Path) -> Path:
+def _write_backup(
+    provider: str,
+    zone: str,
+    raw: str,
+    backup_dir: Path,
+    extension: str,
+) -> Path:
     stamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d_%H%M%S_%f")
-    path = backup_dir / "namecheap" / f"{zone}.{stamp}.xml"
+    path = backup_dir / provider / f"{zone}.{stamp}.{extension}"
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     with path.open("x", encoding="utf-8") as backup:
         backup.write(raw)
@@ -307,11 +341,21 @@ def reconcile_dns_manifest(
     apply: bool = False,
     backup_dir: Path | None = None,
 ) -> dict[str, Any]:
+    if getattr(provider, "name", None) != manifest.provider:
+        raise DNSManifestError("provider credentials do not match the manifest")
     snapshot = provider.get_hosts(manifest.zone)
     if snapshot.status != "ok":
         raise DNSManifestError(
             f"provider fetch failed for {manifest.zone}: {snapshot.message}"
         )
+    if manifest.provider == "dynadot":
+        if snapshot.zone_ttl is None:
+            raise DNSManifestError("Dynadot did not return the observed zone TTL")
+        desired_ttls = {entry.record.ttl for entry in manifest.records}
+        if desired_ttls != {snapshot.zone_ttl}:
+            raise DNSManifestError(
+                "Dynadot manifest TTL must equal the observed zone-wide TTL"
+            )
     next_records = merge_dns_manifest_records(
         snapshot.records, manifest.records
     )
@@ -320,7 +364,14 @@ def reconcile_dns_manifest(
     if apply and changes:
         if backup_dir is None or not backup_dir.is_absolute():
             raise DNSManifestError("live apply requires an absolute backup_dir")
-        backup_path = _write_backup(manifest.zone, snapshot.raw, backup_dir)
+        extension = getattr(provider, "backup_format", "txt")
+        backup_path = _write_backup(
+            manifest.provider,
+            manifest.zone,
+            snapshot.raw,
+            backup_dir,
+            extension,
+        )
         provider.set_hosts(
             manifest.zone, next_records, mail_policy="preserve"
         )
@@ -340,6 +391,7 @@ def reconcile_dns_manifest(
         "contract_version": 1,
         "app_id": manifest.app_id,
         "zone": manifest.zone,
+        "provider": manifest.provider,
         "mode": "apply" if apply else "connected-plan",
         "status": (
             "applied"
@@ -360,3 +412,17 @@ def namecheap_provider(
     return NamecheapDNSProvider(
         credentials=credentials, client_ip=client_ip
     )
+
+
+def provider_from_credentials(
+    provider: str,
+    credentials: Path,
+    client_ip: str | None,
+) -> NamecheapDNSProvider | DynadotDNSProvider:
+    if provider == "namecheap":
+        return namecheap_provider(credentials, client_ip)
+    if provider == "dynadot":
+        if client_ip is not None:
+            raise ValueError("--client-ip is only valid for Namecheap")
+        return DynadotDNSProvider(credentials=credentials)
+    raise ValueError("unsupported DNS provider")

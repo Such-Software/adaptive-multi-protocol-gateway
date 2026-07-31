@@ -1,6 +1,6 @@
 # Domain Onboarding
 
-> Status: draft | Updated 2026-07-07 | Applies to: clearnet DNS setup
+> Status: reviewed adapter contract | Updated 2026-07-31 | Applies to: clearnet DNS setup
 
 AMPG treats clearnet naming as an operator choice. A site can use a normal owned domain,
 a community free subdomain, a Dynamic DNS name, or no clearnet name at all when only
@@ -42,6 +42,15 @@ whole zone before applying. The documented Namecheap API record types do not inc
 unsupported record types and relies on TXT discovery hints unless another provider path
 is configured.
 
+Dynadot REST v2 is also supported. Its DNS update replaces the complete zone and
+uses one zone-wide TTL, so AMPG preserves every documented `value1`, `value2`, and
+`sub_host` field and refuses a write if the merged records have mixed TTLs. The
+Dynadot credential input must contain `api_base_url`, `api_key`, `api_secret`, and
+an operator-observed IPv4 `/32` `allowed_source_cidr`. Keys and signatures travel
+only in request headers. Because Dynadot labels REST v2 beta, production use also
+requires a pinned adapter commit, a sandbox proof, a connected production plan,
+and a private raw backup before the exact-zone apply.
+
 Application and service onboarding can use a secretless JSON manifest without
 creating a synthetic `gateway.toml`:
 
@@ -58,6 +67,11 @@ ampg-dns-manifest \
   --backup-dir ~/Build/example/dns-backups \
   --apply-zone example.com
 ```
+
+For Dynadot, omit `--client-ip` and provide the ephemeral four-field Dynadot
+credential file. A connected plan first observes the existing zone-wide TTL.
+The secretless manifest must be rendered with that exact TTL before apply;
+AMPG fails closed instead of changing the TTL on unmanaged records.
 
 The generic writer is also read-only by default. The exact `--apply-zone`
 sentinel and an absolute backup directory are mandatory for a write.

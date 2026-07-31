@@ -14,7 +14,7 @@ from .addresses import effective_address_records
 
 
 DNS_MODES = ("static", "dynamic")
-DNS_PROVIDERS = ("namecheap",)
+DNS_PROVIDERS = ("namecheap", "dynadot")
 DNS_MAIL_POLICIES = ("preserve", "disabled")
 DEFAULT_TTL = 1800
 NAMECHEAP_SUPPORTED_RECORD_TYPES = {
@@ -91,6 +91,7 @@ class ProviderDNSRecord:
     value: str
     ttl: int = DEFAULT_TTL
     mx_pref: int | None = None
+    provider_value2: str | None = None
 
 
 @dataclass(frozen=True)
@@ -113,6 +114,7 @@ class DNSZoneSnapshot:
     records: tuple[ProviderDNSRecord, ...]
     status: str
     message: str
+    zone_ttl: int | None = None
 
 
 @dataclass(frozen=True)
@@ -776,7 +778,13 @@ def _default_backup_dir(config: GatewayConfig) -> Path:
 
 def _backup_domain(provider, domain: str, backup_dir: Path) -> DNSBackupResult:
     snapshot = provider.get_hosts(domain)
-    path = _write_dns_backup(provider.name, domain, snapshot.raw, backup_dir)
+    path = _write_dns_backup(
+        provider.name,
+        domain,
+        snapshot.raw,
+        backup_dir,
+        extension=getattr(provider, "backup_format", "txt"),
+    )
     return DNSBackupResult(
         provider=provider.name,
         domain=domain,
@@ -787,9 +795,16 @@ def _backup_domain(provider, domain: str, backup_dir: Path) -> DNSBackupResult:
     )
 
 
-def _write_dns_backup(provider: str, domain: str, raw: str, backup_dir: Path) -> Path:
+def _write_dns_backup(
+    provider: str,
+    domain: str,
+    raw: str,
+    backup_dir: Path,
+    *,
+    extension: str = "xml",
+) -> Path:
     stamp = _datetime.datetime.now(_datetime.UTC).strftime("%Y%m%d_%H%M%S")
-    path = backup_dir / provider / f"{domain}.{stamp}.xml"
+    path = backup_dir / provider / f"{domain}.{stamp}.{extension}"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(raw, encoding="utf-8")
     return path
@@ -799,9 +814,15 @@ def _records_supported_by_provider(
     provider: str,
     records: tuple[ProviderDNSRecord, ...] | list[ProviderDNSRecord],
 ) -> tuple[ProviderDNSRecord, ...]:
-    if provider != "namecheap":
+    if provider == "namecheap":
+        supported = NAMECHEAP_SUPPORTED_RECORD_TYPES
+    elif provider == "dynadot":
+        from .dynadot_dns import DYNADOT_SUPPORTED_RECORD_TYPES
+
+        supported = DYNADOT_SUPPORTED_RECORD_TYPES
+    else:
         return tuple(records)
-    return tuple(record for record in records if record.type in NAMECHEAP_SUPPORTED_RECORD_TYPES)
+    return tuple(record for record in records if record.type in supported)
 
 
 def _unsupported_record_changes(
@@ -809,11 +830,17 @@ def _unsupported_record_changes(
     provider: str,
     desired: tuple[ProviderDNSRecord, ...],
 ) -> tuple[DNSApplyChange, ...]:
-    if provider != "namecheap":
+    if provider == "namecheap":
+        supported = NAMECHEAP_SUPPORTED_RECORD_TYPES
+    elif provider == "dynadot":
+        from .dynadot_dns import DYNADOT_SUPPORTED_RECORD_TYPES
+
+        supported = DYNADOT_SUPPORTED_RECORD_TYPES
+    else:
         return ()
     changes = []
     for record in desired:
-        if record.type in NAMECHEAP_SUPPORTED_RECORD_TYPES:
+        if record.type in supported:
             continue
         changes.append(
             DNSApplyChange(
@@ -915,6 +942,7 @@ def _normalize_provider_record(record: ProviderDNSRecord) -> ProviderDNSRecord:
         value=record.value.strip(),
         ttl=int(record.ttl or DEFAULT_TTL),
         mx_pref=record.mx_pref,
+        provider_value2=record.provider_value2,
     )
 
 
@@ -946,11 +974,16 @@ def _url_host(value: str) -> str:
 def _dns_provider(provider: str, *, credentials: Path, client_ip: str | None):
     if provider == "namecheap":
         return NamecheapDNSProvider(credentials=credentials, client_ip=client_ip)
+    if provider == "dynadot":
+        from .dynadot_dns import DynadotDNSProvider
+
+        return DynadotDNSProvider(credentials=credentials)
     raise ValueError(f"unsupported DNS provider {provider!r}")
 
 
 class NamecheapDNSProvider:
     name = "namecheap"
+    backup_format = "xml"
 
     def __init__(self, *, credentials: Path, client_ip: str | None = None):
         self.credentials = credentials
@@ -1015,6 +1048,8 @@ class NamecheapDNSProvider:
         *,
         mail_policy: str,
     ) -> None:
+        if any(record.provider_value2 is not None for record in records):
+            raise ValueError("Namecheap records cannot set provider_value2")
         params = self._domain_params(domain)
         if mail_policy == "disabled":
             params["EmailType"] = "MX"

@@ -44,6 +44,7 @@ def manifest_document():
 
 class FakeProvider:
     name = "namecheap"
+    backup_format = "xml"
 
     def __init__(self, records):
         self.records = tuple(records)
@@ -127,6 +128,62 @@ class DNSManifestTests(unittest.TestCase):
             manifest, provider, apply=True, backup_dir=backup_dir
         )
         self.assertEqual("applied", applied["status"])
+        self.assertEqual(1, provider.writes)
+        second = reconcile_dns_manifest(
+            manifest, provider, apply=True, backup_dir=backup_dir
+        )
+        self.assertEqual("verified", second["status"])
+        self.assertEqual(1, provider.writes)
+
+    def test_dynadot_requires_observed_zone_ttl(self):
+        document = manifest_document()
+        document["provider"] = "dynadot"
+        document["records"][0]["conflict_types"] = ["CNAME", "ANAME"]
+        self.path.write_text(json.dumps(document), encoding="utf-8")
+        manifest = load_dns_manifest(self.path)
+        provider = FakeProvider([])
+        provider.name = "dynadot"
+        with self.assertRaisesRegex(Exception, "observed zone TTL"):
+            reconcile_dns_manifest(manifest, provider)
+
+    def test_provider_credentials_must_match_manifest(self):
+        manifest = load_dns_manifest(self.path)
+        provider = FakeProvider([])
+        provider.name = "dynadot"
+        with self.assertRaisesRegex(Exception, "do not match"):
+            reconcile_dns_manifest(manifest, provider)
+
+    def test_dynadot_apply_uses_json_backup_and_is_idempotent(self):
+        document = manifest_document()
+        document["provider"] = "dynadot"
+        document["records"][0]["conflict_types"] = ["CNAME", "ANAME"]
+        self.path.write_text(json.dumps(document), encoding="utf-8")
+        manifest = load_dns_manifest(self.path)
+
+        class FakeDynadot(FakeProvider):
+            name = "dynadot"
+            backup_format = "json"
+
+            def get_hosts(self, zone):
+                return DNSZoneSnapshot(
+                    self.name,
+                    zone,
+                    '{"zone":"snapshot"}\n',
+                    self.records,
+                    "ok",
+                    "ok",
+                    300,
+                )
+
+        provider = FakeDynadot(
+            [ProviderDNSRecord("@", "A", "153.75.248.86", 300)]
+        )
+        backup_dir = Path(self.temporary.name) / "backups"
+        result = reconcile_dns_manifest(
+            manifest, provider, apply=True, backup_dir=backup_dir
+        )
+        self.assertEqual("applied", result["status"])
+        self.assertTrue(result["backup_path"].endswith(".json"))
         self.assertEqual(1, provider.writes)
         second = reconcile_dns_manifest(
             manifest, provider, apply=True, backup_dir=backup_dir

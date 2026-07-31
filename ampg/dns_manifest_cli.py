@@ -10,8 +10,8 @@ import sys
 from .dns_manifest import (
     DNSManifestError,
     load_dns_manifest,
-    namecheap_provider,
     offline_plan,
+    provider_from_credentials,
     reconcile_dns_manifest,
 )
 
@@ -27,7 +27,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--credentials",
         type=Path,
-        help="Namecheap key-value credential file; required for provider access",
+        help="Provider key-value credential file; required for provider access",
     )
     parser.add_argument("--client-ip")
     parser.add_argument(
@@ -60,8 +60,8 @@ def main(arguments: list[str] | None = None) -> int:
                 raise ValueError("--apply-zone must exactly match manifest zone")
             if apply and options.backup_dir is None:
                 raise ValueError("--backup-dir is required for live apply")
-            provider = namecheap_provider(
-                options.credentials, options.client_ip
+            provider = provider_from_credentials(
+                manifest.provider, options.credentials, options.client_ip
             )
             result = reconcile_dns_manifest(
                 manifest,
@@ -72,7 +72,7 @@ def main(arguments: list[str] | None = None) -> int:
         json.dump(result, sys.stdout, indent=2, sort_keys=True)
         sys.stdout.write("\n")
         return 0
-    except (DNSManifestError, OSError, ValueError) as error:
+    except (DNSManifestError, OSError, RuntimeError, ValueError) as error:
         print(f"ampg-dns-manifest: {error}", file=sys.stderr)
         return 1
 
