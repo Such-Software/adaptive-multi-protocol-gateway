@@ -59,6 +59,7 @@ class DNSManifest:
     provider: str
     preserve_unmanaged: bool
     protected_names: tuple[str, ...]
+    protected_name_exceptions: tuple[tuple[str, str], ...]
     records: tuple[ManagedDNSRecord, ...]
 
 
@@ -198,6 +199,32 @@ def load_dns_manifest(path: Path) -> DNSManifest:
     ):
         raise ValueError("protected_names must be a list")
     protected_names = tuple(_record_name(item) for item in raw_protected)
+    raw_exceptions = document.get("protected_name_exceptions", [])
+    if not isinstance(raw_exceptions, list):
+        raise ValueError("protected_name_exceptions must be a list")
+    protected_name_exceptions: tuple[tuple[str, str], ...] = tuple(
+        (
+            _record_name(_required_string(item, "name")),
+            _required_string(item, "type").upper(),
+        )
+        for item in raw_exceptions
+        if isinstance(item, dict) and set(item) == {"name", "type"}
+    )
+    if len(protected_name_exceptions) != len(raw_exceptions):
+        raise ValueError(
+            "protected_name_exceptions entries require only name and type"
+        )
+    if len(set(protected_name_exceptions)) != len(protected_name_exceptions):
+        raise ValueError("protected_name_exceptions contains a duplicate")
+    for name, record_type in protected_name_exceptions:
+        if name not in protected_names:
+            raise ValueError(
+                "protected_name_exceptions must target a protected name"
+            )
+        if record_type not in _PROVIDER_RECORD_TYPES[provider]:
+            raise ValueError(
+                "protected_name_exceptions contains an unsupported type"
+            )
     raw_records = document.get("records")
     if not isinstance(raw_records, list) or not raw_records:
         raise ValueError("records must be a non-empty list")
@@ -205,10 +232,25 @@ def load_dns_manifest(path: Path) -> DNSManifest:
         raise ValueError("DNS manifest has too many managed records")
     records = tuple(_load_record(raw, provider) for raw in raw_records)
     for managed in records:
-        if _record_name(managed.record.name) in protected_names:
+        managed_identity = (
+            _record_name(managed.record.name),
+            managed.record.type.upper(),
+        )
+        if (
+            managed_identity[0] in protected_names
+            and managed_identity not in protected_name_exceptions
+        ):
             raise ValueError(
                 f"managed record targets protected name {managed.record.name}"
             )
+    managed_name_types = {
+        (_record_name(managed.record.name), managed.record.type.upper())
+        for managed in records
+    }
+    if not set(protected_name_exceptions).issubset(managed_name_types):
+        raise ValueError(
+            "protected_name_exceptions must match a managed record"
+        )
     identities = [_record_identity(managed.record) for managed in records]
     if len(identities) != len(set(identities)):
         raise ValueError("DNS manifest contains a duplicate record")
@@ -219,6 +261,7 @@ def load_dns_manifest(path: Path) -> DNSManifest:
         provider=provider,
         preserve_unmanaged=True,
         protected_names=protected_names,
+        protected_name_exceptions=protected_name_exceptions,
         records=records,
     )
 
@@ -303,6 +346,10 @@ def offline_plan(manifest: DNSManifest) -> dict[str, Any]:
         "mode": "offline-plan",
         "preserve_unmanaged": True,
         "protected_names": list(manifest.protected_names),
+        "protected_name_exceptions": [
+            {"name": name, "type": record_type}
+            for name, record_type in manifest.protected_name_exceptions
+        ],
         "managed_records": [
             {
                 "name": entry.record.name,

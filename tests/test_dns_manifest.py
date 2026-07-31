@@ -108,6 +108,58 @@ class DNSManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "protected"):
             load_dns_manifest(self.path)
 
+    def test_exact_protected_apex_txt_exception_is_allowed(self):
+        document = manifest_document()
+        document["records"][1]["name"] = "@"
+        document["records"][1]["value"] = (
+            "v=spf1 include:spf.efwd.registrar-servers.com "
+            "include:mail.suchshop.lol ~all"
+        )
+        document["protected_name_exceptions"] = [
+            {"name": "@", "type": "TXT"}
+        ]
+        self.path.write_text(json.dumps(document), encoding="utf-8")
+        manifest = load_dns_manifest(self.path)
+        self.assertEqual((("@", "TXT"),), manifest.protected_name_exceptions)
+
+        existing = (
+            ProviderDNSRecord("@", "A", "153.75.248.86", 1800),
+            ProviderDNSRecord(
+                "@", "MX", "eforward1.registrar-servers.com.", 1800, 10
+            ),
+            ProviderDNSRecord(
+                "@",
+                "TXT",
+                "v=spf1 include:spf.efwd.registrar-servers.com ~all",
+                1800,
+            ),
+        )
+        merged = merge_dns_manifest_records(existing, manifest.records)
+        identities = {
+            (record.name, record.type, record.value) for record in merged
+        }
+        self.assertIn(("@", "A", "153.75.248.86"), identities)
+        self.assertIn(
+            ("@", "MX", "eforward1.registrar-servers.com."), identities
+        )
+        self.assertNotIn(
+            (
+                "@",
+                "TXT",
+                "v=spf1 include:spf.efwd.registrar-servers.com ~all",
+            ),
+            identities,
+        )
+
+    def test_protected_exception_must_match_managed_name_and_type(self):
+        document = manifest_document()
+        document["protected_name_exceptions"] = [
+            {"name": "@", "type": "TXT"}
+        ]
+        self.path.write_text(json.dumps(document), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "match a managed record"):
+            load_dns_manifest(self.path)
+
     def test_unresolved_values_are_rejected(self):
         document = manifest_document()
         document["records"][0]["value"] = "{{ prod_ip }}"
