@@ -22,7 +22,7 @@ def golden() -> dict:
     return json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))
 
 
-def test_sign(secret: int, message: bytes) -> tuple[str, str]:
+def _sign_for_test(secret: int, message: bytes) -> tuple[str, str]:
     point = bip340.point_mul(secret, bip340.SECP256K1_GENERATOR)
     assert point is not None
     adjusted = secret if point[1] % 2 == 0 else bip340.SECP256K1_ORDER - secret
@@ -138,7 +138,7 @@ class ServiceManifestTest(unittest.TestCase):
         manifest = deepcopy(golden()["manifest"])
         root_secret = int(golden()["test_secret_key"], 16)
         signing_secret = 4
-        signing_key, _ = test_sign(signing_secret, bytes(32))
+        signing_key, _ = _sign_for_test(signing_secret, bytes(32))
         delegation_payload = {
             "schema": sm.DELEGATION_SCHEMA,
             "service_id": manifest["payload"]["service_id"],
@@ -148,10 +148,10 @@ class ServiceManifestTest(unittest.TestCase):
             "expires_at": "2037-01-01T00:00:00Z",
             "sequence": 1,
         }
-        root_key, delegation_signature = test_sign(
+        root_key, delegation_signature = _sign_for_test(
             root_secret, sm.delegation_digest(delegation_payload)
         )
-        signing_key, manifest_signature = test_sign(
+        signing_key, manifest_signature = _sign_for_test(
             signing_secret, sm.service_manifest_digest(manifest["payload"])
         )
         manifest["delegation"] = {
