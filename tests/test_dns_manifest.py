@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from ampg.dns import DNSZoneSnapshot, ProviderDNSRecord
+from ampg.dns import DNSZoneSnapshot, NamecheapDNSProvider, ProviderDNSRecord
 from ampg.dns_manifest import (
     load_dns_manifest,
     merge_dns_manifest_records,
@@ -58,6 +58,29 @@ class FakeProvider:
     def set_hosts(self, zone, records, *, mail_policy):
         self.writes += 1
         self.records = tuple(records)
+
+
+class NamecheapProviderTests(unittest.TestCase):
+    def test_non_mx_preference_placeholder_is_ignored(self):
+        response = """\
+<ApiResponse Status="OK">
+  <CommandResponse>
+    <DomainDNSGetHostsResult>
+      <host Name="shop" Type="A" Address="192.0.2.1" TTL="300" MXPref="10" />
+      <host Name="@" Type="MX" Address="mx.example" TTL="300" MXPref="20" />
+    </DomainDNSGetHostsResult>
+  </CommandResponse>
+</ApiResponse>
+"""
+        provider = NamecheapDNSProvider.__new__(NamecheapDNSProvider)
+        provider._request = lambda _command, _params: response
+        provider._domain_params = lambda _domain: {"SLD": "example", "TLD": "test"}
+
+        snapshot = provider.get_hosts("example.test")
+
+        self.assertEqual("ok", snapshot.status)
+        self.assertIsNone(snapshot.records[0].mx_pref)
+        self.assertEqual(20, snapshot.records[1].mx_pref)
 
 
 class DNSManifestTests(unittest.TestCase):
