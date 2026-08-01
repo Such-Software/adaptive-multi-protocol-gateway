@@ -1023,13 +1023,18 @@ class NamecheapDNSProvider:
         for element in root.iter():
             if _xml_localname(element.tag) != "host":
                 continue
+            record_type = (element.get("Type") or "").upper()
             records.append(
                 ProviderDNSRecord(
                     name=element.get("Name") or "@",
-                    type=(element.get("Type") or "").upper(),
+                    type=record_type,
                     value=element.get("Address") or "",
                     ttl=int(element.get("TTL") or DEFAULT_TTL),
-                    mx_pref=_optional_int(element.get("MXPref")),
+                    mx_pref=(
+                        _optional_int(element.get("MXPref"))
+                        if record_type == "MX"
+                        else None
+                    ),
                 )
             )
         return DNSZoneSnapshot(
