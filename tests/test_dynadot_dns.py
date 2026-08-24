@@ -283,6 +283,106 @@ class DynadotDNSTests(unittest.TestCase):
         self.assertNotIn("X-Request-Id", captured)
         self.assertNotIn("X-request-id", captured)
 
+    def test_a_string_zone_ttl_is_accepted_because_dynadot_sends_one(self):
+        """A live zone returned ttl as "300".
+
+        The read path required an int and rejected every Dynadot zone, while the
+        write path already coerced the same value with int(record.ttl). Reading
+        was stricter than writing, which is the wrong way round: it made zones
+        unreadable that we were perfectly capable of writing.
+        """
+        from ampg.dynadot_dns import _zone_ttl
+
+        self.assertEqual(300, _zone_ttl("300"))
+        self.assertEqual(1800, _zone_ttl(" 1800 "))
+        self.assertEqual(300, _zone_ttl(300))
+
+    def test_a_ttl_that_is_not_a_whole_number_of_seconds_is_refused(self):
+        from ampg.dynadot_dns import _zone_ttl
+
+        for value in ("", "abc", "300.0", None, 3.5, [], {}):
+            with self.subTest(value=value):
+                with self.assertRaises(RuntimeError):
+                    _zone_ttl(value)
+
+    def test_a_bool_is_not_a_ttl(self):
+        # True is an int in Python and would otherwise be read as 1, then
+        # rejected for being out of range rather than for being a bool.
+        from ampg.dynadot_dns import _zone_ttl
+
+        with self.assertRaises(RuntimeError):
+            _zone_ttl(True)
+
+    def test_the_range_still_holds_after_coercion(self):
+        from ampg.dynadot_dns import _zone_ttl
+
+        for value in ("59", "86401", 59, 86401):
+            with self.subTest(value=value):
+                with self.assertRaises(RuntimeError):
+                    _zone_ttl(value)
+        self.assertEqual(60, _zone_ttl("60"))
+        self.assertEqual(86400, _zone_ttl("86400"))
+
+    def test_a_real_zone_response_reads_end_to_end(self):
+        """Shaped from an actual suchshop.lol response, not from the docs.
+
+        Two things only a live zone showed. The TTL arrives as a string, and the
+        records use record_value1 while the write path uses value1, so the
+        reader knew only the spelling it never receives. Either one alone makes
+        every Dynadot zone unreadable, and the second was hidden behind the
+        first.
+        """
+        def opener(request, timeout=None):
+            return FakeResponse({
+                "code": 200,
+                "data": {"glue_info": {
+                    "glue_type": "DNS",
+                    "ttl": "300",
+                    "dns_main_list": [
+                        {"record_type": "stealth", "record_value1": "mail.example.test",
+                         "record_value2": "10"},
+                        {"record_type": "txt",
+                         "record_value1": "v=spf1 mx include:spf-c.mailbaby.net -all"},
+                        {"record_type": "a", "record_value1": "203.0.113.10"},
+                    ],
+                    "dns_sub_list": [
+                        {"record_type": "a", "record_value1": "203.0.113.11", "sub_host": "mail"},
+                        {"record_type": "mx", "record_value1": "mail.example.test",
+                         "record_value2": "10", "sub_host": "mail"},
+                        {"record_type": "txt", "record_value1": "v=DKIM1;k=rsa;p=AAAA",
+                         "sub_host": "modoboa._domainkey"},
+                    ],
+                }},
+            })
+
+        provider = DynadotDNSProvider(credentials=self.credentials, opener=opener)
+        snapshot = provider.get_hosts("example.test")
+
+        self.assertEqual(6, len(snapshot.records), "no record may be dropped")
+        by_name = {(r.name, r.type): r for r in snapshot.records}
+        # A full-zone write sends back everything read, so a value lost here is
+        # a record deleted from a live zone.
+        self.assertEqual("203.0.113.10", by_name[("@", "A")].value)
+        self.assertEqual("v=DKIM1;k=rsa;p=AAAA", by_name[("modoboa._domainkey", "TXT")].value)
+        self.assertEqual("mail.example.test", by_name[("mail", "MX")].value)
+        self.assertEqual(10, by_name[("mail", "MX")].mx_pref)
+        self.assertIn(("@", "STEALTH"), by_name, "an unusual type is still a record")
+
+    def test_the_write_spelling_is_still_accepted(self):
+        # Kept so the two spellings cannot quietly become one.
+        def opener(request, timeout=None):
+            return FakeResponse({
+                "code": 200,
+                "data": {"glue_info": {
+                    "glue_type": "DNS", "ttl": 1800,
+                    "dns_main_list": [{"record_type": "txt", "value1": "v=spf1 -all"}],
+                    "dns_sub_list": [],
+                }},
+            })
+
+        provider = DynadotDNSProvider(credentials=self.credentials, opener=opener)
+        self.assertEqual("v=spf1 -all", provider.get_hosts("example.test").records[0].value)
+
     def test_mixed_ttl_and_broad_source_allowlist_fail_closed(self):
         provider = DynadotDNSProvider(credentials=self.credentials)
         with self.assertRaisesRegex(ValueError, "one observed"):
