@@ -15,6 +15,8 @@ import json
 from pathlib import Path
 import urllib.error
 import urllib.parse
+import http.client
+import io
 import urllib.request
 import uuid
 from typing import Any, Callable
@@ -103,6 +105,63 @@ def _record_value(record: dict[str, Any], name: str) -> str | None:
     return str(value)
 
 
+class _Body:
+    """The slice of the response interface the caller uses."""
+
+    def __init__(self, data: bytes):
+        self._data = data
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_arguments):
+        return False
+
+    def read(self) -> bytes:
+        return self._data
+
+
+def _send_with_exact_header_names(request, timeout: int = 30):
+    """Send the request without urllib rewriting the header names.
+
+    urllib.request title-cases every header inside do_open, so X-Request-ID goes
+    out as X-Request-Id. Header names are case-insensitive under RFC 9110 and
+    Dynadot's gateway is not: it matches X-Request-ID exactly, does not find the
+    rewritten form, and signs with an empty request id while we signed with the
+    UUID. Every request was refused as a bad signature, which is the one thing
+    the signature was not.
+
+    No spelling survives .title() as X-Request-ID, so urllib cannot be persuaded
+    to send it and the request goes out through http.client instead. The
+    urllib.request.Request stays as the unit passed to an injected opener, so
+    tests keep inspecting exactly what would be transmitted.
+    """
+    parsed = urllib.parse.urlsplit(request.full_url)
+    connection = http.client.HTTPSConnection(
+        parsed.hostname, parsed.port, timeout=timeout
+    )
+    target = parsed.path + (f"?{parsed.query}" if parsed.query else "")
+    try:
+        connection.request(
+            request.get_method(),
+            target,
+            body=request.data,
+            headers=dict(request.header_items()),
+        )
+        response = connection.getresponse()
+        payload = response.read()
+        status, reason, headers = response.status, response.reason, response.headers
+    finally:
+        connection.close()
+    if status >= 400:
+        # Raised so the caller's existing error handling, which reads the body
+        # to surface the provider's own explanation, keeps working unchanged.
+        raise urllib.error.HTTPError(
+            request.full_url, status, reason, headers, io.BytesIO(payload)
+        )
+    return _Body(payload)
+
+
 class DynadotDNSProvider:
     name = "dynadot"
     backup_format = "json"
@@ -127,7 +186,7 @@ class DynadotDNSProvider:
             raise ValueError(f"missing Dynadot api_key in {credentials}")
         if not self.api_secret:
             raise ValueError(f"missing Dynadot api_secret in {credentials}")
-        self._opener = opener or urllib.request.urlopen
+        self._opener = opener or _send_with_exact_header_names
         self._request_id_factory = request_id_factory or (
             lambda: str(uuid.uuid4())
         )
