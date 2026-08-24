@@ -295,8 +295,21 @@ class DynadotDNSProvider:
             with self._opener(request, timeout=30) as response:
                 raw = response.read().decode("utf-8")
         except urllib.error.HTTPError as error:
+            # Dynadot explains the refusal in the body. Discarding it left the
+            # operator with a status code and nothing to act on, which for a 400
+            # is the difference between "the domain is not in this account" and
+            # "the signature is wrong". Bounded and quoted because it is remote
+            # text, and the credential is never in it: the key travels in a
+            # header and the signature is computed, not echoed.
+            detail = ""
+            try:
+                body = error.read().decode("utf-8", "replace").strip()
+                if body:
+                    detail = f": {body[:400]}"
+            except Exception:  # noqa: BLE001 - a body is a bonus, never required
+                detail = ""
             raise RuntimeError(
-                f"Dynadot API rejected {method} {path} with HTTP {error.code}"
+                f"Dynadot API rejected {method} {path} with HTTP {error.code}{detail}"
             ) from error
         except urllib.error.URLError as error:
             raise RuntimeError(
