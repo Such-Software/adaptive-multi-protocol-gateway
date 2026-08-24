@@ -226,6 +226,63 @@ class DynadotDNSTests(unittest.TestCase):
         self.assertEqual("fixed-request-id", seen["X-Request-ID"])
         self.assertEqual(expected, seen["X-Signature"])
 
+    def test_the_socket_receives_the_exact_header_name(self):
+        """Assert on the wire, not on the Request object.
+
+        The previous attempt at this bug checked Request.header_items() and
+        passed, while urllib went on to title-case every name inside do_open, so
+        X-Request-ID still left as X-Request-Id and nothing changed. A data
+        structure that holds the right string is not evidence that the right
+        string was sent.
+        """
+        import http.client as http_client
+        from ampg import dynadot_dns
+
+        captured = {}
+
+        class FakeConnection:
+            def __init__(self, host, port=None, timeout=None):
+                pass
+
+            def request(self, method, target, body=None, headers=None):
+                captured.update(headers or {})
+
+            def getresponse(self):
+                class Response:
+                    status, reason, headers = 200, "OK", {}
+
+                    def read(self):
+                        return json.dumps(
+                            {
+                                "code": 200,
+                                "data": {
+                                    "glue_info": {
+                                        "glue_type": "DNS",
+                                        "ttl": 1800,
+                                        "dns_main_list": [],
+                                        "dns_sub_list": [],
+                                    }
+                                },
+                            }
+                        ).encode()
+
+                return Response()
+
+            def close(self):
+                pass
+
+        original = http_client.HTTPSConnection
+        http_client.HTTPSConnection = FakeConnection
+        try:
+            provider = DynadotDNSProvider(credentials=self.credentials)
+            provider.get_hosts("example.test")
+        finally:
+            http_client.HTTPSConnection = original
+
+        self.assertIn("X-Request-ID", captured)
+        self.assertNotIn("X-Request-Id", captured)
+        self.assertNotIn("X-request-id", captured)
+
     def test_mixed_ttl_and_broad_source_allowlist_fail_closed(self):
         provider = DynadotDNSProvider(credentials=self.credentials)
         with self.assertRaisesRegex(ValueError, "one observed"):
