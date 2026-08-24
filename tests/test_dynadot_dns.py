@@ -136,6 +136,49 @@ class DynadotDNSTests(unittest.TestCase):
         self.assertEqual("10", body["dns_main_list"][0]["value2"])
         self.assertEqual("301", body["dns_sub_list"][0]["value2"])
 
+    def test_http_error_body_reaches_the_operator(self):
+        """A status code with no explanation is not a diagnosis.
+
+        Dynadot says why in the body. For a 400 that is the difference between
+        the domain not being in this account and the signature being wrong, and
+        the operator was handed neither.
+        """
+        import io
+        import urllib.error
+
+        def opener(request, timeout=None):
+            raise urllib.error.HTTPError(
+                request.full_url,
+                400,
+                "Bad Request",
+                {},
+                io.BytesIO(b'{"error":"domain not found in this account"}'),
+            )
+
+        provider = DynadotDNSProvider(credentials=self.credentials, opener=opener)
+        with self.assertRaises(RuntimeError) as caught:
+            provider.get_hosts("example.test")
+        message = str(caught.exception)
+        self.assertIn("HTTP 400", message)
+        self.assertIn("domain not found in this account", message)
+
+    def test_an_unreadable_body_does_not_cost_the_status_code(self):
+        # The body is a bonus. Losing it must not lose the code as well.
+        import urllib.error
+
+        def opener(request, timeout=None):
+            error = urllib.error.HTTPError(request.full_url, 503, "x", {}, None)
+
+            def explode():
+                raise OSError("stream gone")
+
+            error.read = explode
+            raise error
+
+        provider = DynadotDNSProvider(credentials=self.credentials, opener=opener)
+        with self.assertRaisesRegex(RuntimeError, "HTTP 503"):
+            provider.get_hosts("example.test")
+
     def test_mixed_ttl_and_broad_source_allowlist_fail_closed(self):
         provider = DynadotDNSProvider(credentials=self.credentials)
         with self.assertRaisesRegex(ValueError, "one observed"):
