@@ -179,6 +179,53 @@ class DynadotDNSTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "HTTP 503"):
             provider.get_hosts("example.test")
 
+    def test_request_id_header_keeps_its_exact_case_on_the_wire(self):
+        """Dynadot matches X-Request-ID exactly, against RFC 9110.
+
+        urllib capitalises header names when they go through add_header, so
+        X-Request-ID left as X-request-id. Dynadot did not find it, signed with
+        an empty request id while we signed with the UUID, and rejected the
+        result as an invalid signature. Every request this provider made failed,
+        and the message pointed at the algorithm and the credentials.
+        """
+        seen = {}
+
+        def opener(request, timeout=None):
+            seen.update(dict(request.header_items()))
+            return FakeResponse({"code": 200, "data": {"glue_info": {"glue_type": "DNS", "ttl": 1800, "dns_main_list": [], "dns_sub_list": []}}})
+
+        provider = DynadotDNSProvider(credentials=self.credentials, opener=opener)
+        provider.get_hosts("example.test")
+
+        self.assertIn("X-Request-ID", seen)
+        self.assertNotIn("X-request-id", seen)
+        # The signature must be over the id we actually sent.
+        self.assertIn("X-Signature", seen)
+
+    def test_the_signed_request_id_is_the_one_transmitted(self):
+        # Signing one value and sending another is the failure above, restated.
+        seen = {}
+
+        def opener(request, timeout=None):
+            seen.update(dict(request.header_items()))
+            return FakeResponse({"code": 200, "data": {"glue_info": {"glue_type": "DNS", "ttl": 1800, "dns_main_list": [], "dns_sub_list": []}}})
+
+        provider = DynadotDNSProvider(
+            credentials=self.credentials,
+            opener=opener,
+            request_id_factory=lambda: "fixed-request-id",
+        )
+        provider.get_hosts("example.test")
+
+        expected = dynadot_signature(
+            "test-key",
+            "test-secret",
+            "/restful/v2/domains/example.test/records",
+            "fixed-request-id",
+        )
+        self.assertEqual("fixed-request-id", seen["X-Request-ID"])
+        self.assertEqual(expected, seen["X-Signature"])
+
     def test_mixed_ttl_and_broad_source_allowlist_fail_closed(self):
         provider = DynadotDNSProvider(credentials=self.credentials)
         with self.assertRaisesRegex(ValueError, "one observed"):
