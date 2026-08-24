@@ -80,6 +80,29 @@ def _validated_origin(value: str) -> str:
     return origin
 
 
+def _zone_ttl(value: Any) -> int:
+    """Dynadot reports the zone TTL as a string.
+
+    A live zone came back with "300" and the read path required an int, so every
+    Dynadot zone was unreadable while the write path, which already coerces with
+    int(record.ttl), would have accepted the same value. Reading was stricter
+    than writing, which is the wrong way round.
+
+    A bool is excluded explicitly because it is an int in Python and True would
+    otherwise pass as a TTL of 1 and be rejected for the wrong reason.
+    """
+    if isinstance(value, str):
+        text = value.strip()
+        if not text.isdigit():
+            raise RuntimeError("Dynadot returned an invalid zone TTL")
+        value = int(text)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise RuntimeError("Dynadot returned an invalid zone TTL")
+    if value < 60 or value > 86400:
+        raise RuntimeError("Dynadot returned an invalid zone TTL")
+    return value
+
+
 def _validated_source_cidr(value: str) -> str:
     try:
         network = ipaddress.ip_network(value, strict=True)
@@ -202,9 +225,7 @@ class DynadotDNSProvider:
         glue_type = str(glue.get("glue_type", "")).upper()
         if glue_type and glue_type != "DNS":
             raise RuntimeError("Dynadot zone is not using Dynadot DNS")
-        ttl = glue.get("ttl", DEFAULT_TTL)
-        if not isinstance(ttl, int) or ttl < 60 or ttl > 86400:
-            raise RuntimeError("Dynadot returned an invalid zone TTL")
+        ttl = _zone_ttl(glue.get("ttl", DEFAULT_TTL))
         records: list[ProviderDNSRecord] = []
         for field, name_field in (
             ("dns_main_list", None),
@@ -223,8 +244,16 @@ class DynadotDNSProvider:
                         "Dynadot returned an unsupported DNS record type"
                     )
                 name = "@" if name_field is None else _record_value(item, name_field)
-                value1 = _record_value(item, "value1")
-                value2 = _record_value(item, "value2")
+                # Dynadot answers with record_value1 and writes back value1.
+                # The read path only knew the write spelling, so every record on
+                # a live zone came back incomplete. Both are accepted, response
+                # spelling first, because that is what a real zone sends.
+                value1 = _record_value(item, "record_value1")
+                if value1 is None:
+                    value1 = _record_value(item, "value1")
+                value2 = _record_value(item, "record_value2")
+                if value2 is None:
+                    value2 = _record_value(item, "value2")
                 if not name or value1 is None:
                     raise RuntimeError("Dynadot returned an incomplete DNS record")
                 mx_pref = None
