@@ -288,9 +288,20 @@ class DynadotDNSProvider:
         request = urllib.request.Request(
             self.api_base_url + path,
             data=request_body.encode("utf-8") if body is not None else None,
-            headers=headers,
             method=method,
         )
+        # Assigned rather than passed to the constructor, which routes every
+        # header through add_header() and capitalises the name: X-Request-ID
+        # becomes X-request-id on the wire.
+        #
+        # Header names are case-insensitive per RFC 9110, and Dynadot's gateway
+        # is not. It matches X-Request-ID exactly, does not find the rewritten
+        # form, and therefore computes the signature with an empty request id
+        # while we computed ours with the UUID. The result is a valid signature
+        # over a different string, reported as "the X-Signature provided is not
+        # valid", which points at the algorithm and the credentials rather than
+        # at a header we did send.
+        request.headers = headers
         try:
             with self._opener(request, timeout=30) as response:
                 raw = response.read().decode("utf-8")
