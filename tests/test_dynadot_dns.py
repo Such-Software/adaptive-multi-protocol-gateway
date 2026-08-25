@@ -133,8 +133,82 @@ class DynadotDNSTests(unittest.TestCase):
         )
         body = json.loads(requests[0].data)
         self.assertFalse(body["add_dns_to_current_setting"])
-        self.assertEqual("10", body["dns_main_list"][0]["value2"])
-        self.assertEqual("301", body["dns_sub_list"][0]["value2"])
+        # record_value1/record_value2, the spelling Dynadot uses in both
+        # directions. This test asserted value2 and passed while every write was
+        # refused with "if record_type is entered, record_value1 must be
+        # entered", because it encoded the same wrong assumption as the code.
+        for entry in body["dns_main_list"] + body["dns_sub_list"]:
+            self.assertIn("record_value1", entry)
+            self.assertNotIn("value1", entry)
+            self.assertNotIn("value2", entry)
+        self.assertEqual("10", body["dns_main_list"][0]["record_value2"])
+        self.assertEqual("301", body["dns_sub_list"][0]["record_value2"])
+
+    def test_a_zone_survives_being_read_and_written_back(self):
+        """Read a zone, write it back unchanged, and lose nothing.
+
+        The read and write paths disagreed about field names twice in a row, in
+        opposite directions, and each time the unit tests passed because they
+        encoded the same assumption as the code they tested. A round trip cannot:
+        it feeds the writer exactly what the reader produced, so a spelling the
+        two do not share shows up as a value that vanished.
+
+        This matters because set_hosts replaces the whole zone. A record the
+        reader drops or the writer misnames is a record deleted from a live
+        domain, and suchshop.lol is a shop.
+        """
+        live = {
+            "code": 200,
+            "data": {"glue_info": {
+                "glue_type": "DNS",
+                "ttl": "300",
+                "dns_main_list": [
+                    {"record_type": "txt", "record_value1": "v=spf1 mx -all"},
+                    {"record_type": "a", "record_value1": "203.0.113.10"},
+                ],
+                "dns_sub_list": [
+                    {"record_type": "mx", "record_value1": "mail.example.test",
+                     "record_value2": "10", "sub_host": "mail"},
+                    {"record_type": "txt", "record_value1": "v=DKIM1;k=rsa;p=AAAA",
+                     "sub_host": "modoboa._domainkey"},
+                ],
+            }},
+        }
+        written = []
+
+        def opener(request, timeout=None):
+            if request.get_method() == "POST":
+                written.append(json.loads(request.data))
+                return FakeResponse({"code": 200, "data": {}})
+            return FakeResponse(live)
+
+        provider = DynadotDNSProvider(credentials=self.credentials, opener=opener)
+        snapshot = provider.get_hosts("example.test")
+        provider.set_hosts("example.test", tuple(snapshot.records), mail_policy="preserve")
+
+        body = written[0]
+        self.assertEqual(300, body["ttl"], "the string TTL must come back as a number")
+
+        def flatten(main, sub):
+            out = set()
+            for entry in main:
+                out.add(("@", entry["record_type"], entry["record_value1"]))
+            for entry in sub:
+                out.add((entry["sub_host"], entry["record_type"], entry["record_value1"]))
+            return out
+
+        before = flatten(
+            live["data"]["glue_info"]["dns_main_list"],
+            live["data"]["glue_info"]["dns_sub_list"],
+        )
+        after = flatten(body["dns_main_list"], body["dns_sub_list"])
+        # Types are upper-cased on the way out, which is Dynadot's own form.
+        before = {(n, t.upper(), v) for n, t, v in before}
+        self.assertEqual(before, after, "a record changed or vanished in the round trip")
+
+        # The MX preference is carried in the second value and is easy to drop.
+        mx = [e for e in body["dns_sub_list"] if e["record_type"] == "MX"][0]
+        self.assertEqual("10", mx["record_value2"])
 
     def test_http_error_body_reaches_the_operator(self):
         """A status code with no explanation is not a diagnosis.

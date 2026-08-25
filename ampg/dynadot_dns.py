@@ -312,9 +312,15 @@ class DynadotDNSProvider:
             record_type = record.type.upper()
             if record_type not in DYNADOT_SUPPORTED_RECORD_TYPES:
                 raise ValueError("Dynadot record type is unsupported")
+            # record_value1, not value1. Dynadot uses the same spelling in both
+            # directions; the reader was corrected to accept it and the writer
+            # was left alone on the assumption that the two differed. They do
+            # not, and Dynadot answers a write in the old spelling with "if
+            # record_type is entered, record_value1 must be entered", which
+            # reads like a missing value rather than a misnamed one.
             item = {
                 "record_type": record_type,
-                "value1": record.value,
+                "record_value1": record.value,
             }
             value2 = (
                 str(record.mx_pref)
@@ -324,7 +330,7 @@ class DynadotDNSProvider:
             if record_type == "MX" and record.mx_pref is None:
                 raise ValueError("Dynadot MX records require mx_pref")
             if value2 is not None:
-                item["value2"] = value2
+                item["record_value2"] = value2
             normalized_name = record.name.strip().rstrip(".").lower() or "@"
             if normalized_name == "@":
                 main.append(item)
