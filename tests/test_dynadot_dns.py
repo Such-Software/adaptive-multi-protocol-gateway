@@ -210,6 +210,56 @@ class DynadotDNSTests(unittest.TestCase):
         mx = [e for e in body["dns_sub_list"] if e["record_type"] == "MX"][0]
         self.assertEqual("10", mx["record_value2"])
 
+    def test_a_dropped_connection_is_retried(self):
+        # Dynadot drops connections: three plain requests gave 000, 200, 000
+        # within seconds, and a full-zone write died mid-TLS.
+        import ssl as ssl_module
+
+        attempts = {"n": 0}
+
+        def opener(request, timeout=None):
+            attempts["n"] += 1
+            if attempts["n"] < 3:
+                raise ssl_module.SSLError("UNEXPECTED_EOF_WHILE_READING")
+            return FakeResponse({"code": 200, "data": {"glue_info": {
+                "glue_type": "DNS", "ttl": "300",
+                "dns_main_list": [{"record_type": "txt", "record_value1": "v=spf1 -all"}],
+                "dns_sub_list": [],
+            }}})
+
+        # The injected opener replaces the retrying sender, so this asserts the
+        # policy rather than the transport: a caller that retries is what the
+        # real sender now is.
+        from ampg import dynadot_dns
+        self.assertEqual(3, dynadot_dns._CONNECTION_ATTEMPTS)
+        self.assertEqual(2, len(dynadot_dns._RETRY_BACKOFF_SECONDS))
+
+    def test_an_http_status_is_never_retried(self):
+        """A status is an answer, and repeating it turns one refusal into three.
+
+        urllib.error.HTTPError subclasses OSError, which the retry does catch,
+        so this is only correct because the status is raised after the loop has
+        already succeeded. Asserted structurally: moving that raise inside the
+        try would silently start retrying every 400, and no unit test that
+        stubs the opener would notice, because the stub replaces the retry.
+        """
+        source = (Path(__file__).resolve().parents[1] / "ampg/dynadot_dns.py").read_text()
+        loop = source.index("for attempt in range(_CONNECTION_ATTEMPTS)")
+        status_check = source.index("if status >= 400:", loop)
+        raise_status = source.index("raise urllib.error.HTTPError(", status_check)
+        self.assertGreater(raise_status, status_check)
+        # The retry clause catches transport failures only, by name.
+        clause = source[source.index("except (", loop):source.index("as error:", loop)]
+        self.assertNotIn("HTTPError", clause)
+        for expected in ("SSLError", "ConnectionError", "TimeoutError"):
+            self.assertIn(expected, clause)
+
+    def test_retrying_a_write_is_only_safe_because_it_replaces_the_zone(self):
+        # If the write ever appends instead, this reasoning stops holding.
+        source = (Path(__file__).resolve().parents[1] / "ampg/dynadot_dns.py").read_text()
+        self.assertIn('"add_dns_to_current_setting": False', source)
+        self.assertIn("does not transfer to an endpoint that appends", source)
+
     def test_http_error_body_reaches_the_operator(self):
         """A status code with no explanation is not a diagnosis.
 

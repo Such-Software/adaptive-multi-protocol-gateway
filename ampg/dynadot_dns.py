@@ -17,6 +17,8 @@ import urllib.error
 import urllib.parse
 import http.client
 import io
+import ssl
+import time
 import urllib.request
 import uuid
 from typing import Any, Callable
@@ -144,6 +146,22 @@ class _Body:
         return self._data
 
 
+# Dynadot drops connections. Three plain requests to their API from one machine
+# gave 000, 200, 000 within a few seconds, and a full-zone write died mid-TLS
+# with UNEXPECTED_EOF_WHILE_READING.
+#
+# Only a connection that produced no response is retried. An HTTP status is an
+# answer, however unwelcome, and repeating a request the server already judged
+# would turn one refusal into several.
+#
+# Retrying a POST is safe here specifically because set_hosts replaces the whole
+# zone with add_dns_to_current_setting false. The same body applied twice leaves
+# the same zone, so a reply lost on the way back costs a duplicate write and
+# nothing else. This reasoning does not transfer to an endpoint that appends.
+_CONNECTION_ATTEMPTS = 3
+_RETRY_BACKOFF_SECONDS = (0.5, 2.0)
+
+
 def _send_with_exact_header_names(request, timeout: int = 30):
     """Send the request without urllib rewriting the header names.
 
@@ -160,22 +178,32 @@ def _send_with_exact_header_names(request, timeout: int = 30):
     tests keep inspecting exactly what would be transmitted.
     """
     parsed = urllib.parse.urlsplit(request.full_url)
-    connection = http.client.HTTPSConnection(
-        parsed.hostname, parsed.port, timeout=timeout
-    )
     target = parsed.path + (f"?{parsed.query}" if parsed.query else "")
-    try:
-        connection.request(
-            request.get_method(),
-            target,
-            body=request.data,
-            headers=dict(request.header_items()),
+    last_error = None
+    for attempt in range(_CONNECTION_ATTEMPTS):
+        connection = http.client.HTTPSConnection(
+            parsed.hostname, parsed.port, timeout=timeout
         )
-        response = connection.getresponse()
-        payload = response.read()
-        status, reason, headers = response.status, response.reason, response.headers
-    finally:
-        connection.close()
+        try:
+            connection.request(
+                request.get_method(),
+                target,
+                body=request.data,
+                headers=dict(request.header_items()),
+            )
+            response = connection.getresponse()
+            payload = response.read()
+            status, reason, headers = response.status, response.reason, response.headers
+            break
+        except (ssl.SSLError, http.client.HTTPException, ConnectionError, TimeoutError, OSError) as error:
+            last_error = error
+            if attempt == _CONNECTION_ATTEMPTS - 1:
+                raise urllib.error.URLError(
+                    f"Dynadot connection failed after {_CONNECTION_ATTEMPTS} attempts: {error}"
+                ) from error
+            time.sleep(_RETRY_BACKOFF_SECONDS[attempt])
+        finally:
+            connection.close()
     if status >= 400:
         # Raised so the caller's existing error handling, which reads the body
         # to surface the provider's own explanation, keeps working unchanged.
