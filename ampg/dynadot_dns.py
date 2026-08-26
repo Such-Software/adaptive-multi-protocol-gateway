@@ -50,6 +50,34 @@ DYNADOT_API_ORIGINS = {
 }
 
 
+def _is_mislabelled_apex_mx(record_type: str, value1: str | None, value2: str | None) -> bool:
+    """Dynadot returns an apex MX record typed "stealth".
+
+    Observed on suchshop.lol across three reads on two days: the zone's three
+    apex records come back as stealth/txt/a, and comparing them one to one with
+    what the apex actually serves gives stealth = MX 10 mail.suchshop.lol. There
+    is no fourth record and no forwarding configured. Writing that record back
+    with the type Dynadot supplied is refused by Dynadot itself, with "Please
+    enter a valid stealth forwarding url", so a zone carrying an apex MX could
+    not be updated at all: the whole POST fails and no record in it is written.
+
+    The two shapes do not overlap, which is what makes this safe to correct
+    rather than guess at. A genuine stealth forward stores a URL in value1 and
+    leaves value2 empty; Dynadot's own error names the format it requires. A
+    hostname in value1 with an integer preference in value2 is not a stealth
+    record in any valid configuration.
+    """
+    if record_type != "STEALTH" or value1 is None or value2 is None:
+        return False
+    if "://" in value1:
+        return False
+    try:
+        preference = int(value2)
+    except ValueError:
+        return False
+    return 0 <= preference <= 65535
+
+
 def dynadot_signature(
     api_key: str,
     api_secret: str,
@@ -282,6 +310,8 @@ class DynadotDNSProvider:
                 value2 = _record_value(item, "record_value2")
                 if value2 is None:
                     value2 = _record_value(item, "value2")
+                if _is_mislabelled_apex_mx(record_type, value1, value2):
+                    record_type = "MX"
                 if not name or value1 is None:
                     raise RuntimeError("Dynadot returned an incomplete DNS record")
                 mx_pref = None

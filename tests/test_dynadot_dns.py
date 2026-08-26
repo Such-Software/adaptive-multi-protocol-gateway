@@ -490,7 +490,14 @@ class DynadotDNSTests(unittest.TestCase):
         self.assertEqual("v=DKIM1;k=rsa;p=AAAA", by_name[("modoboa._domainkey", "TXT")].value)
         self.assertEqual("mail.example.test", by_name[("mail", "MX")].value)
         self.assertEqual(10, by_name[("mail", "MX")].mx_pref)
-        self.assertIn(("@", "STEALTH"), by_name, "an unusual type is still a record")
+        # This fixture is a copy of suchshop.lol, whose apex record Dynadot types
+        # "stealth" while the apex serves MX 10 mail.suchshop.lol. Preserving that
+        # type verbatim, which this test used to require, is exactly what made a
+        # preserve-unmanaged write impossible: Dynadot rejects its own spelling on
+        # the way back in, and takes the whole batch down with it.
+        self.assertNotIn(("@", "STEALTH"), by_name)
+        self.assertEqual("mail.example.test", by_name[("@", "MX")].value)
+        self.assertEqual(10, by_name[("@", "MX")].mx_pref)
 
     def test_the_write_spelling_is_still_accepted(self):
         # Kept so the two spellings cannot quietly become one.
@@ -527,3 +534,54 @@ class DynadotDNSTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+from ampg import dynadot_dns  # noqa: E402
+
+
+class MislabelledApexMxTest(unittest.TestCase):
+    """Dynadot types an apex MX record "stealth" and then refuses it back.
+
+    suchshop.lol carries MX 10 mail.suchshop.lol at the apex. Dynadot's records
+    endpoint returns it as record_type "stealth" with the host in value1 and the
+    preference in value2. Echoing that back, which a preserve-unmanaged write has
+    to do, is rejected with "Please enter a valid stealth forwarding url" and the
+    whole POST fails, so not one record in the batch is written. Six DMARC report
+    authorizations were blocked by it.
+    """
+
+    def test_a_hostname_with_a_preference_is_an_mx_record(self) -> None:
+        self.assertTrue(
+            dynadot_dns._is_mislabelled_apex_mx("STEALTH", "mail.suchshop.lol", "10")
+        )
+
+    def test_a_real_stealth_forward_is_left_alone(self) -> None:
+        # value1 is a URL and value2 is empty: the shape Dynadot documents.
+        self.assertFalse(
+            dynadot_dns._is_mislabelled_apex_mx(
+                "STEALTH", "http://subdomain.example.com", None
+            )
+        )
+        self.assertFalse(
+            dynadot_dns._is_mislabelled_apex_mx(
+                "STEALTH", "https://shop.example.com/path", "0"
+            )
+        )
+
+    def test_nothing_else_is_touched(self) -> None:
+        for record_type in ("TXT", "A", "MX", "CNAME", "FORWARD"):
+            with self.subTest(record_type=record_type):
+                self.assertFalse(
+                    dynadot_dns._is_mislabelled_apex_mx(
+                        record_type, "mail.suchshop.lol", "10"
+                    )
+                )
+
+    def test_a_preference_outside_the_range_is_not_assumed(self) -> None:
+        for value2 in ("-1", "65536", "ten", "", "1.5"):
+            with self.subTest(value2=value2):
+                self.assertFalse(
+                    dynadot_dns._is_mislabelled_apex_mx(
+                        "STEALTH", "mail.suchshop.lol", value2
+                    )
+                )
